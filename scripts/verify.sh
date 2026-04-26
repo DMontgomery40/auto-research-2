@@ -26,5 +26,19 @@ fi
 python3 -m py_compile scripts/ask_council.py
 python3 -m py_compile scripts/download_synloc.py
 python3 -m py_compile scripts/evaluate_synloc.py
+python3 -m py_compile scripts/autonomy_tick.py
+python3 -m py_compile cloud/synloc_smoke.py
+python3 -m py_compile cloud/synloc_cache.py
+python3 -m py_compile cloud/synloc_baseline_yolo.py
+
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+state = json.loads(Path("autonomy/state.json").read_text())
+assert state["phase"], "autonomy phase missing"
+assert state["hf_dataset_repo"], "HF dataset repo missing"
+assert state["hf_model_repo"], "HF model repo missing"
+PY
 
 echo "verify ok"

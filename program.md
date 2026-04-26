@@ -84,6 +84,18 @@ Repeat until the owner interrupts:
 
 Never ask "should I keep going?" once the loop starts.
 
+## heartbeat
+
+Autonomy continues through GitHub Actions, not through an open chat window.
+
+Every two hours, `.github/workflows/autonomy.yml` runs:
+
+```bash
+python scripts/autonomy_tick.py
+```
+
+The tick checks or submits one Hugging Face Job, updates `autonomy/state.json`, appends `autonomy/events.jsonl`, and opens a GitHub issue if owner input is required.
+
 ## scoring
 
 Primary metric: `mAP-LocSim`, higher is better.

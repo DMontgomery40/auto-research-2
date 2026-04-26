@@ -24,7 +24,9 @@ The primary metric is `mAP-LocSim`. Higher is better.
 - `scripts/ask_council.py` - drop a markdown request into the council automation queue.
 - `scripts/download_synloc.py` - official SoccerNet download wrapper for cloud job payloads.
 - `scripts/evaluate_synloc.py` - official SSKit metric wrapper for cloud job payloads.
+- `scripts/autonomy_tick.py` - one bounded autonomous controller tick.
 - `scripts/verify.sh` - narrow repo sanity check.
+- `.github/workflows/autonomy.yml` - scheduled heartbeat every two hours.
 
 Local upstream clones live in ignored `refs/`:
 
@@ -75,6 +77,23 @@ Keep these repos private. Checkpoints, logs, metrics, and predictions can live t
 3. Run dataset download and baseline on a cloud CUDA GPU job.
 4. Persist datasets, predictions, checkpoints, and metrics to Hugging Face storage or job artifacts, not this repo.
 5. Only then start creating isolated experiment worktrees under `worktrees/`.
+
+## Autonomy
+
+The repo has a persistent heartbeat:
+
+- GitHub Actions runs `scripts/autonomy_tick.py` every two hours and on manual dispatch.
+- The tick submits or checks exactly one Hugging Face Job.
+- State lives in `autonomy/state.json`.
+- Events live in `autonomy/events.jsonl`.
+- If a secret, budget, or cloud job blocks progress, the controller opens a GitHub issue instead of going silent.
+
+Initial phases:
+
+1. `cloud_smoke_pending` - verify HF Jobs, GPU visibility, imports, and private repo write access.
+2. `dataset_cache_valid_pending` - cache the fullhd validation split in the private HF dataset repo.
+3. `baseline_probe_pending` - run a small YOLO baseline probe on cloud CUDA.
+4. `baseline_full_pending` - run the validation baseline on cloud CUDA.
 
 ## Ground Rules
 

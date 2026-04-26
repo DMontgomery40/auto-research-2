@@ -61,6 +61,18 @@ Inside the loop:
 6. Keep if score improves enough for the complexity added; otherwise discard or revert.
 7. Update `CURRENT.md`.
 
+## Persistent Autonomy
+
+This repo must not depend on an open chat thread to keep moving.
+
+- `.github/workflows/autonomy.yml` is the heartbeat.
+- `scripts/autonomy_tick.py` runs one bounded controller step.
+- `autonomy/state.json` is the durable state.
+- `autonomy/events.jsonl` is the concise event log.
+- `cloud/` contains Hugging Face Jobs payloads.
+
+If the controller needs owner input, more budget, or secret repair, it opens a GitHub issue with `autonomy` and `needs-owner` labels. Do not silently wait in chat.
+
 ## Experiment Discipline
 
 - Same seed, same dataset SHA, same cloud eval command, same GPU class when comparing runs.

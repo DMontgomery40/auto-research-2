@@ -23,6 +23,8 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Owner has signed the SoccerNet NDA and has an official SoccerNet password; SynLoc data is cleared for this project.
 - Private HF dataset/cache repo exists: `dmontgomery40/auto-research-2-synloc-data`.
 - Private HF model/checkpoint repo exists: `dmontgomery40/auto-research-2-synloc-models`.
+- Persistent heartbeat exists: `.github/workflows/autonomy.yml`.
+- Controller state exists: `autonomy/state.json`.
 
 ## Unknowns
 
@@ -34,6 +36,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Create the first tiny Hugging Face Jobs smoke run for environment, credentials, SSKit install, and dataset access.
-2. Establish the official baseline score on cloud CUDA.
-3. Start the first isolated experiment branch only after baseline is recorded.
+1. Push and enable the GitHub Actions heartbeat.
+2. Let the controller submit/check the first tiny Hugging Face Jobs smoke run.
+3. Establish the official baseline score on cloud CUDA.
+4. Start the first isolated experiment branch only after baseline is recorded.
