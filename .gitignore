@@ -1,0 +1,27 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Local references and heavy artifacts
+refs/
+data/
+datasets/
+models/
+artifacts/
+outputs/
+runs/
+worktrees/
+*.zip
+*.tar
+*.tar.gz
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# Local logs and scratch files
+*.log
+*.tmp
+.DS_Store

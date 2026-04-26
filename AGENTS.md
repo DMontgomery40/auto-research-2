@@ -1,0 +1,93 @@
+# AGENTS.md
+
+This repo is an autonomous research harness. Keep it closer to Karpathy's `autoresearch` than to a platform.
+
+## Prime Directive
+
+Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by June 30, 2026.
+
+SynLoc is single-frame athlete detection plus world-coordinate pitch localization. The metric to optimize is `mAP-LocSim`; higher is better. Track public/test/challenge scores in `LEDGER.md`, but do not submit to Codabench unless the owner explicitly asks.
+
+## Simplicity Rule
+
+Prefer markdown instructions plus tiny scripts over services, databases, dashboards, schedulers, or custom frameworks. If three clear sentences in `program.md` solve the problem, do that before writing code.
+
+Code is justified when it:
+
+- removes repeated manual friction,
+- prevents expensive mistakes,
+- makes a run reproducible, or
+- converts official devkit behavior into a stable local command.
+
+## Repository Shape
+
+- `program.md` is the loop contract and should stay readable enough to hand to any strong agent.
+- `CURRENT.md` is the live state.
+- `LEDGER.md` is the experiment and score log.
+- `IDEAS.md` is the experiment backlog.
+- `BUDGET.md` is the compute ledger.
+- `COUNCIL.md` documents the sibling council queue.
+- `scripts/` contains small helpers only.
+- `refs/`, `data/`, `runs/`, `outputs/`, `models/`, and `worktrees/` are local-only and ignored.
+
+## Loop Contract
+
+Use this shape:
+
+1. setup-once
+2. baseline-once
+3. loop-forever
+
+Inside the loop:
+
+1. Read `CURRENT.md`, `LEDGER.md`, and `IDEAS.md`.
+2. Pick one experiment with a clear expected score movement.
+3. Run it in an isolated branch/worktree under `worktrees/<tag>/`.
+4. Evaluate with the official SSKit metric path.
+5. Record score, cost, commit, and decision in `LEDGER.md`.
+6. Keep if score improves enough for the complexity added; otherwise discard or revert.
+7. Update `CURRENT.md`.
+
+## Experiment Discipline
+
+- Same seed, same dataset SHA, same eval command for comparable runs.
+- Treat validation-selected score thresholds as validation-only unless the threshold is then fixed for test/challenge.
+- Keep generated predictions, checkpoints, logs, and data out of git.
+- Prefer a working baseline and tight local evaluator before any GPU-heavy idea.
+- Spend compute like it is real money. It is.
+
+## Budget
+
+Default budget is `$25/week`. Track each paid job in `BUDGET.md`.
+
+If more spend is needed, open a GitHub issue in this repo with:
+
+- proposed experiment,
+- expected upside,
+- estimated cost,
+- fallback if it fails.
+
+Do not exceed the budget before owner approval.
+
+## Council
+
+The sibling council lives at `../challenge-council/`. Use it sparingly:
+
+- when the loop is stuck,
+- after a meaningful baseline is known,
+- before a large spend,
+- every 2-3 days during serious autonomous runs.
+
+Queue requests by writing `council_request.md` into the council automation inbox. Prefer `scripts/ask_council.py`.
+
+The council may analyze official task materials, devkit behavior, logs, and our experiment ledger. Do not ask it to mine post-deadline winner writeups or leaked solutions. Leaderboard score tracking is allowed; solution leakage is not.
+
+## Verification
+
+Before ending a mutating turn, run:
+
+```bash
+scripts/verify.sh
+```
+
+Also run any narrower test or smoke command for files you changed.
