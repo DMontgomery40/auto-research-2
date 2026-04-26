@@ -1,6 +1,8 @@
 # /// script
 # dependencies = [
 #   "huggingface_hub>=0.24.0",
+#   "torch",
+#   "torchvision",
 #   "ultralytics",
 #   "opencv-python-headless",
 #   "git+https://github.com/Spiideo/sskit.git",

@@ -3,6 +3,8 @@
 #   "huggingface_hub>=0.24.0",
 #   "SoccerNet",
 #   "opencv-python-headless",
+#   "torch",
+#   "torchvision",
 #   "sskit"
 # ]
 # ///

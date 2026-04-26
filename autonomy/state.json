@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 0.25,
-    "flavor": "t4-small",
-    "id": "69ee79a9d2c8bd8662bd02f9",
-    "label": "cloud-smoke",
-    "next_phase": "dataset_cache_valid_pending",
-    "phase": "cloud_smoke_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-04-26T20:46:33.951185Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69ee79a9d2c8bd8662bd02f9"
-  },
+  "active_job": null,
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
@@ -23,9 +13,19 @@
       "phase": "cloud_smoke_pending",
       "status": "ERROR",
       "url": "https://huggingface.co/jobs/dmontgomery40/69ee7933d2c8bd8662bd02f1"
+    },
+    {
+      "cost_estimate_usd": 0.25,
+      "failed_at": "2026-04-26T20:51:00Z",
+      "flavor": "t4-small",
+      "id": "69ee79a9d2c8bd8662bd02f9",
+      "label": "cloud-smoke",
+      "phase": "cloud_smoke_pending",
+      "status": "ERROR",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69ee79a9d2c8bd8662bd02f9"
     }
   ],
-  "phase": "cloud_smoke_running",
+  "phase": "cloud_smoke_pending",
   "spent_estimate_usd": 0.5,
   "updated_at": "2026-04-26T20:46:33.951318Z",
   "weekly_budget_usd": 25.0
