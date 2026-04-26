@@ -22,6 +22,14 @@ def load_env(path: Path) -> None:
         os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
 
 
+def env_any(*names: str) -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return ""
+
+
 def ensure_package() -> None:
     try:
         import SoccerNet  # noqa: F401
@@ -37,19 +45,22 @@ def main() -> None:
     args = parser.parse_args()
 
     load_env(ROOT / ".env")
-    username = os.getenv("SOCCERNET_USERNAME") or os.getenv("SPIIDEO_USERNAME")
-    password = os.getenv("SOCCERNET_PASSWORD")
+    username = env_any("SOCCERNET_USERNAME", "SPIIDEO_USERNAME")
+    data_password = os.getenv("SOCCERNET_PASSWORD")
+    signin_password = env_any("SOCCERNET_SIGNIN_PASSWORD", "SOCCERNET_PASSWORD_2", "SPIIDEO_PASSWORD", "SOCCERNET_PASSWORD")
     if not username:
         raise SystemExit("SOCCERNET_USERNAME is missing from .env or environment.")
-    if not password:
+    if not data_password:
         raise SystemExit("SOCCERNET_PASSWORD is missing from .env or environment.")
+    if not signin_password:
+        raise SystemExit("SOCCERNET_SIGNIN_PASSWORD is missing from .env or environment.")
 
     ensure_package()
     from SoccerNet.Downloader import SoccerNetDownloader
 
     downloader = SoccerNetDownloader(LocalDirectory=str(args.root))
-    downloader.getSpiideoCredentials = lambda: (username, password)
-    kwargs = {"task": "SpiideoSynLoc", "split": args.splits, "password": password}
+    downloader.getSpiideoCredentials = lambda: (username, signin_password)
+    kwargs = {"task": "SpiideoSynLoc", "split": args.splits, "password": data_password}
     if args.version == "fullhd":
         kwargs["version"] = "fullhd"
     downloader.downloadDataTask(**kwargs)

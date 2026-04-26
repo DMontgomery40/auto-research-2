@@ -20,6 +20,14 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def env_any(*names: str) -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return ""
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -31,6 +39,9 @@ def sha256(path: Path) -> str:
 def main() -> None:
     required = ["HF_TOKEN", "SOCCERNET_USERNAME", "SOCCERNET_PASSWORD", "HF_DATASET_REPO"]
     missing = [key for key in required if not os.getenv(key)]
+    signin_password = env_any("SOCCERNET_SIGNIN_PASSWORD", "SOCCERNET_PASSWORD_2", "SPIIDEO_PASSWORD", "SOCCERNET_PASSWORD")
+    if not signin_password:
+        missing.append("SOCCERNET_SIGNIN_PASSWORD")
     if missing:
         raise RuntimeError(f"Missing required environment variables: {missing}")
 
@@ -42,7 +53,7 @@ def main() -> None:
     root.mkdir(parents=True, exist_ok=True)
 
     downloader = SoccerNetDownloader(LocalDirectory=str(root))
-    downloader.getSpiideoCredentials = lambda: (os.environ["SOCCERNET_USERNAME"], os.environ["SOCCERNET_PASSWORD"])
+    downloader.getSpiideoCredentials = lambda: (os.environ["SOCCERNET_USERNAME"], signin_password)
     kwargs = {
         "task": "SpiideoSynLoc",
         "split": splits,

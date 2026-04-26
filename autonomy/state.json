@@ -1,13 +1,5 @@
 {
   "active_job": null,
-  "blocked_missing": [
-    "SOCCERNET_USERNAME"
-  ],
-  "blocked_phase": "dataset_cache_valid_pending",
-  "blocker": {
-    "created_at": "2026-04-26T20:54:00Z",
-    "title": "Autonomy blocked: missing SOCCERNET_USERNAME"
-  },
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
@@ -69,8 +61,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69ee7a8bd70108f37ace0389"
     }
   ],
-  "phase": "blocked_missing_secret",
+  "phase": "dataset_cache_valid_pending",
   "spent_estimate_usd": 1.75,
-  "updated_at": "2026-04-26T22:29:35.518051Z",
+  "updated_at": "2026-04-26T22:43:53.280667Z",
   "weekly_budget_usd": 25.0
 }

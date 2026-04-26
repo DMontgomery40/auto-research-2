@@ -22,6 +22,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Local model validation is explicitly out of scope because local MLX/Mac execution has no parity with cloud CUDA training and inference.
 - Owner has signed the SoccerNet NDA and has an official SoccerNet password; SynLoc data is cleared for this project.
 - Dataset download also requires the Spiideo Research username/email as `SOCCERNET_USERNAME`.
+- The Spiideo sign-in password is separate from the SoccerNet data password. Use `SOCCERNET_SIGNIN_PASSWORD`; `SOCCERNET_PASSWORD_2` is accepted as an alias.
 - Private HF dataset/cache repo exists: `dmontgomery40/auto-research-2-synloc-data`.
 - Private HF model/checkpoint repo exists: `dmontgomery40/auto-research-2-synloc-models`.
 - Persistent heartbeat exists: `.github/workflows/autonomy.yml`.
@@ -34,7 +35,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Cloud dataset presence/checksum.
 - Baseline cloud validation score.
 - Codabench credentials/session status.
-- `SOCCERNET_USERNAME` GitHub secret.
+- Confirmed GitHub secrets: `SOCCERNET_USERNAME`, `SOCCERNET_SIGNIN_PASSWORD`, and `SOCCERNET_PASSWORD`.
 - Exact Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
 
 ## Next Action

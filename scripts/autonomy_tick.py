@@ -39,6 +39,7 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
         "timeout": "6h",
         "python": "3.10",
         "required_secrets": ["SOCCERNET_USERNAME", "SOCCERNET_PASSWORD"],
+        "required_secret_groups": [["SOCCERNET_SIGNIN_PASSWORD", "SOCCERNET_PASSWORD_2", "SPIIDEO_PASSWORD", "SOCCERNET_PASSWORD"]],
         "cost_estimate_usd": 1.0,
         "next_phase": "baseline_probe_pending",
         "env": {"SYNLOC_SPLITS": "valid", "SYNLOC_VERSION": "fullhd"},
@@ -50,6 +51,7 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
         "timeout": "2h",
         "python": "3.10",
         "required_secrets": [],
+        "required_secret_groups": [],
         "cost_estimate_usd": 1.5,
         "next_phase": "baseline_full_pending",
         "env": {"SYNLOC_SPLIT": "valid", "SYNLOC_VERSION": "fullhd", "BASELINE_MAX_IMAGES": "64"},
@@ -61,6 +63,7 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
         "timeout": "6h",
         "python": "3.10",
         "required_secrets": [],
+        "required_secret_groups": [],
         "cost_estimate_usd": 6.0,
         "next_phase": "council_after_baseline_pending",
         "env": {"SYNLOC_SPLIT": "valid", "SYNLOC_VERSION": "fullhd", "BASELINE_MAX_IMAGES": "0"},
@@ -82,6 +85,14 @@ def load_dotenv() -> None:
             continue
         key, value = line.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+def env_any(*names: str) -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return ""
 
 
 def load_state() -> dict[str, Any]:
@@ -216,6 +227,9 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
 
     required_secrets = spec.get("required_secrets", [])
     missing = [key for key in required_secrets if not os.getenv(key)]
+    for group in spec.get("required_secret_groups", []):
+        if not any(os.getenv(key) for key in group):
+            missing.append("/".join(group))
     if missing:
         block_once(
             state,
@@ -254,6 +268,11 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
     }
     if os.getenv("SOCCERNET_USERNAME"):
         secrets["SOCCERNET_USERNAME"] = os.environ["SOCCERNET_USERNAME"]
+    signin_password = env_any("SOCCERNET_SIGNIN_PASSWORD", "SOCCERNET_PASSWORD_2", "SPIIDEO_PASSWORD")
+    if signin_password:
+        secrets["SOCCERNET_SIGNIN_PASSWORD"] = signin_password
+    if os.getenv("SOCCERNET_PASSWORD_2"):
+        secrets["SOCCERNET_PASSWORD_2"] = os.environ["SOCCERNET_PASSWORD_2"]
     script = ROOT / spec["script"]
     if dry_run:
         append_event("dry_run_submit", phase=phase, script=str(script), spec=spec)
