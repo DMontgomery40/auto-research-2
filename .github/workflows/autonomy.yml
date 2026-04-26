@@ -2,6 +2,10 @@ name: autonomy
 
 on:
   workflow_dispatch:
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
+  issue_comment:
+    types: [created, edited]
   schedule:
     - cron: "17 */2 * * *"
 
@@ -15,6 +19,12 @@ concurrency:
 
 jobs:
   tick:
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'schedule' ||
+        contains(join(github.event.issue.labels.*.name, ','), 'autonomy')
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

@@ -83,10 +83,12 @@ Keep these repos private. Checkpoints, logs, metrics, and predictions can live t
 The repo has a persistent heartbeat:
 
 - GitHub Actions runs `scripts/autonomy_tick.py` every two hours and on manual dispatch.
+- Comments or changes on autonomy-labeled GitHub issues wake the same controller immediately.
 - The tick submits or checks exactly one Hugging Face Job.
 - State lives in `autonomy/state.json`.
 - Events live in `autonomy/events.jsonl`.
 - If a secret, budget, or cloud job blocks progress, the controller opens a GitHub issue instead of going silent.
+- If the owner fixes the blocker and replies on that issue, the issue event wakes the heartbeat without waiting for the next two-hour schedule.
 
 Initial phases:
 

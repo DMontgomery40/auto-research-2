@@ -25,6 +25,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Private HF dataset/cache repo exists: `dmontgomery40/auto-research-2-synloc-data`.
 - Private HF model/checkpoint repo exists: `dmontgomery40/auto-research-2-synloc-models`.
 - Persistent heartbeat exists: `.github/workflows/autonomy.yml`.
+- Autonomy-labeled issue comments/edits now wake the heartbeat immediately.
 - Controller state exists: `autonomy/state.json`.
 
 ## Unknowns

@@ -66,6 +66,7 @@ Inside the loop:
 This repo must not depend on an open chat thread to keep moving.
 
 - `.github/workflows/autonomy.yml` is the heartbeat.
+- Autonomy-labeled issue comments and issue edits wake the heartbeat immediately.
 - `scripts/autonomy_tick.py` runs one bounded controller step.
 - `autonomy/state.json` is the durable state.
 - `autonomy/events.jsonl` is the concise event log.

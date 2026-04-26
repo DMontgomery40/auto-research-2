@@ -96,6 +96,8 @@ python scripts/autonomy_tick.py
 
 The tick checks or submits one Hugging Face Job, updates `autonomy/state.json`, appends `autonomy/events.jsonl`, and opens a GitHub issue if owner input is required.
 
+Autonomy-labeled issue comments and issue edits also wake the same workflow immediately. If the owner says "done" after adding a secret or approving budget, the controller should notice on that event rather than waiting for the schedule.
+
 ## scoring
 
 Primary metric: `mAP-LocSim`, higher is better.
