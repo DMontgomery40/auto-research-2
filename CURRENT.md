@@ -16,6 +16,8 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Local credentials file exists: `.env`.
 - `.env` has `HF_TOKEN` and `SOCCERNET_PASSWORD`.
 - GitHub CLI is already authenticated as `DMontgomery40`.
+- Data download helper exists: `scripts/download_synloc.py`.
+- Official metric wrapper exists: `scripts/evaluate_synloc.py`.
 
 ## Unknowns
 

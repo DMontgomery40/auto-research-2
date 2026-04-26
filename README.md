@@ -22,6 +22,8 @@ The primary metric is `mAP-LocSim`. Higher is better.
 - `BUDGET.md` - weekly compute budget ledger.
 - `COUNCIL.md` - how to use the sibling challenge council.
 - `scripts/ask_council.py` - drop a markdown request into the council automation queue.
+- `scripts/download_synloc.py` - official SoccerNet download wrapper.
+- `scripts/evaluate_synloc.py` - official SSKit metric wrapper.
 - `scripts/verify.sh` - narrow repo sanity check.
 
 Local upstream clones live in ignored `refs/`:

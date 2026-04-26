@@ -16,14 +16,24 @@ Do this only when the repo is fresh or the environment changed:
 4. Ensure the SynLoc dataset is present at `data/SoccerNet/SpiideoSynLoc`.
 5. Record exact dataset files, sizes, and any checksums in `CURRENT.md`.
 
-If data is missing, download through the official SoccerNet path using the local `.env` credentials. Keep archives and extracted files out of git.
+If data is missing, download through the official SoccerNet path using the local `.env` credentials. Prefer:
+
+```bash
+python3 scripts/download_synloc.py --version fullhd
+```
+
+Keep archives and extracted files out of git.
 
 ## baseline-once
 
 Before inventing model ideas:
 
 1. Run the official SSKit baseline or the thinnest equivalent local baseline.
-2. Evaluate with the official SSKit `mAP-LocSim` path on validation.
+2. Evaluate with the official SSKit `mAP-LocSim` path on validation:
+
+   ```bash
+   python3 scripts/evaluate_synloc.py --pred runs/<tag>/results.json --out runs/<tag>/metrics.json
+   ```
 3. Record:
    - command,
    - commit,

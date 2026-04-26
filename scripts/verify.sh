@@ -24,5 +24,7 @@ if [ -d refs ] && git status --short --ignored refs | grep -v '^!! refs/' >/dev/
 fi
 
 python3 -m py_compile scripts/ask_council.py
+python3 -m py_compile scripts/download_synloc.py
+python3 -m py_compile scripts/evaluate_synloc.py
 
 echo "verify ok"
