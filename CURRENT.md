@@ -16,20 +16,22 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Local credentials file exists: `.env`.
 - `.env` has `HF_TOKEN` and `SOCCERNET_PASSWORD`.
 - GitHub CLI is already authenticated as `DMontgomery40`.
-- Data download helper exists: `scripts/download_synloc.py`.
-- Official metric wrapper exists: `scripts/evaluate_synloc.py`.
-- Repo volume has about 13 GiB free as of 2026-04-26; this is likely not enough for the full SynLoc dataset.
+- Data download helper exists: `scripts/download_synloc.py`, but it is intended for cloud job payloads.
+- Official metric wrapper exists: `scripts/evaluate_synloc.py`, but meaningful metric runs belong on cloud CUDA GPUs.
+- Repo volume has about 137 GiB free as of 2026-04-26 after owner cleanup.
+- Local model validation is explicitly out of scope because local MLX/Mac execution has no parity with cloud CUDA training and inference.
 
 ## Unknowns
 
 - Current public/test/challenge leaderboard top score.
-- Dataset presence/checksum.
-- Baseline local validation score.
+- Cloud dataset presence/checksum.
+- Baseline cloud validation score.
 - Codabench credentials/session status.
-- Where to store the dataset if local disk stays tight.
+- Whether SoccerNet/Spiideo terms allow private HF dataset mirroring, or require per-job official-source download.
+- Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
 
 ## Next Action
 
-1. Free disk space or choose an external dataset root for `data/SoccerNet/SpiideoSynLoc`.
-2. Establish the official baseline score locally.
+1. Create the first tiny Hugging Face Jobs smoke run for environment, credentials, SSKit install, and dataset access.
+2. Establish the official baseline score on cloud CUDA.
 3. Start the first isolated experiment branch only after baseline is recorded.

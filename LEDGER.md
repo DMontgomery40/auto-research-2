@@ -2,9 +2,9 @@
 
 Primary metric: `mAP-LocSim` (higher is better).
 
-| Date | Tag | Commit | Dataset | Eval command | Score | Threshold | Cost | Runtime | Decision | Notes |
-|---|---|---|---|---|---:|---:|---:|---:|---|---|
-| 2026-04-26 | setup | pending | unknown | pending | 0.000 | 0.000 | $0.00 | 0m | keep | Repo initialized; baseline not run yet. |
+| Date | Tag | Commit | Dataset | Cloud Runtime | Eval command | Score | Threshold | Cost | Runtime | Decision | Notes |
+|---|---|---|---|---|---|---:|---:|---:|---:|---|---|
+| 2026-04-26 | setup | pending | unknown | none | pending | 0.000 | 0.000 | $0.00 | 0m | keep | Repo initialized; baseline not run yet. |
 
 ## Leaderboard Tracking
 

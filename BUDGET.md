@@ -6,7 +6,7 @@ Week starts: Monday.
 
 | Date | Tag | Provider | Hardware | Est. Cost | Actual Cost | Purpose | Result |
 |---|---|---|---|---:|---:|---|---|
-| 2026-04-26 | setup | local | CPU | $0.00 | $0.00 | Repo setup | Done |
+| 2026-04-26 | setup | local | CPU | $0.00 | $0.00 | Control-plane repo setup | Done |
 
 ## Spend Rule
 

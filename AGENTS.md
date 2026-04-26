@@ -17,7 +17,7 @@ Code is justified when it:
 - removes repeated manual friction,
 - prevents expensive mistakes,
 - makes a run reproducible, or
-- converts official devkit behavior into a stable local command.
+- converts official devkit behavior into a stable cloud job command.
 
 ## Repository Shape
 
@@ -29,6 +29,14 @@ Code is justified when it:
 - `COUNCIL.md` documents the sibling council queue.
 - `scripts/` contains small helpers only.
 - `refs/`, `data/`, `runs/`, `outputs/`, `models/`, and `worktrees/` are local-only and ignored.
+
+## Runtime Model
+
+Local is orchestration only. This machine is MLX/Mac-shaped and has no parity with the CUDA GPU training and inference environment.
+
+Do not validate model quality locally. Do not make keep/discard decisions from local ML scores.
+
+Local commands are allowed for repo sanity, syntax, packaging, council queueing, and log review. Meaningful baseline, training, inference, evaluation, threshold selection, and prediction generation must run on cloud CUDA GPUs, preferably Hugging Face Jobs while the budget allows.
 
 ## Loop Contract
 
@@ -50,10 +58,10 @@ Inside the loop:
 
 ## Experiment Discipline
 
-- Same seed, same dataset SHA, same eval command for comparable runs.
+- Same seed, same dataset SHA, same cloud eval command, same GPU class when comparing runs.
 - Treat validation-selected score thresholds as validation-only unless the threshold is then fixed for test/challenge.
 - Keep generated predictions, checkpoints, logs, and data out of git.
-- Prefer a working baseline and tight local evaluator before any GPU-heavy idea.
+- Prefer a tiny cloud smoke job before any expensive GPU-heavy idea.
 - Spend compute like it is real money. It is.
 
 ## Budget

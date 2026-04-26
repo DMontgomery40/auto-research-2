@@ -1,12 +1,12 @@
 # Ideas
 
-Do not spend GPU money until baseline and evaluator are real.
+Do not spend real GPU money until a tiny cloud smoke job proves the environment, credentials, SSKit install, and artifact persistence.
 
 ## Baseline and Infrastructure
 
-- Reproduce the SSKit YOLO baseline on a tiny sample.
-- Build the thinnest local evaluation command around `sskit.coco.LocSimCOCOeval`.
-- Produce a valid `results.json` plus `metadata.json` zip for local validation.
+- Reproduce the SSKit YOLO baseline on a tiny cloud CUDA sample.
+- Build the thinnest cloud evaluation command around `sskit.coco.LocSimCOCOeval`.
+- Produce a valid `results.json` plus `metadata.json` zip from cloud predictions.
 - Find a reliable way to read the Codabench leaderboard score without scraping private or leaked content.
 
 ## Model Directions
