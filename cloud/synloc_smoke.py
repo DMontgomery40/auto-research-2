@@ -2,8 +2,8 @@
 # dependencies = [
 #   "huggingface_hub>=0.24.0",
 #   "SoccerNet",
-#   "sskit",
-#   "xtcocotools"
+#   "opencv-python-headless",
+#   "sskit"
 # ]
 # ///
 from __future__ import annotations
@@ -42,7 +42,6 @@ def main() -> None:
 
     import SoccerNet  # noqa: F401
     import sskit  # noqa: F401
-    import xtcocotools  # noqa: F401
 
     api = HfApi(token=os.environ["HF_TOKEN"])
     whoami = api.whoami()
@@ -56,7 +55,7 @@ def main() -> None:
         "model_repo": os.environ["HF_MODEL_REPO"],
         "nvidia_smi_ok": nvidia["ok"],
         "nvidia_smi_stdout_tail": nvidia.get("stdout", ""),
-        "imports": ["SoccerNet", "sskit", "xtcocotools"],
+        "imports": ["SoccerNet", "sskit"],
     }
     api.upload_file(
         repo_id=os.environ["HF_DATASET_REPO"],
