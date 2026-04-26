@@ -22,3 +22,5 @@
 {"blocked_phase": "dataset_cache_valid_pending", "event": "still_blocked_missing_secret", "missing": ["SOCCERNET_USERNAME"], "ts": "2026-04-26T20:53:03.193913Z"}
 {"active_job": null, "event": "tick_start", "phase": "blocked_missing_secret", "ts": "2026-04-26T20:54:41.971957Z"}
 {"blocked_phase": "dataset_cache_valid_pending", "event": "still_blocked_missing_secret", "missing": ["SOCCERNET_USERNAME"], "ts": "2026-04-26T20:54:41.972072Z"}
+{"active_job": null, "event": "tick_start", "phase": "blocked_missing_secret", "ts": "2026-04-26T22:29:35.517945Z"}
+{"blocked_phase": "dataset_cache_valid_pending", "event": "still_blocked_missing_secret", "missing": ["SOCCERNET_USERNAME"], "ts": "2026-04-26T22:29:35.518026Z"}
