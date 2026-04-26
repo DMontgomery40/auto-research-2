@@ -42,6 +42,9 @@ jobs:
         with:
           token: ${{ github.token }}
 
+      - name: Refresh state before tick
+        run: git pull --ff-only
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -59,6 +62,10 @@ jobs:
           git add autonomy/state.json autonomy/events.jsonl
           if ! git diff --cached --quiet; then
             git commit -m "Record autonomy tick"
-            git pull --rebase
+            if ! git pull --rebase; then
+              git rebase --abort || true
+              echo "Remote autonomy state changed; dropping stale tick state."
+              exit 0
+            fi
             git push
           fi
