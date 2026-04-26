@@ -56,7 +56,12 @@ Use Hugging Face Jobs or another cloud CUDA GPU runtime for:
 - threshold selection,
 - challenge-style prediction generation.
 
-Dataset storage rule: prefer official-source download inside the cloud job. Mirror the dataset into a private Hugging Face dataset only if the SoccerNet/Spiideo terms allow it. Checkpoints, logs, metrics, and predictions can live in private HF repos or job artifacts when allowed.
+Dataset storage rule: the owner has signed the SoccerNet NDA and has an official SoccerNet password, so SynLoc data is cleared for this project. Use private Hugging Face storage as the working cloud cache:
+
+- Dataset/cache repo: `dmontgomery40/auto-research-2-synloc-data`
+- Model/checkpoint repo: `dmontgomery40/auto-research-2-synloc-models`
+
+Keep these repos private. Checkpoints, logs, metrics, and predictions can live there or in job artifacts.
 
 ## First Run
 

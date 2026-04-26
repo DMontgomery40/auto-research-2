@@ -20,6 +20,9 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Official metric wrapper exists: `scripts/evaluate_synloc.py`, but meaningful metric runs belong on cloud CUDA GPUs.
 - Repo volume has about 137 GiB free as of 2026-04-26 after owner cleanup.
 - Local model validation is explicitly out of scope because local MLX/Mac execution has no parity with cloud CUDA training and inference.
+- Owner has signed the SoccerNet NDA and has an official SoccerNet password; SynLoc data is cleared for this project.
+- Private HF dataset/cache repo exists: `dmontgomery40/auto-research-2-synloc-data`.
+- Private HF model/checkpoint repo exists: `dmontgomery40/auto-research-2-synloc-models`.
 
 ## Unknowns
 
@@ -27,8 +30,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Cloud dataset presence/checksum.
 - Baseline cloud validation score.
 - Codabench credentials/session status.
-- Whether SoccerNet/Spiideo terms allow private HF dataset mirroring, or require per-job official-source download.
-- Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
+- Exact Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
 
 ## Next Action
 

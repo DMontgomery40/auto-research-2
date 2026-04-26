@@ -38,6 +38,11 @@ Do not validate model quality locally. Do not make keep/discard decisions from l
 
 Local commands are allowed for repo sanity, syntax, packaging, council queueing, and log review. Meaningful baseline, training, inference, evaluation, threshold selection, and prediction generation must run on cloud CUDA GPUs, preferably Hugging Face Jobs while the budget allows.
 
+The owner has signed the SoccerNet NDA and has an official SoccerNet password. Treat SynLoc data as cleared for this project and use private Hugging Face storage for cloud dataset/cache work:
+
+- `dmontgomery40/auto-research-2-synloc-data`
+- `dmontgomery40/auto-research-2-synloc-models`
+
 ## Loop Contract
 
 Use this shape:

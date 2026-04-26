@@ -24,7 +24,12 @@ Do this only when the repo is fresh or the environment changed:
 4. Ensure the SynLoc dataset is present in the cloud runtime or cloud storage used by jobs.
 5. Record exact dataset files, sizes, and any checksums in `CURRENT.md`.
 
-If data is missing, download through the official SoccerNet path inside a cloud job using the `.env` credentials as job secrets. `scripts/download_synloc.py` exists as a payload helper; do not run it locally for parity. Mirror the raw dataset into a private Hugging Face dataset only if the SoccerNet/Spiideo terms allow it.
+The owner has signed the SoccerNet NDA and has an official SoccerNet password, so SynLoc data is cleared for this project. Use private Hugging Face storage as the cloud cache:
+
+- `HF_DATASET_REPO=dmontgomery40/auto-research-2-synloc-data`
+- `HF_MODEL_REPO=dmontgomery40/auto-research-2-synloc-models`
+
+If data is missing, download through the official SoccerNet path inside a cloud job using the `.env` credentials as job secrets, then mirror/cache it in the private dataset repo. `scripts/download_synloc.py` exists as a payload helper; do not run it locally for parity.
 
 ```bash
 python3 scripts/download_synloc.py --version fullhd
