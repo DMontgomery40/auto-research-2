@@ -1,10 +1,21 @@
 {
-  "active_job": null,
+  "active_job": {
+    "cost_estimate_usd": 0.25,
+    "flavor": "t4-small",
+    "id": "69ee7933d2c8bd8662bd02f1",
+    "label": "cloud-smoke",
+    "next_phase": "dataset_cache_valid_pending",
+    "phase": "cloud_smoke_pending",
+    "status": "RUNNING",
+    "submitted_at": "2026-04-26T20:44:35.763856Z",
+    "url": "https://huggingface.co/jobs/dmontgomery40/69ee7933d2c8bd8662bd02f1"
+  },
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
   "history": [],
-  "phase": "cloud_smoke_pending",
-  "spent_estimate_usd": 0.0,
+  "phase": "cloud_smoke_running",
+  "spent_estimate_usd": 0.25,
+  "updated_at": "2026-04-26T20:44:35.763991Z",
   "weekly_budget_usd": 25.0
 }
