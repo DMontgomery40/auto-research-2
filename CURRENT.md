@@ -18,6 +18,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - GitHub CLI is already authenticated as `DMontgomery40`.
 - Data download helper exists: `scripts/download_synloc.py`.
 - Official metric wrapper exists: `scripts/evaluate_synloc.py`.
+- Repo volume has about 13 GiB free as of 2026-04-26; this is likely not enough for the full SynLoc dataset.
 
 ## Unknowns
 
@@ -25,9 +26,10 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Dataset presence/checksum.
 - Baseline local validation score.
 - Codabench credentials/session status.
+- Where to store the dataset if local disk stays tight.
 
 ## Next Action
 
-1. Confirm or download `data/SoccerNet/SpiideoSynLoc`.
+1. Free disk space or choose an external dataset root for `data/SoccerNet/SpiideoSynLoc`.
 2. Establish the official baseline score locally.
 3. Start the first isolated experiment branch only after baseline is recorded.
