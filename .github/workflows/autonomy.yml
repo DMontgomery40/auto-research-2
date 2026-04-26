@@ -22,6 +22,7 @@ jobs:
       GITHUB_REPOSITORY: ${{ github.repository }}
       GITHUB_TOKEN: ${{ github.token }}
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      SOCCERNET_USERNAME: ${{ secrets.SOCCERNET_USERNAME }}
       SOCCERNET_PASSWORD: ${{ secrets.SOCCERNET_PASSWORD }}
       WEEKLY_BUDGET_USD: "25"
     steps:

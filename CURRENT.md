@@ -21,6 +21,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Repo volume has about 137 GiB free as of 2026-04-26 after owner cleanup.
 - Local model validation is explicitly out of scope because local MLX/Mac execution has no parity with cloud CUDA training and inference.
 - Owner has signed the SoccerNet NDA and has an official SoccerNet password; SynLoc data is cleared for this project.
+- Dataset download also requires the Spiideo Research username/email as `SOCCERNET_USERNAME`.
 - Private HF dataset/cache repo exists: `dmontgomery40/auto-research-2-synloc-data`.
 - Private HF model/checkpoint repo exists: `dmontgomery40/auto-research-2-synloc-models`.
 - Persistent heartbeat exists: `.github/workflows/autonomy.yml`.
@@ -32,11 +33,12 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Cloud dataset presence/checksum.
 - Baseline cloud validation score.
 - Codabench credentials/session status.
+- `SOCCERNET_USERNAME` GitHub secret.
 - Exact Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
 
 ## Next Action
 
-1. Push and enable the GitHub Actions heartbeat.
-2. Let the controller submit/check the first tiny Hugging Face Jobs smoke run.
+1. Add `SOCCERNET_USERNAME` as a GitHub repo secret.
+2. Resume `dataset_cache_valid_pending`.
 3. Establish the official baseline score on cloud CUDA.
 4. Start the first isolated experiment branch only after baseline is recorded.

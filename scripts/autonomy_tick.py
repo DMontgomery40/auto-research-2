@@ -38,6 +38,7 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
         "flavor": "cpu-upgrade",
         "timeout": "6h",
         "python": "3.10",
+        "required_secrets": ["SOCCERNET_USERNAME", "SOCCERNET_PASSWORD"],
         "cost_estimate_usd": 1.0,
         "next_phase": "baseline_probe_pending",
         "env": {"SYNLOC_SPLITS": "valid", "SYNLOC_VERSION": "fullhd"},
@@ -48,6 +49,7 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
         "flavor": "t4-small",
         "timeout": "2h",
         "python": "3.10",
+        "required_secrets": [],
         "cost_estimate_usd": 1.5,
         "next_phase": "baseline_full_pending",
         "env": {"SYNLOC_SPLIT": "valid", "SYNLOC_VERSION": "fullhd", "BASELINE_MAX_IMAGES": "64"},
@@ -58,6 +60,7 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
         "flavor": "l4x1",
         "timeout": "6h",
         "python": "3.10",
+        "required_secrets": [],
         "cost_estimate_usd": 6.0,
         "next_phase": "council_after_baseline_pending",
         "env": {"SYNLOC_SPLIT": "valid", "SYNLOC_VERSION": "fullhd", "BASELINE_MAX_IMAGES": "0"},
@@ -136,6 +139,17 @@ def create_issue(title: str, body: str) -> None:
             append_event("issue_create_failed", title=title, error=repr(exc), retry_error=repr(retry_exc))
 
 
+def block_once(state: dict[str, Any], *, phase: str, title: str, body: str, missing: list[str]) -> None:
+    blocker = state.get("blocker") or {}
+    state["phase"] = "blocked_missing_secret"
+    state["blocked_phase"] = phase
+    state["blocked_missing"] = missing
+    state["blocker"] = {"title": title, "created_at": blocker.get("created_at") or utc_now()}
+    append_event("blocked_missing_secret", phase=phase, missing=missing)
+    if blocker.get("title") != title:
+        create_issue(title, body)
+
+
 def job_status(job: Any) -> str:
     stage = getattr(getattr(job, "status", None), "stage", None)
     return getattr(stage, "value", str(stage))
@@ -200,6 +214,22 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
         append_event("no_job_for_phase", phase=phase)
         return
 
+    required_secrets = spec.get("required_secrets", [])
+    missing = [key for key in required_secrets if not os.getenv(key)]
+    if missing:
+        block_once(
+            state,
+            phase=phase,
+            missing=missing,
+            title=f"Autonomy blocked: missing {', '.join(missing)}",
+            body=(
+                f"The controller reached `{phase}` but the GitHub Actions environment is missing: `{', '.join(missing)}`.\n\n"
+                "Add the missing repository secret(s), then resume by setting `autonomy/state.json` phase back to "
+                f"`{phase}` or by asking Codex to resume the blocked phase."
+            ),
+        )
+        return
+
     budget = float(os.getenv("WEEKLY_BUDGET_USD", state.get("weekly_budget_usd", 25.0)))
     spent = float(state.get("spent_estimate_usd", 0.0))
     cost = float(spec["cost_estimate_usd"])
@@ -222,6 +252,8 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
         "HF_TOKEN": os.environ["HF_TOKEN"],
         "SOCCERNET_PASSWORD": os.environ["SOCCERNET_PASSWORD"],
     }
+    if os.getenv("SOCCERNET_USERNAME"):
+        secrets["SOCCERNET_USERNAME"] = os.environ["SOCCERNET_USERNAME"]
     script = ROOT / spec["script"]
     if dry_run:
         append_event("dry_run_submit", phase=phase, script=str(script), spec=spec)
@@ -271,6 +303,16 @@ def main() -> None:
 
     api = HfApi(token=os.environ["HF_TOKEN"])
     append_event("tick_start", phase=state.get("phase"), active_job=state.get("active_job"))
+    if state.get("phase") == "blocked_missing_secret":
+        missing = [key for key in state.get("blocked_missing", []) if not os.getenv(key)]
+        if missing:
+            append_event("still_blocked_missing_secret", missing=missing, blocked_phase=state.get("blocked_phase"))
+            write_state(state)
+            return
+        state["phase"] = state.pop("blocked_phase", "dataset_cache_valid_pending")
+        state.pop("blocked_missing", None)
+        state.pop("blocker", None)
+        append_event("blocker_cleared", phase=state.get("phase"))
     if not inspect_active_job(api, state):
         submit_next_job(api, state, dry_run=args.dry_run)
     write_state(state)

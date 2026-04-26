@@ -37,7 +37,10 @@ def main() -> None:
     args = parser.parse_args()
 
     load_env(ROOT / ".env")
+    username = os.getenv("SOCCERNET_USERNAME") or os.getenv("SPIIDEO_USERNAME")
     password = os.getenv("SOCCERNET_PASSWORD")
+    if not username:
+        raise SystemExit("SOCCERNET_USERNAME is missing from .env or environment.")
     if not password:
         raise SystemExit("SOCCERNET_PASSWORD is missing from .env or environment.")
 
@@ -45,6 +48,7 @@ def main() -> None:
     from SoccerNet.Downloader import SoccerNetDownloader
 
     downloader = SoccerNetDownloader(LocalDirectory=str(args.root))
+    downloader.getSpiideoCredentials = lambda: (username, password)
     kwargs = {"task": "SpiideoSynLoc", "split": args.splits, "password": password}
     if args.version == "fullhd":
         kwargs["version"] = "fullhd"

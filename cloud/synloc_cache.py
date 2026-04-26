@@ -29,7 +29,7 @@ def sha256(path: Path) -> str:
 
 
 def main() -> None:
-    required = ["HF_TOKEN", "SOCCERNET_PASSWORD", "HF_DATASET_REPO"]
+    required = ["HF_TOKEN", "SOCCERNET_USERNAME", "SOCCERNET_PASSWORD", "HF_DATASET_REPO"]
     missing = [key for key in required if not os.getenv(key)]
     if missing:
         raise RuntimeError(f"Missing required environment variables: {missing}")
@@ -42,6 +42,7 @@ def main() -> None:
     root.mkdir(parents=True, exist_ok=True)
 
     downloader = SoccerNetDownloader(LocalDirectory=str(root))
+    downloader.getSpiideoCredentials = lambda: (os.environ["SOCCERNET_USERNAME"], os.environ["SOCCERNET_PASSWORD"])
     kwargs = {
         "task": "SpiideoSynLoc",
         "split": splits,
