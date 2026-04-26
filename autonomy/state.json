@@ -1,5 +1,13 @@
 {
   "active_job": null,
+  "blocked_missing": [
+    "SOCCERNET_USERNAME"
+  ],
+  "blocked_phase": "dataset_cache_valid_pending",
+  "blocker": {
+    "created_at": "2026-04-26T20:54:00Z",
+    "title": "Autonomy blocked: missing SOCCERNET_USERNAME"
+  },
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
@@ -62,15 +70,7 @@
     }
   ],
   "phase": "blocked_missing_secret",
-  "blocked_phase": "dataset_cache_valid_pending",
-  "blocked_missing": [
-    "SOCCERNET_USERNAME"
-  ],
-  "blocker": {
-    "created_at": "2026-04-26T20:54:00Z",
-    "title": "Autonomy blocked: missing SOCCERNET_USERNAME"
-  },
   "spent_estimate_usd": 1.75,
-  "updated_at": "2026-04-26T20:50:19.764827Z",
+  "updated_at": "2026-04-26T20:53:03.193937Z",
   "weekly_budget_usd": 25.0
 }
