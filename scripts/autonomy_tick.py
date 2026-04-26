@@ -229,7 +229,6 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
         secrets=secrets,
         flavor=spec["flavor"],
         timeout=spec["timeout"],
-        _repo="auto-research-2-job-scripts",
         token=os.environ["HF_TOKEN"],
     )
     active = {
