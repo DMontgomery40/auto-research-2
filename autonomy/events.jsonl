@@ -20,3 +20,5 @@
 {"event":"job_failed_blocked","job_id":"69ee7a8bd70108f37ace0389","reason":"SoccerNet downloader requires Spiideo Research username/email in addition to password","ts":"2026-04-26T20:54:00Z"}
 {"active_job": null, "event": "tick_start", "phase": "blocked_missing_secret", "ts": "2026-04-26T20:53:03.193835Z"}
 {"blocked_phase": "dataset_cache_valid_pending", "event": "still_blocked_missing_secret", "missing": ["SOCCERNET_USERNAME"], "ts": "2026-04-26T20:53:03.193913Z"}
+{"active_job": null, "event": "tick_start", "phase": "blocked_missing_secret", "ts": "2026-04-26T20:54:41.971957Z"}
+{"blocked_phase": "dataset_cache_valid_pending", "event": "still_blocked_missing_secret", "missing": ["SOCCERNET_USERNAME"], "ts": "2026-04-26T20:54:41.972072Z"}
