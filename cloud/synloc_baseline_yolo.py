@@ -3,8 +3,6 @@
 #   "huggingface_hub>=0.24.0",
 #   "torch",
 #   "torchvision",
-#   "ultralytics",
-#   "opencv-python-headless",
 #   "sskit @ git+https://github.com/Spiideo/sskit.git",
 #   "numpy<2",
 #   "xtcocotools"
@@ -19,10 +17,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
+import torch
 from huggingface_hub import HfApi, snapshot_download
 from sskit import image_to_ground
 from sskit.coco import LocSimCOCOeval
-from ultralytics import YOLO
+from torchvision.io import read_image
+from torchvision.models.detection import FasterRCNN_ResNet50_FPN_V2_Weights, fasterrcnn_resnet50_fpn_v2
 from xtcocotools.coco import COCO
 
 
@@ -96,8 +96,10 @@ def main() -> None:
     split = os.getenv("SYNLOC_SPLIT", "valid")
     version = os.getenv("SYNLOC_VERSION", "fullhd")
     max_images = int(os.getenv("BASELINE_MAX_IMAGES", "64"))
-    imgsz = int(os.getenv("BASELINE_IMGSZ", "1280"))
-    model_name = os.getenv("BASELINE_MODEL", "yolov8x.pt")
+    score_floor = float(os.getenv("BASELINE_SCORE_FLOOR", "0.05"))
+    model_name = os.getenv("BASELINE_MODEL", "fasterrcnn_resnet50_fpn_v2")
+    if model_name != "fasterrcnn_resnet50_fpn_v2":
+        raise RuntimeError(f"Unsupported BASELINE_MODEL={model_name!r}")
 
     cache_dir = Path("/tmp/hf-synloc-cache")
     data_root = Path("/tmp/SoccerNet")
@@ -114,42 +116,45 @@ def main() -> None:
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
     images = gt["images"][: max_images or None]
 
-    model = YOLO(model_name)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    weights = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
+    preprocess = weights.transforms()
+    model = fasterrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=score_floor)
+    model.to(device).eval()
+
     results = []
     det_id = 1
-    for image in images:
-        path = image_path(data_root, image["file_name"])
-        width = float(image["width"])
-        height = float(image["height"])
-        pred = model.predict(str(path), imgsz=imgsz, verbose=False)[0]
-        names = pred.names
-        boxes = pred.boxes
-        if boxes is None:
-            continue
-        xyxy = boxes.xyxy.cpu().numpy()
-        conf = boxes.conf.cpu().numpy()
-        cls = boxes.cls.cpu().numpy().astype(int)
-        for box, score, class_id in zip(xyxy, conf, cls):
-            if names.get(int(class_id)) != "person":
-                continue
-            x1, y1, x2, y2 = [float(v) for v in box]
-            point = np.array([[(x1 + x2) / 2.0, y2]], dtype=np.float32)
-            normalized = ((point - np.array([[(width - 1) / 2.0, (height - 1) / 2.0]], dtype=np.float32)) / width).astype(np.float32)
-            bev = image_to_ground(image["camera_matrix"], image["undist_poly"], normalized)[0]
-            results.append(
-                {
-                    "area": 0,
-                    "bbox": [x1, y1, x2 - x1, y2 - y1],
-                    "category_id": 1,
-                    "id": det_id,
-                    "image_id": image["id"],
-                    "position_on_pitch": [float(bev[0]), float(bev[1]), 0.0],
-                    "score": float(score),
-                }
-            )
-            det_id += 1
+    with torch.inference_mode():
+        for image in images:
+            path = image_path(data_root, image["file_name"])
+            width = float(image["width"])
+            height = float(image["height"])
+            tensor = preprocess(read_image(str(path))).to(device)
+            pred = model([tensor])[0]
+            xyxy = pred["boxes"].detach().cpu().numpy()
+            conf = pred["scores"].detach().cpu().numpy()
+            cls = pred["labels"].detach().cpu().numpy().astype(int)
+            for box, score, class_id in zip(xyxy, conf, cls):
+                if int(class_id) != 1:
+                    continue
+                x1, y1, x2, y2 = [float(v) for v in box]
+                point = np.array([[(x1 + x2) / 2.0, y2]], dtype=np.float32)
+                normalized = ((point - np.array([[(width - 1) / 2.0, (height - 1) / 2.0]], dtype=np.float32)) / width).astype(np.float32)
+                bev = image_to_ground(image["camera_matrix"], image["undist_poly"], normalized)[0]
+                results.append(
+                    {
+                        "area": 0,
+                        "bbox": [x1, y1, x2 - x1, y2 - y1],
+                        "category_id": 1,
+                        "id": det_id,
+                        "image_id": image["id"],
+                        "position_on_pitch": [float(bev[0]), float(bev[1]), 0.0],
+                        "score": float(score),
+                    }
+                )
+                det_id += 1
 
-    run_id = f"baseline-yolo-{utc_now().replace(':', '-')}"
+    run_id = f"baseline-torchvision-{utc_now().replace(':', '-')}"
     out_dir = Path("/tmp") / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
     pred_path = out_dir / "results.json"
@@ -163,6 +168,8 @@ def main() -> None:
         "version": version,
         "max_images": max_images,
         "model": model_name,
+        "score_floor": score_floor,
+        "device": str(device),
         "num_images": len(images),
         "num_detections": len(results),
         "metrics": metrics,

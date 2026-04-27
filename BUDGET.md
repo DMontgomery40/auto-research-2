@@ -11,6 +11,7 @@ Week starts: Monday.
 | 2026-04-26 | dataset-cache-valid attempts | HF Jobs | CPU upgrade | $2.00 | pending | Cache fullhd validation split in private HF dataset repo | Passed on second attempt |
 | 2026-04-27 | baseline-probe | HF Jobs | T4 small | $1.50 | pending | Small YOLO validation probe | Failed before execution; patched and retrying |
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small YOLO validation probe | Failed on NumPy ABI; pinned `numpy<2` and retrying |
+| 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Failed on `libGL`; switched to TorchVision detector and retrying |
 
 ## Spend Rule
 

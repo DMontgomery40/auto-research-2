@@ -9,6 +9,7 @@ Primary metric: `mAP-LocSim` (higher is better).
 | 2026-04-26 | dataset-cache-valid | 19f67af | fullhd valid | HF Jobs `cpu-upgrade` | `cloud/synloc_cache.py` | 0.000 | 0.000 | $2.00 est | n/a | keep | First run lacked username; job `69ee959bd70108f37ace0415` cached `annotations.zip` and `val.zip` to private HF dataset repo. |
 | 2026-04-27 | baseline-probe | 19f67af | fullhd valid | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.000 | 0.000 | $1.50 est | 0m | retry | Job `69ee962cd2c8bd8662bd0432` failed before execution on bare PEP 723 `git+https://...` dependency; dependency patched and phase reset. |
 | 2026-04-27 | baseline-probe | 9a57490 | fullhd valid | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.000 | 0.000 | $1.50 est | 51s | retry | Job `69efa0ccd70108f37ace0980` failed on `xtcocotools` NumPy ABI mismatch; pinned `numpy<2` and phase reset. |
+| 2026-04-27 | baseline-probe | 1c98108 | fullhd valid | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.000 | 0.000 | $1.50 est | 39s | retry | Job `69efa24bd70108f37ace098f` failed on `libGL.so.1` via `ultralytics`/OpenCV; switched baseline detector to TorchVision Faster R-CNN. |
 
 ## Leaderboard Tracking
 

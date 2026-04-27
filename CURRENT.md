@@ -34,6 +34,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
   - `val.zip` sha256 `a0d19585df77e18253f9d35d4c0b1c07d36af8e53797bc04fc8aa901d7c3d68e`
 - Baseline probe job `69ee962cd2c8bd8662bd0432` failed before execution because the PEP 723 dependency used a bare `git+https://...` URL. It is now patched to `sskit @ git+https://github.com/Spiideo/sskit.git`.
 - Baseline probe job `69efa0ccd70108f37ace0980` got past PEP 723 parsing, then failed on `xtcocotools` versus NumPy 2 ABI compatibility. The baseline job now pins `numpy<2`.
+- Baseline probe job `69efa24bd70108f37ace098f` got past the NumPy issue, then failed because `ultralytics` imported desktop OpenCV and required `libGL.so.1`. The baseline now uses TorchVision Faster R-CNN instead.
 
 ## Unknowns
 
@@ -44,7 +45,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Retry `baseline_probe_pending` with `numpy<2`.
+1. Retry `baseline_probe_pending` with TorchVision Faster R-CNN.
 2. If the probe succeeds, run `baseline_full_pending` on cloud CUDA.
 3. Record the baseline `mAP-LocSim`, cost, and artifacts in `LEDGER.md`.
 4. Ask council for experiment ideas after baseline is real, then start the first isolated experiment branch.

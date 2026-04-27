@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 1.5,
-    "flavor": "t4-small",
-    "id": "69efa24bd70108f37ace098f",
-    "label": "baseline-probe",
-    "next_phase": "baseline_full_pending",
-    "phase": "baseline_probe_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-04-27T17:52:11.422926Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69efa24bd70108f37ace098f"
-  },
+  "active_job": null,
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
@@ -131,10 +121,23 @@
       "status": "ERROR",
       "submitted_at": "2026-04-27T17:45:48.202680Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69efa0ccd70108f37ace0980"
+    },
+    {
+      "cost_estimate_usd": 1.5,
+      "failed_at": "2026-04-27T17:53:36Z",
+      "flavor": "t4-small",
+      "id": "69efa24bd70108f37ace098f",
+      "label": "baseline-probe",
+      "logs_tail": "Traceback (most recent call last):\n  File \"//synloc_baseline_yolo.py\", line 25, in <module>\n    from ultralytics import YOLO\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/ultralytics/__init__.py\", line 13, in <module>\n    from ultralytics.utils import ASSETS, SETTINGS\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/ultralytics/utils/__init__.py\", line 24, in <module>\n    import cv2\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/cv2/__init__.py\", line 181, in <module>\n    bootstrap()\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/cv2/__init__.py\", line 153, in bootstrap\n    native_module = importlib.import_module(\"cv2\")\nImportError: libGL.so.1: cannot open shared object file: No such file or directory",
+      "next_phase": "baseline_full_pending",
+      "phase": "baseline_probe_pending",
+      "status": "ERROR",
+      "submitted_at": "2026-04-27T17:52:11.422926Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69efa24bd70108f37ace098f"
     }
   ],
-  "phase": "baseline_probe_running",
+  "phase": "baseline_probe_pending",
   "spent_estimate_usd": 7.25,
-  "updated_at": "2026-04-27T17:52:11.423098Z",
+  "updated_at": "2026-04-27T17:53:36Z",
   "weekly_budget_usd": 25.0
 }
