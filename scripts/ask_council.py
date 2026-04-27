@@ -12,7 +12,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 COUNCIL_INBOX = Path("challenge-council") / "data" / "automation_queue" / "inbox"
-MAX_TEXT_CHARS = 20000
+MAX_TEXT_CHARS = 12000
 
 
 def queue_candidates() -> list[Path]:
@@ -78,6 +78,27 @@ def load_json(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {"error": f"{path.name} was not a JSON object"}
 
 
+def compact_history_item(item: dict[str, Any]) -> dict[str, Any]:
+    result = item.get("result") if isinstance(item.get("result"), dict) else {}
+    metrics = result.get("metrics") if isinstance(result.get("metrics"), dict) else {}
+    return {
+        "label": item.get("label"),
+        "id": item.get("id"),
+        "status": item.get("status"),
+        "flavor": item.get("flavor"),
+        "cost_estimate_usd": item.get("cost_estimate_usd"),
+        "submitted_at": item.get("submitted_at"),
+        "completed_at": item.get("completed_at"),
+        "failed_at": item.get("failed_at"),
+        "run_id": result.get("run_id"),
+        "model": result.get("model"),
+        "num_images": result.get("num_images"),
+        "num_detections": result.get("num_detections"),
+        "map_locsim": metrics.get("map_locsim"),
+        "score_threshold": metrics.get("score_threshold"),
+    }
+
+
 def state_summary() -> str:
     state = load_json(ROOT / "autonomy" / "state.json")
     if not state:
@@ -89,7 +110,7 @@ def state_summary() -> str:
         "spent_estimate_usd": state.get("spent_estimate_usd"),
         "weekly_budget_usd": state.get("weekly_budget_usd"),
         "updated_at": state.get("updated_at"),
-        "recent_history": history[-5:],
+        "recent_history": [compact_history_item(item) for item in history[-8:] if isinstance(item, dict)],
     }
     return json.dumps(summary, indent=2, sort_keys=True)
 
@@ -139,6 +160,10 @@ Target: 2026 Spiideo SoccerNet SynLoc
 
 {read_excerpt(ROOT / "COUNCIL_DOSSIER.md")}
 
+## Research Priors
+
+{read_excerpt(ROOT / "RESEARCH_PRIORS.md")}
+
 ## Autonomy State Summary
 
 ```json
@@ -161,24 +186,21 @@ Target: 2026 Spiideo SoccerNet SynLoc
 
 {read_excerpt(ROOT / "IDEAS.md")}
 
-## Operating Program
+## Implementation Pointers
 
-{read_excerpt(ROOT / "program.md")}
+Do not spend Stage 1 reading full source unless needed. The key files are:
 
-## Baseline Implementation Under Review
+- Current baseline script: `cloud/synloc_baseline_yolo.py`
+- Official devkit baseline reference: `refs/sskit/baseline.py`
+- Official evaluator wrapper: `scripts/evaluate_synloc.py`
+- Local operating loop: `program.md`
 
-The current baseline script is included so the council can identify dumb assumptions directly.
-
-{fenced(ROOT / "cloud" / "synloc_baseline_yolo.py", language="python")}
-
-## Official Devkit Baseline Reference
-
-{fenced(ROOT / "refs" / "sskit" / "baseline.py", language="python")}
+The important baseline assumption is already summarized above: current baseline uses generic COCO `person` detections, bbox bottom-center projection, and official `mAP-LocSim`.
 
 ## Recent Autonomy Events
 
 ```jsonl
-{events_tail()}
+{events_tail(30)}
 ```
 """
     (request_dir / "council_request.md").write_text(body, encoding="utf-8")

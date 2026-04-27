@@ -1,9 +1,9 @@
 {
   "active_job": null,
   "council_request": {
-    "path": "/Users/davidmontgomery/challenge-council/data/automation_queue/inbox/20260427T183242Z-synloc-strategy-after-baseline",
-    "queued_at": "2026-04-27T18:32:42.996264Z",
-    "title": "SynLoc strategy after baseline"
+    "path": "/Users/davidmontgomery/challenge-council/data/automation_queue/inbox/20260427T191213Z-synloc-strategy-with-research-priors",
+    "queued_at": "2026-04-27T19:12:13Z",
+    "title": "SynLoc strategy with research priors"
   },
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
@@ -220,8 +220,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69efa541d70108f37ace099f"
     }
   ],
-  "phase": "awaiting_council_report",
+  "phase": "soccermaster_wiring_probe_pending",
   "spent_estimate_usd": 16.25,
-  "updated_at": "2026-04-27T18:45:57.946996Z",
+  "updated_at": "2026-04-27T19:15:43Z",
   "weekly_budget_usd": 25.0
 }

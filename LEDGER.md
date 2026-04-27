@@ -16,7 +16,7 @@ Primary metric: `mAP-LocSim` (higher is better).
 
 ## External Prior
 
-- 2026-04-26 sibling repo `/Users/davidmontgomery/v2d-research` ran copied SoccerMaster GSR adapter probe `synloc-20260426-1308` on 64 deterministic SynLoc validation frames. Score was `mAP-LocSim=0.0` across 54 confidence/role/pitch-bound rows; role decode produced no `player` detections. This is not counted as an `auto-research-2` score, but it is a discard signal for scaling the copied adapter as-is.
+- 2026-04-26 sibling repo `/Users/davidmontgomery/v2d-research` ran copied SoccerMaster GSR adapter probe `synloc-20260426-1308` on 64 deterministic SynLoc validation frames. Score was `mAP-LocSim=0.0` across 54 confidence/role/pitch-bound rows; role decode produced no `player` detections. This is not counted as an `auto-research-2` score, and it should be read as an integration/config failure signal, not a verdict against SoccerMaster. The paper's benchmark numbers make the zero-output path suspicious enough to debug first.
 
 ## Leaderboard Tracking
 

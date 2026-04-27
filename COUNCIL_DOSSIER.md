@@ -39,17 +39,19 @@ That is a lossy generic detector/projection guess. It proves the official metric
 
 The repo was started blank to avoid cross-project contamination, so not all useful soccer-specific context is present in this checkout.
 
+The council should also read `RESEARCH_PRIORS.md`. It gives a compact map of the sibling workbench `/docs/architectures/` research library, current SoccerNet 2026 task direction, official SynLoc paper facts, and published prior-year SoccerNet winner/report lessons. Do not ask the models to ingest the whole docs tree unless a narrow follow-up requires it.
+
 There is a prior sibling SynLoc effort at `/Users/davidmontgomery/v2d-research` with useful evidence:
 
 - `soccana` soccer detector subset baseline on 128 validation frames scored `mAP-LocSim = 0.0005657708628005657`.
 - Pitch-bounds filtering on that same 128-frame slice reached `mAP-LocSim = 0.0009900990099009901`, but did not generalize to 512 frames and should not be promoted blindly.
 - A copied SoccerMaster GSR adapter was tried on 64 deterministic SynLoc validation frames.
 - SoccerMaster attempt result: `mAP-LocSim = 0.0`; role decode produced mostly `ball=18370`, `staff=271`, `goalkeeper=131`, and no `player` detections.
-- Interpretation: do not scale that copied SoccerMaster adapter as-is for SynLoc athlete localization. Still, soccer-specific model/context leads are important and should not be ignored.
+- Interpretation: this is probably a runtime/config/decode failure in our copied adapter path, not a model-quality result. The SoccerMaster paper reports `92.3` athlete-detection AP@50, `50.5` mAP, and `99.2` role accuracy in Table 3, plus strong pitch-registration/camera-calibration transfer. A correct SoccerMaster runtime should not decode no players on ordinary soccer frames.
 
 Council should distinguish:
 
-- "SoccerMaster adapter as previously wired failed" from
+- "SoccerMaster adapter as previously wired failed or was misconfigured" from
 - "soccer-specific models are useless."
 
 Those are not the same statement.
@@ -64,7 +66,8 @@ The council should evaluate, rank, and criticize these directions:
 - Better use of camera calibration, distortion, and world-coordinate loss.
 - Training or fine-tuning a soccer/person detector on SynLoc images rather than using COCO person detection.
 - Postprocessing only after detector/localizer recall is real; do not spend days threshold-tuning near-zero predictions.
-- Using prior soccer assets only when a tiny deterministic slice shows player/person output and metric lift.
+- SoccerMaster wiring audit before any score sweep: verify official/source-faithful weights, class dimensions, role label order, image normalization/resizing, confidence thresholding, raw logits, and whether player/goalkeeper/referee outputs appear before projection.
+- Using prior soccer assets only when a tiny deterministic slice shows raw athlete output and then metric lift.
 - Strong diagnostics: GT matching, projection error histograms, per-camera/per-scene failure analysis, and visual overlays for a small set.
 
 ## Budget And Compute Reality

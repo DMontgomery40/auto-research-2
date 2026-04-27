@@ -37,6 +37,7 @@ Good council requests include:
 - experiment ledger excerpt,
 - ideas already tried,
 - `COUNCIL_DOSSIER.md`,
+- `RESEARCH_PRIORS.md`,
 - `autonomy/state.json` summary and recent `autonomy/events.jsonl`,
 - the baseline implementation being criticized,
 - budget constraints,

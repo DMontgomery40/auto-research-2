@@ -30,6 +30,7 @@ python3 -m py_compile scripts/autonomy_tick.py
 python3 -m py_compile cloud/synloc_smoke.py
 python3 -m py_compile cloud/synloc_cache.py
 python3 -m py_compile cloud/synloc_baseline_yolo.py
+python3 -m py_compile cloud/soccermaster_wiring_probe.py
 
 python3 - <<'PY'
 from pathlib import Path

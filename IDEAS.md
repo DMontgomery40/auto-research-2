@@ -19,10 +19,11 @@ Do not spend real GPU money until a tiny cloud smoke job proves the environment,
 
 ## Soccer-Specific Prior
 
-- SoccerMaster exists in the sibling workbench/research context and is an optional lead, not a mandate.
-- First useful question: can SoccerMaster produce player/person-like detections or role outputs on SynLoc images that can be converted into `position_on_pitch` predictions and beat the TorchVision baseline?
+- SoccerMaster exists in the sibling workbench/research context and is a serious soccer-specific lead, not a mandate.
+- The SoccerMaster paper reports strong spatial benchmarks: Table 3 has `92.3` athlete-detection AP@50, `50.5` mAP, and `99.2` role accuracy for SoccerMaster with pipeline data, far beyond generic vision baselines. A zero SynLoc score is therefore a runtime/config/decode warning before it is a model-quality signal.
+- First useful question: can the code-faithful SoccerMaster runtime load the expected backbone/head weights, decode the expected role labels, and produce player/goalkeeper/referee outputs on SynLoc images before any projection or metric conversion?
 - Sibling evidence from `/Users/davidmontgomery/v2d-research`: scratch run `synloc-20260426-1308` tested the copied SoccerMaster GSR adapter on 64 deterministic SynLoc validation frames with official camera projection and official LocSim eval. All 54 confidence/role/pitch-bound rows scored `mAP-LocSim=0.0`; role decode produced mostly `ball=18370`, `staff=271`, `goalkeeper=131`, and no `player` detections.
-- Do not scale that copied GSR adapter as-is. Retest SoccerMaster only if the experiment changes the decode/head/postprocess, uses it for pitch/keypoint calibration, or otherwise has a specific reason it could produce athlete-like world positions.
+- Treat that as evidence that our adapter/config/postprocess path is probably wrong or incomplete. The next bounded test is a wiring probe: inspect raw detection logits, role logits, class dimensions, role mapping, thresholds, image normalization, and weight placement on cloud CUDA before deciding whether SoccerMaster can or cannot help SynLoc.
 
 ## Risky Ideas
 

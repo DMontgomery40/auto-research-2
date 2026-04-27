@@ -69,6 +69,21 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
         "next_phase": "council_after_baseline_pending",
         "env": {"SYNLOC_SPLIT": "valid", "SYNLOC_VERSION": "fullhd", "BASELINE_MAX_IMAGES": "0"},
     },
+    "soccermaster_wiring_probe_pending": {
+        "label": "soccermaster-wiring-probe",
+        "script": "cloud/soccermaster_wiring_probe.py",
+        "flavor": "l4x1",
+        "timeout": "2h",
+        "python": "3.10",
+        "required_secrets": [],
+        "required_secret_groups": [],
+        "cost_estimate_usd": 2.0,
+        "next_phase": "soccermaster_wiring_probe_review",
+        "env": {
+            "V2D_ASSET_REPO": "dmontgomery40/v2d-research-assets",
+            "SOCCERMASTER_MAX_IMAGES": "4",
+        },
+    },
 }
 
 
@@ -203,9 +218,9 @@ def council_question(state: dict[str, Any]) -> str:
         f"Baseline summary: {baseline_summary(state)}.\n\n"
         "Please recommend the next three highest expected-value experiments to improve official mAP-LocSim within the $25/week budget. "
         "For each, include the smallest CUDA smoke/probe, expected upside, failure signal, and whether to keep/discard.\n\n"
-        "SoccerMaster is available as an optional soccer-specific lead, not a mandate. "
-        "Sibling evidence from /Users/davidmontgomery/v2d-research says the copied SoccerMaster GSR adapter scored mAP-LocSim=0.0 on a 64-frame SynLoc slice and decoded no player detections, mostly ball/staff/goalkeeper. "
-        "Only recommend retesting SoccerMaster if the decode/head/postprocess or pitch-calibration use is meaningfully different."
+        "SoccerMaster is a serious soccer-specific lead, not a mandate. "
+        "The paper reports 92.3 athlete-detection AP@50, 50.5 mAP, and 99.2 role accuracy, so the sibling zero-score run should be treated as a likely runtime/config/decode failure. "
+        "Please recommend how to audit weight placement, role mapping, class dimensions, normalization, thresholds, and raw logits before interpreting SoccerMaster scores."
     )
 
 
