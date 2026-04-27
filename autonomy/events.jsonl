@@ -68,3 +68,6 @@
 {"event": "no_job_for_phase", "phase": "blocked", "ts": "2026-04-27T16:53:21.227050Z"}
 {"active_job": null, "event": "tick_end", "phase": "blocked", "ts": "2026-04-27T16:53:21.227424Z"}
 {"event": "operator_resume", "from_phase": "blocked", "reason": "patched PEP 723 git URL dependency in baseline job", "to_phase": "baseline_probe_pending", "ts": "2026-04-27T17:43:31Z"}
+{"active_job": null, "event": "tick_start", "phase": "baseline_probe_pending", "ts": "2026-04-27T17:45:47.867269Z"}
+{"event": "job_submitted", "job": {"cost_estimate_usd": 1.5, "flavor": "t4-small", "id": "69efa0ccd70108f37ace0980", "label": "baseline-probe", "next_phase": "baseline_full_pending", "phase": "baseline_probe_pending", "status": "RUNNING", "submitted_at": "2026-04-27T17:45:48.202680Z", "url": "https://huggingface.co/jobs/dmontgomery40/69efa0ccd70108f37ace0980"}, "ts": "2026-04-27T17:45:48.202764Z"}
+{"active_job": {"cost_estimate_usd": 1.5, "flavor": "t4-small", "id": "69efa0ccd70108f37ace0980", "label": "baseline-probe", "next_phase": "baseline_full_pending", "phase": "baseline_probe_pending", "status": "RUNNING", "submitted_at": "2026-04-27T17:45:48.202680Z", "url": "https://huggingface.co/jobs/dmontgomery40/69efa0ccd70108f37ace0980"}, "event": "tick_end", "phase": "baseline_probe_running", "ts": "2026-04-27T17:45:48.203142Z"}

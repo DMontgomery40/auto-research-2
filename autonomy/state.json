@@ -1,5 +1,15 @@
 {
-  "active_job": null,
+  "active_job": {
+    "cost_estimate_usd": 1.5,
+    "flavor": "t4-small",
+    "id": "69efa0ccd70108f37ace0980",
+    "label": "baseline-probe",
+    "next_phase": "baseline_full_pending",
+    "phase": "baseline_probe_pending",
+    "status": "RUNNING",
+    "submitted_at": "2026-04-27T17:45:48.202680Z",
+    "url": "https://huggingface.co/jobs/dmontgomery40/69efa0ccd70108f37ace0980"
+  },
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
@@ -110,8 +120,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69ee962cd2c8bd8662bd0432"
     }
   ],
-  "phase": "baseline_probe_pending",
-  "spent_estimate_usd": 4.25,
-  "updated_at": "2026-04-27T17:43:31Z",
+  "phase": "baseline_probe_running",
+  "spent_estimate_usd": 5.75,
+  "updated_at": "2026-04-27T17:45:48.202817Z",
   "weekly_budget_usd": 25.0
 }
