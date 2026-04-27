@@ -13,6 +13,7 @@ Week starts: Monday.
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small YOLO validation probe | Failed on NumPy ABI; pinned `numpy<2` and retrying |
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Failed on `libGL`; switched to TorchVision detector and retrying |
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Failed on missing `scipy`; added dependency and retrying |
+| 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Completed; `mAP-LocSim=0.0001237624` on 64 images |
 
 ## Spend Rule
 

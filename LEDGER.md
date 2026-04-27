@@ -11,6 +11,7 @@ Primary metric: `mAP-LocSim` (higher is better).
 | 2026-04-27 | baseline-probe | 9a57490 | fullhd valid | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.000 | 0.000 | $1.50 est | 51s | retry | Job `69efa0ccd70108f37ace0980` failed on `xtcocotools` NumPy ABI mismatch; pinned `numpy<2` and phase reset. |
 | 2026-04-27 | baseline-probe | 1c98108 | fullhd valid | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.000 | 0.000 | $1.50 est | 39s | retry | Job `69efa24bd70108f37ace098f` failed on `libGL.so.1` via `ultralytics`/OpenCV; switched baseline detector to TorchVision Faster R-CNN. |
 | 2026-04-27 | baseline-probe | e01f8d0 | fullhd valid | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.000 | 0.000 | $1.50 est | 41s | retry | Job `69efa359d2c8bd8662bd113e` failed because GitHub SSKit imports undeclared `scipy`; added explicit `scipy`. |
+| 2026-04-27 | baseline-probe | 3681f37 | fullhd valid 64 images | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.0001237624 | 0.4998428226 | $1.50 est | 79s | keep | Job `69efa455d2c8bd8662bd115b` completed on CUDA with 2,831 detections; artifact run `baseline-torchvision-2026-04-27T18-02-12.913357Z`. |
 
 ## Leaderboard Tracking
 

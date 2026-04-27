@@ -36,17 +36,18 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Baseline probe job `69efa0ccd70108f37ace0980` got past PEP 723 parsing, then failed on `xtcocotools` versus NumPy 2 ABI compatibility. The baseline job now pins `numpy<2`.
 - Baseline probe job `69efa24bd70108f37ace098f` got past the NumPy issue, then failed because `ultralytics` imported desktop OpenCV and required `libGL.so.1`. The baseline now uses TorchVision Faster R-CNN instead.
 - Baseline probe job `69efa359d2c8bd8662bd113e` got past TorchVision imports, then failed because GitHub SSKit imports `scipy` without declaring it. The baseline job now includes `scipy`.
+- Baseline probe job `69efa455d2c8bd8662bd115b` completed on CUDA for 64 validation images with TorchVision Faster R-CNN: `mAP-LocSim=0.00012376237623762376`, 2,831 detections, run artifact `baseline-torchvision-2026-04-27T18-02-12.913357Z`.
 
 ## Unknowns
 
 - Current public/test/challenge leaderboard top score.
-- Baseline cloud validation score.
+- Full cloud validation score.
 - Codabench credentials/session status.
 - Exact Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
 
 ## Next Action
 
-1. Retry `baseline_probe_pending` with TorchVision Faster R-CNN plus explicit `scipy`.
-2. If the probe succeeds, run `baseline_full_pending` on cloud CUDA.
-3. Record the baseline `mAP-LocSim`, cost, and artifacts in `LEDGER.md`.
-4. Ask council for experiment ideas after baseline is real, then start the first isolated experiment branch.
+1. Run `baseline_full_pending` on cloud CUDA.
+2. Record the full baseline `mAP-LocSim`, cost, and artifacts in `LEDGER.md`.
+3. Ask council for experiment ideas after baseline is real.
+4. Start the first isolated experiment branch.
