@@ -110,8 +110,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69ee962cd2c8bd8662bd0432"
     }
   ],
-  "phase": "blocked",
+  "phase": "baseline_probe_pending",
   "spent_estimate_usd": 4.25,
-  "updated_at": "2026-04-27T16:53:21.227087Z",
+  "updated_at": "2026-04-27T17:43:31Z",
   "weekly_budget_usd": 25.0
 }

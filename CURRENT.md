@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-04-26
+Updated: 2026-04-27
 
 ## Mission
 
@@ -14,7 +14,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Local SSKit reference clone: `refs/sskit` at `9e28ad1`.
 - Local Karpathy autoresearch reference clone: `refs/karpathy-autoresearch` at `228791f`.
 - Local credentials file exists: `.env`.
-- `.env` has `HF_TOKEN` and `SOCCERNET_PASSWORD`.
+- `.env` has `HF_TOKEN`, `SOCCERNET_USERNAME`, `SOCCERNET_PASSWORD`, and the separate Spiideo sign-in password alias.
 - GitHub CLI is already authenticated as `DMontgomery40`.
 - Data download helper exists: `scripts/download_synloc.py`, but it is intended for cloud job payloads.
 - Official metric wrapper exists: `scripts/evaluate_synloc.py`, but meaningful metric runs belong on cloud CUDA GPUs.
@@ -28,19 +28,22 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Persistent heartbeat exists: `.github/workflows/autonomy.yml`.
 - Autonomy-labeled issue comments/edits now wake the heartbeat immediately.
 - Controller state exists: `autonomy/state.json`.
+- Cloud smoke succeeded on HF Jobs T4 with SoccerNet and SSKit imports.
+- Cloud dataset cache is present for `fullhd` validation:
+  - `annotations.zip` sha256 `848c15ee5ad00494e636d5ca776f57aa10fd2533ad5bc5088c9702782ebabb87`
+  - `val.zip` sha256 `a0d19585df77e18253f9d35d4c0b1c07d36af8e53797bc04fc8aa901d7c3d68e`
+- Baseline probe job `69ee962cd2c8bd8662bd0432` failed before execution because the PEP 723 dependency used a bare `git+https://...` URL. It is now patched to `sskit @ git+https://github.com/Spiideo/sskit.git`.
 
 ## Unknowns
 
 - Current public/test/challenge leaderboard top score.
-- Cloud dataset presence/checksum.
 - Baseline cloud validation score.
 - Codabench credentials/session status.
-- Confirmed GitHub secrets: `SOCCERNET_USERNAME`, `SOCCERNET_SIGNIN_PASSWORD`, and `SOCCERNET_PASSWORD`.
 - Exact Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
 
 ## Next Action
 
-1. Add `SOCCERNET_USERNAME` as a GitHub repo secret.
-2. Resume `dataset_cache_valid_pending`.
-3. Establish the official baseline score on cloud CUDA.
-4. Start the first isolated experiment branch only after baseline is recorded.
+1. Retry `baseline_probe_pending`.
+2. If the probe succeeds, run `baseline_full_pending` on cloud CUDA.
+3. Record the baseline `mAP-LocSim`, cost, and artifacts in `LEDGER.md`.
+4. Ask council for experiment ideas after baseline is real, then start the first isolated experiment branch.

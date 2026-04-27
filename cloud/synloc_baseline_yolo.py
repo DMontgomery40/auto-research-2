@@ -5,7 +5,7 @@
 #   "torchvision",
 #   "ultralytics",
 #   "opencv-python-headless",
-#   "git+https://github.com/Spiideo/sskit.git",
+#   "sskit @ git+https://github.com/Spiideo/sskit.git",
 #   "xtcocotools"
 # ]
 # ///

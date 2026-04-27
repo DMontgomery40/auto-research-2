@@ -32,6 +32,25 @@ python3 -m py_compile cloud/synloc_cache.py
 python3 -m py_compile cloud/synloc_baseline_yolo.py
 
 python3 - <<'PY'
+from pathlib import Path
+
+for path in sorted(Path("cloud").glob("*.py")):
+    in_pep723 = False
+    for line_no, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.strip()
+        if line == "# /// script":
+            in_pep723 = True
+            continue
+        if line == "# ///":
+            in_pep723 = False
+            continue
+        if in_pep723 and "\"git+" in line:
+            raise SystemExit(
+                f"{path}:{line_no}: PEP 723 URL dependency must use 'package @ git+...'"
+            )
+PY
+
+python3 - <<'PY'
 import json
 from pathlib import Path
 
