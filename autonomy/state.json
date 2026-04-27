@@ -1,8 +1,11 @@
 {
   "active_job": null,
   "council_request": {
-    "path": "/Users/davidmontgomery/challenge-council/data/automation_queue/inbox/20260427T191213Z-synloc-strategy-with-research-priors",
+    "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
+    "failed_at": "2026-04-27T19:17:02Z",
+    "path": "/Users/davidmontgomery/challenge-council/data/automation_queue/failed/20260427T191213Z-synloc-strategy-with-research-priors",
     "queued_at": "2026-04-27T19:12:13Z",
+    "status": "failed",
     "title": "SynLoc strategy with research priors"
   },
   "enabled": true,
