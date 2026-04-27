@@ -33,6 +33,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
   - `annotations.zip` sha256 `848c15ee5ad00494e636d5ca776f57aa10fd2533ad5bc5088c9702782ebabb87`
   - `val.zip` sha256 `a0d19585df77e18253f9d35d4c0b1c07d36af8e53797bc04fc8aa901d7c3d68e`
 - Baseline probe job `69ee962cd2c8bd8662bd0432` failed before execution because the PEP 723 dependency used a bare `git+https://...` URL. It is now patched to `sskit @ git+https://github.com/Spiideo/sskit.git`.
+- Baseline probe job `69efa0ccd70108f37ace0980` got past PEP 723 parsing, then failed on `xtcocotools` versus NumPy 2 ABI compatibility. The baseline job now pins `numpy<2`.
 
 ## Unknowns
 
@@ -43,7 +44,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Retry `baseline_probe_pending`.
+1. Retry `baseline_probe_pending` with `numpy<2`.
 2. If the probe succeeds, run `baseline_full_pending` on cloud CUDA.
 3. Record the baseline `mAP-LocSim`, cost, and artifacts in `LEDGER.md`.
 4. Ask council for experiment ideas after baseline is real, then start the first isolated experiment branch.

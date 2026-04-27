@@ -6,6 +6,7 @@
 #   "ultralytics",
 #   "opencv-python-headless",
 #   "sskit @ git+https://github.com/Spiideo/sskit.git",
+#   "numpy<2",
 #   "xtcocotools"
 # ]
 # ///

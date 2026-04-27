@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 1.5,
-    "flavor": "t4-small",
-    "id": "69efa0ccd70108f37ace0980",
-    "label": "baseline-probe",
-    "next_phase": "baseline_full_pending",
-    "phase": "baseline_probe_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-04-27T17:45:48.202680Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69efa0ccd70108f37ace0980"
-  },
+  "active_job": null,
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
@@ -118,10 +108,23 @@
       "status": "ERROR",
       "submitted_at": "2026-04-26T22:48:12.082896Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69ee962cd2c8bd8662bd0432"
+    },
+    {
+      "cost_estimate_usd": 1.5,
+      "failed_at": "2026-04-27T17:50:39Z",
+      "flavor": "t4-small",
+      "id": "69efa0ccd70108f37ace0980",
+      "label": "baseline-probe",
+      "logs_tail": "Traceback (most recent call last):\n  File \"//synloc_baseline_yolo.py\", line 23, in <module>\n    from sskit.coco import LocSimCOCOeval\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/sskit/coco.py\", line 1, in <module>\n    from xtcocotools.cocoeval import COCOeval\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/xtcocotools/cocoeval.py\", line 5, in <module>\n    from . import mask as maskUtils\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/xtcocotools/mask.py\", line 3, in <module>\n    import xtcocotools._mask as _mask\n  File \"xtcocotools/_mask.pyx\", line 1, in init xtcocotools._mask\nValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject",
+      "next_phase": "baseline_full_pending",
+      "phase": "baseline_probe_pending",
+      "status": "ERROR",
+      "submitted_at": "2026-04-27T17:45:48.202680Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69efa0ccd70108f37ace0980"
     }
   ],
-  "phase": "baseline_probe_running",
+  "phase": "baseline_probe_pending",
   "spent_estimate_usd": 5.75,
-  "updated_at": "2026-04-27T17:45:48.202817Z",
+  "updated_at": "2026-04-27T17:50:39Z",
   "weekly_budget_usd": 25.0
 }

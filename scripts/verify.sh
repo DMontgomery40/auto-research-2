@@ -36,6 +36,7 @@ from pathlib import Path
 
 for path in sorted(Path("cloud").glob("*.py")):
     in_pep723 = False
+    deps = []
     for line_no, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         line = raw.strip()
         if line == "# /// script":
@@ -48,6 +49,10 @@ for path in sorted(Path("cloud").glob("*.py")):
             raise SystemExit(
                 f"{path}:{line_no}: PEP 723 URL dependency must use 'package @ git+...'"
             )
+        if in_pep723 and line.startswith("#   \"") and line.rstrip(",").endswith("\""):
+            deps.append(line.split("\"", 2)[1])
+    if "xtcocotools" in deps and not any(dep.startswith("numpy<2") for dep in deps):
+        raise SystemExit(f"{path}: xtcocotools cloud jobs must pin numpy<2")
 PY
 
 python3 - <<'PY'
