@@ -458,48 +458,6 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
     append_event("job_submitted", job=active)
 
 
-def queue_council_after_baseline(state: dict[str, Any], *, dry_run: bool) -> bool:
-    if state.get("phase") != "council_after_baseline_pending":
-        return False
-
-    title = "SynLoc strategy after full baseline"
-    question = (
-        "Given the full near-zero generic Faster R-CNN baseline, the adjacent SoccerMaster/Soccana evidence, "
-        "and the remaining weekly budget, what should the autonomous agent do next? Be blunt if the current path is dumb."
-    )
-    command = [
-        sys.executable,
-        str(ROOT / "scripts" / "ask_council.py"),
-        "--title",
-        title,
-        "--question",
-        question,
-    ]
-    if dry_run:
-        append_event("dry_run_council_request", phase=state.get("phase"), command=command)
-        return True
-
-    proc = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, check=False)
-    if proc.returncode != 0:
-        state["phase"] = "blocked"
-        append_event("council_request_failed", returncode=proc.returncode, output=(proc.stdout + proc.stderr)[-4000:])
-        create_issue(
-            "Autonomy blocked: council request failed",
-            f"The controller tried to queue the post-baseline council request and failed.\n\n```text\n{(proc.stdout + proc.stderr)[-4000:]}\n```",
-        )
-        return True
-
-    request_dir = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else ""
-    state["phase"] = "council_after_baseline_queued"
-    state["council_request"] = {
-        "title": title,
-        "request_dir": request_dir,
-        "queued_at": utc_now(),
-    }
-    append_event("council_request_queued", request_dir=request_dir, title=title)
-    return True
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run one autonomous controller tick.")
     parser.add_argument("--dry-run", action="store_true")
@@ -531,7 +489,7 @@ def main() -> None:
         state.pop("blocked_missing", None)
         state.pop("blocker", None)
         append_event("blocker_cleared", phase=state.get("phase"))
-    if not inspect_active_job(api, state) and not queue_council_after_baseline(state, dry_run=args.dry_run):
+    if not inspect_active_job(api, state):
         submit_next_job(api, state, dry_run=args.dry_run)
     write_state(state)
     append_event("tick_end", phase=state.get("phase"), active_job=state.get("active_job"))
