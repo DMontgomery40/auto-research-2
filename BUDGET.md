@@ -14,6 +14,9 @@ Week starts: Monday.
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Failed on `libGL`; switched to TorchVision detector and retrying |
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Failed on missing `scipy`; added dependency and retrying |
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Completed; `mAP-LocSim=0.0001237624` on 64 images |
+| 2026-04-27 | baseline-full | HF Jobs | L4 x1 | $6.00 | pending | Full validation baseline | Completed; `mAP-LocSim=0.0000356151` on 6,777 images |
+
+Current estimated spend after full baseline: `$16.25 / $25.00`.
 
 ## Spend Rule
 

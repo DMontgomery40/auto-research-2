@@ -17,6 +17,7 @@ from huggingface_hub import HfApi
 ROOT = Path(__file__).resolve().parents[1]
 STATE_PATH = ROOT / "autonomy" / "state.json"
 EVENTS_PATH = ROOT / "autonomy" / "events.jsonl"
+COUNCIL_INBOX = Path("challenge-council") / "data" / "automation_queue" / "inbox"
 
 TERMINAL_OK = {"COMPLETED"}
 TERMINAL_BAD = {"ERROR", "CANCELED", "DELETED"}
@@ -150,6 +151,153 @@ def create_issue(title: str, body: str) -> None:
             append_event("issue_create_failed", title=title, error=repr(exc), retry_error=repr(retry_exc))
 
 
+def council_queue_candidates() -> list[Path]:
+    paths: list[Path] = []
+    if os.getenv("CHALLENGE_COUNCIL_INBOX"):
+        paths.append(Path(os.environ["CHALLENGE_COUNCIL_INBOX"]).expanduser())
+    paths.append(ROOT.parent / COUNCIL_INBOX)
+    if len(ROOT.parents) > 1:
+        paths.append(ROOT.parents[1] / COUNCIL_INBOX)
+    paths.append(Path.home() / COUNCIL_INBOX)
+
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        resolved = path.expanduser()
+        if resolved not in seen:
+            seen.add(resolved)
+            unique.append(resolved)
+    return unique
+
+
+def existing_council_queue() -> Path | None:
+    for candidate in council_queue_candidates():
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def latest_result(state: dict[str, Any], label: str) -> dict[str, Any] | None:
+    for item in reversed(state.get("history", [])):
+        if item.get("label") == label and isinstance(item.get("result"), dict):
+            return item["result"]
+    return None
+
+
+def baseline_summary(state: dict[str, Any]) -> str:
+    result = latest_result(state, "baseline-full") or latest_result(state, "baseline-probe") or {}
+    metrics = result.get("metrics", {}) if isinstance(result.get("metrics"), dict) else {}
+    return (
+        f"run_id={result.get('run_id', 'unknown')}; "
+        f"mAP-LocSim={metrics.get('map_locsim', 'unknown')}; "
+        f"threshold={metrics.get('score_threshold', 'unknown')}; "
+        f"num_images={result.get('num_images', 'unknown')}; "
+        f"num_detections={result.get('num_detections', 'unknown')}; "
+        f"model={result.get('model', 'unknown')}"
+    )
+
+
+def council_question(state: dict[str, Any]) -> str:
+    return (
+        "We have a TorchVision Faster R-CNN SynLoc baseline. "
+        f"Baseline summary: {baseline_summary(state)}.\n\n"
+        "Please recommend the next three highest expected-value experiments to improve official mAP-LocSim within the $25/week budget. "
+        "For each, include the smallest CUDA smoke/probe, expected upside, failure signal, and whether to keep/discard.\n\n"
+        "SoccerMaster is available as an optional soccer-specific lead, not a mandate. "
+        "Sibling evidence from /Users/davidmontgomery/v2d-research says the copied SoccerMaster GSR adapter scored mAP-LocSim=0.0 on a 64-frame SynLoc slice and decoded no player detections, mostly ball/staff/goalkeeper. "
+        "Only recommend retesting SoccerMaster if the decode/head/postprocess or pitch-calibration use is meaningfully different."
+    )
+
+
+def handle_council_after_baseline(state: dict[str, Any]) -> None:
+    queue = existing_council_queue()
+    title = "SynLoc strategy after baseline"
+    question = council_question(state)
+    if not queue:
+        state["phase"] = "blocked_council_request"
+        append_event(
+            "council_queue_missing",
+            candidates=[str(path) for path in council_queue_candidates()],
+        )
+        create_issue(
+            "Autonomy blocked: council queue unavailable",
+            (
+                "The full baseline phase completed, but the controller cannot see the challenge council inbox from this runtime.\n\n"
+                "Queue this request locally with:\n\n"
+                "```bash\n"
+                f"python3 scripts/ask_council.py --title {json.dumps(title)} --question {json.dumps(question)}\n"
+                "```\n\n"
+                "After the council report is available, resume the next experiment phase."
+            ),
+        )
+        return
+
+    code, output = run(
+        [
+            sys.executable,
+            "scripts/ask_council.py",
+            "--title",
+            title,
+            "--question",
+            question,
+            "--queue",
+            str(queue),
+        ]
+    )
+    if code != 0:
+        state["phase"] = "blocked_council_request"
+        append_event("council_request_failed", output=output)
+        create_issue(
+            "Autonomy blocked: council request failed",
+            f"The controller tried to queue the post-baseline council request but failed.\n\n```text\n{output[-4000:]}\n```",
+        )
+        return
+
+    request_path = output.strip().splitlines()[-1]
+    state["phase"] = "awaiting_council_report"
+    state["council_request"] = {"title": title, "path": request_path, "queued_at": utc_now()}
+    append_event("council_request_queued", path=request_path)
+
+
+def handle_council_report_wait(state: dict[str, Any]) -> None:
+    request = state.get("council_request") or {}
+    request_path = Path(str(request.get("path", ""))).expanduser()
+    if not request_path.name:
+        state["phase"] = "blocked_council_request"
+        append_event("council_request_missing_from_state")
+        return
+
+    request_id = request_path.name
+    queue = existing_council_queue()
+    queue_root = queue.parent if queue else request_path.parent.parent
+    done_report = queue_root / "done" / request_id / "final_report.md"
+    failed_status = queue_root / "failed" / request_id / "status.json"
+    if done_report.exists():
+        report = done_report.read_text(encoding="utf-8", errors="replace")
+        state["phase"] = "first_experiment_pending"
+        state["council_report"] = {"path": str(done_report), "received_at": utc_now()}
+        append_event("council_report_ready", path=str(done_report))
+        create_issue(
+            "Council report ready: choose first SynLoc experiment",
+            (
+                f"Council report: `{done_report}`\n\n"
+                "Open a small isolated experiment branch/worktree from the recommendations and keep/discard by official mAP-LocSim.\n\n"
+                "Report excerpt:\n\n"
+                f"```text\n{report[:4000]}\n```"
+            ),
+        )
+        return
+    if failed_status.exists():
+        state["phase"] = "blocked_council_request"
+        append_event("council_report_failed", path=str(failed_status))
+        create_issue(
+            "Autonomy blocked: council request failed",
+            f"Council request `{request_id}` failed. See `{failed_status}`.",
+        )
+        return
+    append_event("council_report_pending", request_id=request_id)
+
+
 def block_once(state: dict[str, Any], *, phase: str, title: str, body: str, missing: list[str]) -> None:
     blocker = state.get("blocker") or {}
     state["phase"] = "blocked_missing_secret"
@@ -220,6 +368,15 @@ def inspect_active_job(api: HfApi, state: dict[str, Any]) -> bool:
 
 def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None:
     phase = state.get("phase")
+    if phase == "council_after_baseline_pending":
+        if dry_run:
+            append_event("dry_run_council_request", question=council_question(state))
+            return
+        handle_council_after_baseline(state)
+        return
+    if phase == "awaiting_council_report":
+        handle_council_report_wait(state)
+        return
     spec = JOB_SPECS.get(phase)
     if not spec:
         append_event("no_job_for_phase", phase=phase)
@@ -301,6 +458,48 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
     append_event("job_submitted", job=active)
 
 
+def queue_council_after_baseline(state: dict[str, Any], *, dry_run: bool) -> bool:
+    if state.get("phase") != "council_after_baseline_pending":
+        return False
+
+    title = "SynLoc strategy after full baseline"
+    question = (
+        "Given the full near-zero generic Faster R-CNN baseline, the adjacent SoccerMaster/Soccana evidence, "
+        "and the remaining weekly budget, what should the autonomous agent do next? Be blunt if the current path is dumb."
+    )
+    command = [
+        sys.executable,
+        str(ROOT / "scripts" / "ask_council.py"),
+        "--title",
+        title,
+        "--question",
+        question,
+    ]
+    if dry_run:
+        append_event("dry_run_council_request", phase=state.get("phase"), command=command)
+        return True
+
+    proc = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, check=False)
+    if proc.returncode != 0:
+        state["phase"] = "blocked"
+        append_event("council_request_failed", returncode=proc.returncode, output=(proc.stdout + proc.stderr)[-4000:])
+        create_issue(
+            "Autonomy blocked: council request failed",
+            f"The controller tried to queue the post-baseline council request and failed.\n\n```text\n{(proc.stdout + proc.stderr)[-4000:]}\n```",
+        )
+        return True
+
+    request_dir = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else ""
+    state["phase"] = "council_after_baseline_queued"
+    state["council_request"] = {
+        "title": title,
+        "request_dir": request_dir,
+        "queued_at": utc_now(),
+    }
+    append_event("council_request_queued", request_dir=request_dir, title=title)
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run one autonomous controller tick.")
     parser.add_argument("--dry-run", action="store_true")
@@ -332,7 +531,7 @@ def main() -> None:
         state.pop("blocked_missing", None)
         state.pop("blocker", None)
         append_event("blocker_cleared", phase=state.get("phase"))
-    if not inspect_active_job(api, state):
+    if not inspect_active_job(api, state) and not queue_council_after_baseline(state, dry_run=args.dry_run):
         submit_next_job(api, state, dry_run=args.dry_run)
     write_state(state)
     append_event("tick_end", phase=state.get("phase"), active_job=state.get("active_job"))

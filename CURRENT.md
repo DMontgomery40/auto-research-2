@@ -37,17 +37,19 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Baseline probe job `69efa24bd70108f37ace098f` got past the NumPy issue, then failed because `ultralytics` imported desktop OpenCV and required `libGL.so.1`. The baseline now uses TorchVision Faster R-CNN instead.
 - Baseline probe job `69efa359d2c8bd8662bd113e` got past TorchVision imports, then failed because GitHub SSKit imports `scipy` without declaring it. The baseline job now includes `scipy`.
 - Baseline probe job `69efa455d2c8bd8662bd115b` completed on CUDA for 64 validation images with TorchVision Faster R-CNN: `mAP-LocSim=0.00012376237623762376`, 2,831 detections, run artifact `baseline-torchvision-2026-04-27T18-02-12.913357Z`.
+- SoccerMaster is available as a soccer-specific optional lead. Sibling repo `/Users/davidmontgomery/v2d-research` already tested the copied SoccerMaster GSR adapter on a bounded 64-frame SynLoc slice (`synloc-20260426-1308`) and discarded it as-is: all rows scored `mAP-LocSim=0.0`, with no decoded `player` detections. Only retest SoccerMaster here if the decode/head/postprocess or pitch-calibration use is meaningfully different.
+- Full baseline job `69efa541d70108f37ace099f` completed on HF Jobs `l4x1` for all 6,777 `fullhd valid` images with TorchVision Faster R-CNN: `mAP-LocSim=0.00003561507229859677`, 288,766 detections, selected score threshold `0.49995696544647217`, run artifact `baseline-torchvision-2026-04-27T18-17-53.729401Z`.
+- The full baseline is a scoring-pipeline sanity check, not a serious model direction: it uses COCO `person` boxes, projects each bbox bottom-center point into pitch coordinates, and scores almost zero.
+- Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
 ## Unknowns
 
 - Current public/test/challenge leaderboard top score.
-- Full cloud validation score.
 - Codabench credentials/session status.
 - Exact Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
 
 ## Next Action
 
-1. Run `baseline_full_pending` on cloud CUDA.
-2. Record the full baseline `mAP-LocSim`, cost, and artifacts in `LEDGER.md`.
-3. Ask council for experiment ideas after baseline is real.
-4. Start the first isolated experiment branch.
+1. Ask council for experiment ideas after the real full baseline.
+2. Use council feedback to choose one bounded experiment with a cheap kill test.
+3. Start the first isolated experiment branch.

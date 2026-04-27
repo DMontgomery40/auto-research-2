@@ -12,9 +12,14 @@ Primary metric: `mAP-LocSim` (higher is better).
 | 2026-04-27 | baseline-probe | 1c98108 | fullhd valid | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.000 | 0.000 | $1.50 est | 39s | retry | Job `69efa24bd70108f37ace098f` failed on `libGL.so.1` via `ultralytics`/OpenCV; switched baseline detector to TorchVision Faster R-CNN. |
 | 2026-04-27 | baseline-probe | e01f8d0 | fullhd valid | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.000 | 0.000 | $1.50 est | 41s | retry | Job `69efa359d2c8bd8662bd113e` failed because GitHub SSKit imports undeclared `scipy`; added explicit `scipy`. |
 | 2026-04-27 | baseline-probe | 3681f37 | fullhd valid 64 images | HF Jobs `t4-small` | `cloud/synloc_baseline_yolo.py` | 0.0001237624 | 0.4998428226 | $1.50 est | 79s | keep | Job `69efa455d2c8bd8662bd115b` completed on CUDA with 2,831 detections; artifact run `baseline-torchvision-2026-04-27T18-02-12.913357Z`. |
+| 2026-04-27 | baseline-full | 7aa2a67 | fullhd valid 6,777 images | HF Jobs `l4x1` | `cloud/synloc_baseline_yolo.py` | 0.0000356151 | 0.4999569654 | $6.00 est | 14m | keep | Job `69efa541d70108f37ace099f` completed on CUDA with 288,766 detections; this proves the official metric path but is only a generic COCO Faster R-CNN bottom-center projection baseline. |
+
+## External Prior
+
+- 2026-04-26 sibling repo `/Users/davidmontgomery/v2d-research` ran copied SoccerMaster GSR adapter probe `synloc-20260426-1308` on 64 deterministic SynLoc validation frames. Score was `mAP-LocSim=0.0` across 54 confidence/role/pitch-bound rows; role decode produced no `player` detections. This is not counted as an `auto-research-2` score, but it is a discard signal for scaling the copied adapter as-is.
 
 ## Leaderboard Tracking
 
 | Date Checked | Board | Rank 1 Score | Our Best | Source | Notes |
 |---|---|---:|---:|---|---|
-| 2026-04-26 | Codabench test/challenge | unknown | 0.000 | pending | Codabench page identified; score not yet scraped or authenticated. |
+| 2026-04-27 | Codabench test/challenge | unknown | 0.0000356151 | local HF validation | Codabench page identified; platform score not yet scraped or authenticated. |
