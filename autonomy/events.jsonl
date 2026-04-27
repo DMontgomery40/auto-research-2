@@ -106,3 +106,6 @@
 {"active_job": null, "event": "tick_start", "phase": "awaiting_council_report", "ts": "2026-04-27T18:33:10.643663Z"}
 {"event": "council_report_pending", "request_id": "20260427T183242Z-synloc-strategy-after-baseline", "ts": "2026-04-27T18:33:10.644682Z"}
 {"active_job": null, "event": "tick_end", "phase": "awaiting_council_report", "ts": "2026-04-27T18:33:10.645402Z"}
+{"active_job": null, "event": "tick_start", "phase": "awaiting_council_report", "ts": "2026-04-27T18:45:57.946413Z"}
+{"event": "council_report_pending", "request_id": "20260427T183242Z-synloc-strategy-after-baseline", "ts": "2026-04-27T18:45:57.946943Z"}
+{"active_job": null, "event": "tick_end", "phase": "awaiting_council_report", "ts": "2026-04-27T18:45:57.947719Z"}
