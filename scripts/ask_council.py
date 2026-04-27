@@ -152,7 +152,8 @@ Target: 2026 Spiideo SoccerNet SynLoc
 - Primary metric: mAP-LocSim, higher is better.
 - Weekly compute budget: $25 unless owner approves more by GitHub issue.
 - Keep the harness simple and markdown-first.
-- Do not use leaked solutions or post-deadline winner writeups.
+- Do not use leaked solutions, post-deadline solution writeups, or prior SoccerNet result material.
+- If official 2026 results are not available yet, include no results material.
 - The council is the outside reviewer: be blunt, call out dumb plans, and give high-context strategic hints.
 - The council can recommend outside resources or model directions, but the autonomy repo still owns execution and budget gates.
 

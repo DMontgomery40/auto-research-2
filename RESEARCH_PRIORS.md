@@ -9,7 +9,7 @@ The sibling workbench has a durable research library at `/Users/davidmontgomery/
 Use these as pointers, not bulk context:
 
 - `README.md`: high-level map of SoccerMaster, GSR, detector families, SoccerNet tasks, and research-agent harnesses.
-- `gsr-and-video-to-data-pipelines.md`: SoccerNet-GSR, Broadcast-to-Minimap, SoccerNet 2025 challenge direction, FOOTPASS, SoccerNet-v3D, calibration modules, and modular pipeline traps.
+- `gsr-and-video-to-data-pipelines.md`: SoccerNet-GSR, FOOTPASS, SoccerNet-v3D, calibration modules, and modular pipeline traps. Do not import its prior-year result summaries into council requests.
 - `soccer-foundation-models.md`: SoccerMaster, MatchVision/UniSoccer, SoccerChat, SoccerAgent, and why dense spatial soccer models differ from generic VLMs.
 - `detectors-yolo-and-small-object-models.md`: YOLO11/YOLO26, RF-DETR/RT-DETR, SoccerDETR, Football-YOLO, Soccana, ball detection, jersey-number recognition, and detector-only traps.
 - `monthly/2026-04.md`: live April 2026 notes, including FOOTPASS contract, RF-DETR soccer checkpoint scan, SoccerNet VQA 2026 details, and calibration watch items.
@@ -45,16 +45,11 @@ Council implication:
 - These tasks are converging on player identity, pitch geometry, temporal context, and structured state.
 - SynLoc is the cleanest single-frame piece of that stack. It should be treated as supervised world-coordinate athlete localization, not generic object detection.
 
-## What Recent SoccerNet Winners And Reports Suggest
+## Results Boundary
 
-Do not mine leaked 2026 solutions. It is acceptable to learn from official published prior-year challenge reports and winner papers.
+Do not use prior SoccerNet challenge result material.
 
-Useful lessons:
-
-- SoccerNet 2024 GSR winner `From Broadcast to Minimap` was a modular system, not a single generic detector. It combined fine-tuned YOLOv5m detection, SegFormer-based camera parameter estimation, DeepSORT tracking, ReID, orientation prediction, and jersey-number recognition.
-- SoccerNet 2025 challenge report describes GSR submissions using YOLO-X athlete detection, Deep-EIoU plus OSNet ReID, and multi-frame keypoint models for pitch coordinates.
-- The same report also mentions YOLOv12 with 27 field-line categories, and a later RF-DETR detector replacement.
-- This pattern matters: winners are pipeline systems with task-specific supervision, calibration, tracking/identity, and structured postprocessing. Detector swaps alone are usually not enough.
+If 2026 official results are not available yet, include no results material. The council may use official 2026 challenge pages, devkits, dataset papers, model papers, and our own experiment ledger.
 
 ## Current Breakthroughs / Model Leads
 
@@ -79,9 +74,6 @@ These are leads for the council to rank, not mandates:
 - SoccerNet 2026 challenge page: `https://www.soccer-net.org/challenges/2026`
 - SynLoc paper: `https://www.scitepress.org/Papers/2025/131082/131082.pdf`
 - SSKit devkit: `https://github.com/Spiideo/sskit`
-- SoccerNet 2025 challenge results: `https://arxiv.org/abs/2508.19182`
-- SoccerNet 2024 challenge results: `https://arxiv.org/abs/2409.10587`
-- Broadcast-to-Minimap / GSR 2024 winner paper: `https://arxiv.org/abs/2504.06357`
 - FOOTPASS paper: `https://arxiv.org/abs/2511.16183`
 - FOOTPASS devkit: `https://github.com/JeremieOchin/FOOTPASS`
 - SoccerMaster paper: `https://arxiv.org/abs/2512.11016`

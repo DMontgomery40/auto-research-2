@@ -39,7 +39,7 @@ That is a lossy generic detector/projection guess. It proves the official metric
 
 The repo was started blank to avoid cross-project contamination, so not all useful soccer-specific context is present in this checkout.
 
-The council should also read `RESEARCH_PRIORS.md`. It gives a compact map of the sibling workbench `/docs/architectures/` research library, current SoccerNet 2026 task direction, official SynLoc paper facts, and published prior-year SoccerNet winner/report lessons. Do not ask the models to ingest the whole docs tree unless a narrow follow-up requires it.
+The council should also read `RESEARCH_PRIORS.md`. It gives a compact map of the sibling workbench `/docs/architectures/` research library, current SoccerNet 2026 task direction, official SynLoc paper facts, and non-result technical priors. Do not ask the models to ingest the whole docs tree unless a narrow follow-up requires it.
 
 There is a prior sibling SynLoc effort at `/Users/davidmontgomery/v2d-research` with useful evidence:
 
@@ -93,7 +93,8 @@ Include:
 
 ## Bans
 
-- Do not use leaked solutions, official winners, or post-deadline winning writeups.
+- Do not use leaked solutions, post-deadline solution writeups, or prior SoccerNet result material.
+- If official 2026 results are not available yet, use no results material.
 - Do not recommend leaderboard/result-page imitation.
 - Do not endorse metric gaming without honest offline validation.
 - Do not let the agent keep doing "promising vibe" experiments without kill criteria.
