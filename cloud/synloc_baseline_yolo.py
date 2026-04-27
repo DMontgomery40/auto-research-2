@@ -4,6 +4,7 @@
 #   "torch",
 #   "torchvision",
 #   "sskit @ git+https://github.com/Spiideo/sskit.git",
+#   "scipy",
 #   "numpy<2",
 #   "xtcocotools"
 # ]

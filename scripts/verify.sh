@@ -53,6 +53,8 @@ for path in sorted(Path("cloud").glob("*.py")):
             deps.append(line.split("\"", 2)[1])
     if "xtcocotools" in deps and not any(dep.startswith("numpy<2") for dep in deps):
         raise SystemExit(f"{path}: xtcocotools cloud jobs must pin numpy<2")
+    if any(dep.startswith("sskit @ git+") for dep in deps) and "scipy" not in deps:
+        raise SystemExit(f"{path}: GitHub SSKit cloud jobs must include scipy")
 PY
 
 python3 - <<'PY'

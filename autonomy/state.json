@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 1.5,
-    "flavor": "t4-small",
-    "id": "69efa359d2c8bd8662bd113e",
-    "label": "baseline-probe",
-    "next_phase": "baseline_full_pending",
-    "phase": "baseline_probe_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-04-27T17:56:41.985375Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69efa359d2c8bd8662bd113e"
-  },
+  "active_job": null,
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
@@ -144,10 +134,23 @@
       "status": "ERROR",
       "submitted_at": "2026-04-27T17:52:11.422926Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69efa24bd70108f37ace098f"
+    },
+    {
+      "cost_estimate_usd": 1.5,
+      "failed_at": "2026-04-27T17:59:17Z",
+      "flavor": "t4-small",
+      "id": "69efa359d2c8bd8662bd113e",
+      "label": "baseline-probe",
+      "logs_tail": "Traceback (most recent call last):\n  File \"//synloc_baseline_yolo.py\", line 22, in <module>\n    from sskit import image_to_ground\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/sskit/__init__.py\", line 3, in <module>\n    from sskit.metric import match\n  File \"/root/.cache/uv/environments-v2/synloc-baseline-yolo-3fc41a25b99f5fa9/lib/python3.10/site-packages/sskit/metric.py\", line 2, in <module>\n    from scipy.optimize import linear_sum_assignment\nModuleNotFoundError: No module named 'scipy'",
+      "next_phase": "baseline_full_pending",
+      "phase": "baseline_probe_pending",
+      "status": "ERROR",
+      "submitted_at": "2026-04-27T17:56:41.985375Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69efa359d2c8bd8662bd113e"
     }
   ],
-  "phase": "baseline_probe_running",
+  "phase": "baseline_probe_pending",
   "spent_estimate_usd": 8.75,
-  "updated_at": "2026-04-27T17:56:41.985501Z",
+  "updated_at": "2026-04-27T17:59:17Z",
   "weekly_budget_usd": 25.0
 }
