@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 1.5,
-    "flavor": "t4-small",
-    "id": "69ee962cd2c8bd8662bd0432",
-    "label": "baseline-probe",
-    "next_phase": "baseline_full_pending",
-    "phase": "baseline_probe_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-04-26T22:48:12.082896Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69ee962cd2c8bd8662bd0432"
-  },
+  "active_job": null,
   "enabled": true,
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
@@ -105,10 +95,23 @@
       "status": "COMPLETED",
       "submitted_at": "2026-04-26T22:45:47.218443Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69ee959bd70108f37ace0415"
+    },
+    {
+      "cost_estimate_usd": 1.5,
+      "failed_at": "2026-04-27T01:08:38.892189Z",
+      "flavor": "t4-small",
+      "id": "69ee962cd2c8bd8662bd0432",
+      "label": "baseline-probe",
+      "logs_tail": "error: TOML parse error at line 7, column 3\n  |\n7 |   \"git+https://github.com/Spiideo/sskit.git\",\n  |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nURL requirement must be preceded by a package name. Add the name of the package before the URL (e.g., `package_name @ https://...`).\ngit+https://github.com/Spiideo/sskit.git\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+      "next_phase": "baseline_full_pending",
+      "phase": "baseline_probe_pending",
+      "status": "ERROR",
+      "submitted_at": "2026-04-26T22:48:12.082896Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69ee962cd2c8bd8662bd0432"
     }
   ],
-  "phase": "baseline_probe_running",
+  "phase": "blocked",
   "spent_estimate_usd": 4.25,
-  "updated_at": "2026-04-26T22:48:12.083042Z",
+  "updated_at": "2026-04-27T01:08:39.280229Z",
   "weekly_budget_usd": 25.0
 }
