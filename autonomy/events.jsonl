@@ -150,3 +150,6 @@
 {"active_job": null, "event": "tick_start", "phase": "blocked", "ts": "2026-04-28T16:57:20.646884Z"}
 {"event": "no_job_for_phase", "phase": "blocked", "ts": "2026-04-28T16:57:20.646976Z"}
 {"active_job": null, "event": "tick_end", "phase": "blocked", "ts": "2026-04-28T16:57:20.647485Z"}
+{"active_job": null, "event": "tick_start", "phase": "blocked", "ts": "2026-04-28T18:51:36.195746Z"}
+{"event": "no_job_for_phase", "phase": "blocked", "ts": "2026-04-28T18:51:36.195883Z"}
+{"active_job": null, "event": "tick_end", "phase": "blocked", "ts": "2026-04-28T18:51:36.196374Z"}
