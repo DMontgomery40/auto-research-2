@@ -9,6 +9,7 @@
     "title": "SynLoc strategy with research priors"
   },
   "enabled": true,
+  "first_train_experiment_issue_created_at": "2026-04-29T17:12:59.822674Z",
   "hf_dataset_repo": "dmontgomery40/auto-research-2-synloc-data",
   "hf_model_repo": "dmontgomery40/auto-research-2-synloc-models",
   "history": [
@@ -2460,8 +2461,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f23612d2c8bd8662bd3210"
     }
   ],
-  "phase": "first_train_experiment_pending",
+  "phase": "blocked_train_experiment_spec_missing",
   "spent_estimate_usd": 21.75,
-  "updated_at": "2026-04-29T16:53:56.732475Z",
+  "updated_at": "2026-04-29T17:12:59.822680Z",
   "weekly_budget_usd": 25.0
 }
