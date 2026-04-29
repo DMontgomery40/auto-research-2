@@ -6,7 +6,7 @@
     "label": "soccermaster-wiring-probe",
     "next_phase": "soccermaster_wiring_probe_review",
     "phase": "soccermaster_wiring_probe_pending",
-    "status": "RUNNING",
+    "status": "SCHEDULING",
     "submitted_at": "2026-04-29T15:54:44.324781Z",
     "url": "https://huggingface.co/jobs/dmontgomery40/69f229c4d70108f37ace174a"
   },
@@ -248,6 +248,6 @@
   ],
   "phase": "soccermaster_wiring_probe_running",
   "spent_estimate_usd": 20.25,
-  "updated_at": "2026-04-29T15:54:44.324918Z",
+  "updated_at": "2026-04-29T15:55:09.074260Z",
   "weekly_budget_usd": 25.0
 }
