@@ -202,7 +202,12 @@ def main() -> None:
         "verdict": (
             "raw-athlete-output-present"
             if athlete_like_at_005 > 0
-            else "no-athlete-output-at-0.05-debug-config"
+            else "config-mismatch-no-athlete-output-at-0.05"
+        ),
+        "interpretation": (
+            "SoccerMaster reports strong pretrained athlete detection. Zero player/goalkeeper/referee output "
+            "on ordinary soccer frames is a runtime/config/decode mismatch until proven otherwise, not "
+            "model underperformance."
         ),
     }
 

@@ -200,3 +200,4 @@
 {"active_job": null, "event": "tick_start", "phase": "soccermaster_wiring_probe_review", "ts": "2026-04-29T15:59:50.855132Z"}
 {"event": "no_job_for_phase", "phase": "soccermaster_wiring_probe_review", "ts": "2026-04-29T15:59:50.855235Z"}
 {"active_job": null, "event": "tick_end", "phase": "soccermaster_wiring_probe_review", "ts": "2026-04-29T15:59:50.857034Z"}
+{"event":"operator_correction_encoded","from_phase":"soccermaster_wiring_probe_review","reason":"SoccerMaster zero athlete output is a config/runtime/decode mismatch, not underperformance; future tiny SoccerMaster probes must use cheaper HF flavor t4-small unless T4 failure justifies escalation.","to_phase":"soccermaster_config_mismatch_review","ts":"2026-04-29T16:16:27Z"}

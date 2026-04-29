@@ -15,8 +15,12 @@ Week starts: Monday.
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Failed on missing `scipy`; added dependency and retrying |
 | 2026-04-27 | baseline-probe retry | HF Jobs | T4 small | $1.50 | pending | Small validation probe | Completed; `mAP-LocSim=0.0001237624` on 64 images |
 | 2026-04-27 | baseline-full | HF Jobs | L4 x1 | $6.00 | pending | Full validation baseline | Completed; `mAP-LocSim=0.0000356151` on 6,777 images |
+| 2026-04-27 | soccermaster-wiring-probe | HF Jobs | L4 x1 | $2.00 | pending | Check SoccerMaster raw athlete output | Failed before inference on wrong asset path |
+| 2026-04-29 | soccermaster-wiring-probe retry | HF Jobs | L4 x1 | $2.00 | pending | Check SoccerMaster raw athlete output after asset repair | Completed; zero athlete roles, config/runtime/decode mismatch |
 
-Current estimated spend after full baseline: `$16.25 / $25.00`.
+Current estimated spend: `$20.25 / $25.00`.
+
+Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
 ## Spend Rule
 

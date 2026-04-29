@@ -72,13 +72,13 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
     "soccermaster_wiring_probe_pending": {
         "label": "soccermaster-wiring-probe",
         "script": "cloud/soccermaster_wiring_probe.py",
-        "flavor": "l4x1",
-        "timeout": "2h",
+        "flavor": "t4-small",
+        "timeout": "1h",
         "python": "3.10",
         "required_secrets": [],
         "required_secret_groups": [],
-        "cost_estimate_usd": 2.0,
-        "next_phase": "soccermaster_wiring_probe_review",
+        "cost_estimate_usd": 0.5,
+        "next_phase": "soccermaster_raw_output_review",
         "env": {
             "V2D_ASSET_REPO": "dmontgomery40/v2d-research-assets",
             "SOCCERMASTER_MAX_IMAGES": "4",
@@ -350,6 +350,18 @@ def parse_autonomy_result(logs: str) -> dict[str, Any] | None:
     return None
 
 
+def next_phase_for_result(active: dict[str, Any], result: dict[str, Any]) -> str:
+    next_phase = active.get("next_phase", active.get("phase", "blocked"))
+    if not result.get("ok", False):
+        return "blocked"
+    if active.get("label") != "soccermaster-wiring-probe":
+        return next_phase
+    athlete_count = int(result.get("athlete_like_at_conf_0_05") or 0)
+    if athlete_count <= 0:
+        return "soccermaster_config_mismatch_review"
+    return "soccermaster_synloc_conversion_probe_pending"
+
+
 def inspect_active_job(api: HfApi, state: dict[str, Any]) -> bool:
     active = state.get("active_job")
     if not active:
@@ -364,7 +376,7 @@ def inspect_active_job(api: HfApi, state: dict[str, Any]) -> bool:
         result = parse_autonomy_result(logs) or {"ok": False, "error": "No AUTONOMY_RESULT marker in logs"}
         state.setdefault("history", []).append({**active, "completed_at": utc_now(), "result": result})
         state["active_job"] = None
-        state["phase"] = active.get("next_phase", state.get("phase"))
+        state["phase"] = next_phase_for_result(active, result)
         append_event("job_completed", job=active, result=result)
         return True
     if status in TERMINAL_BAD:

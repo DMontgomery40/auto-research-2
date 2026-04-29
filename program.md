@@ -117,9 +117,21 @@ Use the validation set to select thresholds. Use that fixed threshold for test/c
 
 Default budget: `$25/week`.
 
-Use cheap cloud smoke jobs first. Use larger Hugging Face Jobs or other rented GPU only when the cloud smoke path is clean and the expected signal is worth the spend.
+Use cheap Hugging Face Jobs first. Hugging Face Jobs are billed by runtime, so keep timeouts tight and choose the cheapest flavor that can answer the current question:
+
+- CPU flavor for packaging, file layout, asset inventory, and metadata checks.
+- `t4-small` for tiny CUDA probes and raw inference debugging.
+- `l4x1` or larger only after a documented T4 memory/runtime failure, or when a full validation/training run has a clear expected-value case.
+
+Do not spend L4 money to discover import errors, missing files, wrong paths, or config mismatches.
 
 If one experiment could exceed the weekly budget, open a GitHub issue requesting approval before running it.
+
+## SoccerMaster mismatch rule
+
+SoccerMaster is a serious pretrained soccer model, not a generic detector guess. Its reported athlete-detection performance is high enough that zero decoded athlete output on soccer frames means the integration is broken until proven otherwise.
+
+If SoccerMaster emits no `player`, `goalkeeper`, or `referee` detections, stop scoring and debug the mismatch first: official/source-faithful config, weight placement, class dimensions, role-label order, preprocessing/normalization, thresholds, and raw logits. Do not call that underperformance and do not scale it.
 
 ## council
 

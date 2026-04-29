@@ -23,7 +23,7 @@ The council should give large, high-context hints and ranked strategic direction
 The current full baseline is not a serious soccer model. It is only a scoring-pipeline sanity check:
 
 - Model: TorchVision `fasterrcnn_resnet50_fpn_v2` with default COCO weights.
-- Runtime: HF Jobs `l4x1`.
+- Runtime so far: HF Jobs `t4-small`, `cpu-upgrade`, and `l4x1`. Future tiny SoccerMaster wiring probes should default to `t4-small`; `l4x1` needs a documented T4 memory/runtime failure or full-run reason.
 - Validation split: `fullhd valid`.
 - Images: 6,777.
 - Detections emitted: 288,766.
@@ -48,6 +48,7 @@ There is a prior sibling SynLoc effort at `/Users/davidmontgomery/v2d-research` 
 - A copied SoccerMaster GSR adapter was tried on 64 deterministic SynLoc validation frames.
 - SoccerMaster attempt result: `mAP-LocSim = 0.0`; role decode produced mostly `ball=18370`, `staff=271`, `goalkeeper=131`, and no `player` detections.
 - Interpretation: this is probably a runtime/config/decode failure in our copied adapter path, not a model-quality result. The SoccerMaster paper reports `92.3` athlete-detection AP@50, `50.5` mAP, and `99.2` role accuracy in Table 3, plus strong pitch-registration/camera-calibration transfer. A correct SoccerMaster runtime should not decode no players on ordinary soccer frames.
+- The repaired `auto-research-2` wiring probe job `69f229c4d70108f37ace174a` loaded SoccerMaster assets and ran CUDA on 4 images, but still produced `ball=1120`, `staff=80`, and `athlete_like_at_conf_0_05=0`. Treat this as an active config/runtime/decode mismatch to isolate, not as evidence SoccerMaster is weak.
 
 Council should distinguish:
 
@@ -73,7 +74,8 @@ The council should evaluate, rank, and criticize these directions:
 ## Budget And Compute Reality
 
 - Weekly budget is `$25/week` unless the owner approves more through a GitHub issue.
-- Current estimated spend after the full baseline is `$16.25 / $25`.
+- Current estimated spend is `$20.25 / $25`.
+- Do not recommend more L4 spend for import/path/config discovery. Recommend the cheapest kill test first, usually CPU for file/config checks or `t4-small` for tiny CUDA inference probes.
 - Future GPU use must be evidence-gated.
 - The council is allowed to recommend asking for more budget, but must say why the upside justifies it and what the kill criteria are.
 

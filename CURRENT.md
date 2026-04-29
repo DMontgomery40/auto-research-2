@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-04-27
+Updated: 2026-04-29
 
 ## Mission
 
@@ -41,6 +41,8 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Sibling repo `/Users/davidmontgomery/v2d-research` tested a copied SoccerMaster GSR adapter on a bounded 64-frame SynLoc slice (`synloc-20260426-1308`): all rows scored `mAP-LocSim=0.0`, with no decoded `player` detections. This is not a verdict against SoccerMaster; it means this repo should first audit weight placement, role mapping, class dimensions, normalization, and raw logits before using projected scores.
 - Full baseline job `69efa541d70108f37ace099f` completed on HF Jobs `l4x1` for all 6,777 `fullhd valid` images with TorchVision Faster R-CNN: `mAP-LocSim=0.00003561507229859677`, 288,766 detections, selected score threshold `0.49995696544647217`, run artifact `baseline-torchvision-2026-04-27T18-17-53.729401Z`.
 - The full baseline is a scoring-pipeline sanity check, not a serious model direction: it uses COCO `person` boxes, projects each bbox bottom-center point into pitch coordinates, and scores almost zero.
+- SoccerMaster wiring probe job `69f229c4d70108f37ace174a` completed after the asset-path repair. It loaded the weights and ran CUDA inference on 4 images, but raw roles were `ball=1120`, `staff=80`, and `athlete_like_at_conf_0_05=0`. This is a config/runtime/decode mismatch, not underperformance. Do not run score sweeps until the official/source-faithful SoccerMaster config path emits athlete roles.
+- Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
 - Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
 ## Unknowns
@@ -51,6 +53,6 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Run `soccermaster_wiring_probe_pending` on cloud CUDA.
-2. If raw SoccerMaster outputs include player/goalkeeper/referee detections, build a tiny SynLoc conversion/eval probe.
-3. If raw outputs are still ball/staff-heavy or empty, debug config against the official SoccerMaster paper/repo before spending on scoring sweeps.
+1. Debug the SoccerMaster config/runtime/decode mismatch against the official SoccerMaster repo and paper before any scoring sweep.
+2. Use a tiny `t4-small` HF CUDA probe only after the source-faithful config hypothesis is patched.
+3. If raw SoccerMaster outputs include player/goalkeeper/referee detections, build a tiny SynLoc conversion/eval probe.

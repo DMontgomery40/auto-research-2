@@ -79,8 +79,13 @@ If the controller needs owner input, more budget, or secret repair, it opens a G
 - Same seed, same dataset SHA, same cloud eval command, same GPU class when comparing runs.
 - Treat validation-selected score thresholds as validation-only unless the threshold is then fixed for test/challenge.
 - Keep generated predictions, checkpoints, logs, and data out of git.
+- Prefer the cheapest viable Hugging Face flavor for every probe. Use CPU flavors for packaging, asset, and metadata checks; use `t4-small` for tiny CUDA probes; only escalate to `l4x1` or larger after a documented T4 memory/runtime failure or a concrete throughput need.
 - Prefer a tiny cloud smoke job before any expensive GPU-heavy idea.
 - Spend compute like it is real money. It is.
+
+## SoccerMaster Rule
+
+SoccerMaster is a pretrained soccer-specific model with reported athlete-detection performance far above generic out-of-the-box detectors. If a SoccerMaster path emits zero `player`/`goalkeeper`/`referee` detections on ordinary soccer frames, treat that as a runtime/config/decode mismatch until proven otherwise. Do not describe it as model underperformance, do not bury it as a low score, and do not run scoring sweeps before auditing weight placement, class/role dimensions, role-label order, preprocessing, thresholds, and raw logits.
 
 ## Budget
 
