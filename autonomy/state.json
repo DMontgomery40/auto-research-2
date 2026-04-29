@@ -1,5 +1,15 @@
 {
-  "active_job": null,
+  "active_job": {
+    "cost_estimate_usd": 0.25,
+    "flavor": "cpu-upgrade",
+    "id": "69f2462ed70108f37ace17b5",
+    "label": "synloc-devkit-oracle",
+    "next_phase": "devkit_oracle_review",
+    "phase": "devkit_oracle_pending",
+    "status": "RUNNING",
+    "submitted_at": "2026-04-29T17:55:58.633032Z",
+    "url": "https://huggingface.co/jobs/dmontgomery40/69f2462ed70108f37ace17b5"
+  },
   "blocker": {
     "created_at": "2026-04-29T17:55:06.220774Z",
     "failed_job_id": "69f2457ed2c8bd8662bd32b0",
@@ -2576,8 +2586,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f24012d2c8bd8662bd3267"
     }
   ],
-  "phase": "devkit_oracle_pending",
-  "spent_estimate_usd": 22.75,
-  "updated_at": "2026-04-29T17:55:06.220607Z",
+  "phase": "devkit_oracle_running",
+  "spent_estimate_usd": 23.0,
+  "updated_at": "2026-04-29T17:55:58.633175Z",
   "weekly_budget_usd": 25.0
 }
