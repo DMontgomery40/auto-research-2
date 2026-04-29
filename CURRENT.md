@@ -44,8 +44,10 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - SoccerMaster wiring probe job `69f229c4d70108f37ace174a` completed after the asset-path repair. It loaded the weights and ran CUDA inference on 4 images, but the copied Rondo adapter used the wrong role-label order. Official SoccerMaster defines `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`; the copied adapter labeled id `3` as `ball` and id `4` as `staff`. Reinterpreting the last raw counts means the probe likely emitted `player=1120` and `referee=80`, not zero athlete output.
 - Corrected-role SoccerMaster wiring probe job `69f23419d2c8bd8662bd31f2` completed on HF Jobs `t4-small`. It confirmed raw athlete output: `player=1196`, `referee=4`; at confidence `0.05`: `player=731`, `referee=4`; verdict `raw-athlete-output-present`.
 - SoccerMaster-to-SynLoc conversion/eval probe job `69f23612d2c8bd8662bd3210` completed on HF Jobs `t4-small`. Best 64-image result: `mAP-LocSim=0.000007373902767781469`, role set `athlete`, threshold `0.01`, 18,268 detections, run artifact `soccermaster-synloc-probe-2026-04-29T16-51-53-869121Z`.
-- That score is worse than the 64-image TorchVision baseline (`0.00012376237623762376`), but it finally isolates the next real problem: SoccerMaster emits many athlete detections, while the current box-to-ground projection/eval conversion has terrible precision/recall.
-- There is still no `train.py` or train-job script in this repo. The current controller phase is `first_train_experiment_pending`, but `scripts/autonomy_tick.py` has no job spec for that phase yet.
+- That score is worse than the 64-image TorchVision baseline (`0.00012376237623762376`). Treat this as evidence that the copied adapter/runtime is still not source-faithful, not as evidence that SoccerMaster is bad.
+- The unresolved leak is bigger than role-label plumbing: official SoccerMaster is a video/spatiotemporal model with temporal attention, an official Deformable DETR/MSDeformAttn detection path, and official `PostProcess`. The copied Rondo adapter drops temporal weights, runs single images through plain SigLIP, approximates MSDeformAttn with `grid_sample`, and custom-decodes boxes/NMS.
+- `train.py` now exists and must baseline-evaluate pretrained soccer/football YOLO models before any training. Default autonomous baseline compares `mobadam/football-player-detection` (`YOLO26l`, football classes `ball/player/referee/goalkeeper`) and `Adit-jain/soccana` (YOLO11n SoccerNet/Soccana-style classes).
+- Current controller phase is `pretrained_yolo_baseline_pending`.
 - Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
 - Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
@@ -57,6 +59,6 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Add the first actual train/fine-tune job spec instead of letting `first_train_experiment_pending` fall into `no_job_for_phase`.
-2. The training job must start from a concrete `train.py` path or create one explicitly; this repo currently has no `train.py`.
-3. Do not spend more GPU money on generic wiring. The last two jobs already proved the relevant facts: role decode works, conversion/eval works, and the current projection/detection path scores poorly.
+1. Run `train.py` in `TRAIN_MODE=baseline` on HF Jobs `t4-small` against the cached fullhd validation split.
+2. Block if the pretrained YOLO/Soccana baseline produces zero detections or zero official `mAP-LocSim`; debug that before training.
+3. If baseline eval passes, cache the train split and run `train.py` in `TRAIN_MODE=finetune`.

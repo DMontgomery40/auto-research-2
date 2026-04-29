@@ -102,6 +102,60 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
             "SOCCERMASTER_THRESHOLDS": "0.01,0.03,0.05,0.1,0.2,0.3",
         },
     },
+    "pretrained_yolo_baseline_pending": {
+        "label": "pretrained-yolo-baseline",
+        "script": "train.py",
+        "flavor": "t4-small",
+        "timeout": "2h",
+        "python": "3.10",
+        "required_secrets": [],
+        "required_secret_groups": [],
+        "cost_estimate_usd": 0.75,
+        "next_phase": "train_dataset_cache_pending",
+        "env": {
+            "TRAIN_MODE": "baseline",
+            "SYNLOC_SPLIT": "valid",
+            "SYNLOC_VERSION": "fullhd",
+            "TRAIN_MAX_IMAGES": "128",
+            "YOLO_IMGSZ": "960",
+            "YOLO_CONF": "0.01",
+            "YOLO_IOU": "0.7",
+        },
+    },
+    "train_dataset_cache_pending": {
+        "label": "dataset-cache-train-valid",
+        "script": "cloud/synloc_cache.py",
+        "flavor": "cpu-upgrade",
+        "timeout": "8h",
+        "python": "3.10",
+        "required_secrets": ["SOCCERNET_USERNAME", "SOCCERNET_PASSWORD"],
+        "required_secret_groups": [["SOCCERNET_SIGNIN_PASSWORD", "SOCCERNET_PASSWORD_2", "SPIIDEO_PASSWORD", "SOCCERNET_PASSWORD"]],
+        "cost_estimate_usd": 1.0,
+        "next_phase": "first_train_experiment_pending",
+        "env": {"SYNLOC_SPLITS": "train,valid", "SYNLOC_VERSION": "fullhd"},
+    },
+    "first_train_experiment_pending": {
+        "label": "first-yolo-train",
+        "script": "train.py",
+        "flavor": "t4-small",
+        "timeout": "3h",
+        "python": "3.10",
+        "required_secrets": [],
+        "required_secret_groups": [],
+        "cost_estimate_usd": 1.5,
+        "next_phase": "train_result_review",
+        "env": {
+            "TRAIN_MODE": "finetune",
+            "SYNLOC_VERSION": "fullhd",
+            "TRAIN_MAX_IMAGES": "2048",
+            "VAL_MAX_IMAGES": "512",
+            "YOLO_IMGSZ": "960",
+            "YOLO_EPOCHS": "3",
+            "YOLO_BATCH": "4",
+            "YOLO_CONF": "0.01",
+            "YOLO_IOU": "0.7",
+        },
+    },
 }
 
 
@@ -372,6 +426,14 @@ def next_phase_for_result(active: dict[str, Any], result: dict[str, Any]) -> str
     next_phase = active.get("next_phase", active.get("phase", "blocked"))
     if not result.get("ok", False):
         return "blocked"
+    if active.get("label") == "pretrained-yolo-baseline":
+        best = result.get("best", {}) if isinstance(result.get("best"), dict) else {}
+        metrics = best.get("metrics", {}) if isinstance(best.get("metrics"), dict) else {}
+        detections = int(best.get("num_detections") or 0)
+        score = float(metrics.get("map_locsim") or 0.0)
+        if detections <= 0 or score <= 0.0:
+            return "blocked_pretrained_yolo_baseline_eval"
+        return next_phase
     if active.get("label") != "soccermaster-wiring-probe":
         return next_phase
     athlete_count = int(result.get("athlete_like_at_conf_0_05") or 0)
@@ -422,27 +484,8 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
     if phase == "awaiting_council_report":
         handle_council_report_wait(state)
         return
-    if phase == "first_train_experiment_pending":
-        append_event(
-            "train_experiment_spec_missing",
-            phase=phase,
-            reason="The loop reached the first train/fine-tune phase, but no train.py job spec exists in JOB_SPECS.",
-        )
-        if not state.get("first_train_experiment_issue_created_at"):
-            create_issue(
-                "Autonomy needs first train.py experiment spec",
-                (
-                    "The controller reached `first_train_experiment_pending` after the SoccerMaster conversion/eval probe.\n\n"
-                    "Current facts:\n\n"
-                    "- Corrected SoccerMaster role decode works.\n"
-                    "- The 64-image SoccerMaster SynLoc conversion probe completed.\n"
-                    "- Best probe score: `mAP-LocSim=0.000007373902767781469`.\n"
-                    "- This repo currently has no `train.py` and no job spec for the first train/fine-tune experiment.\n\n"
-                    "Add a concrete train/fine-tune job spec or explicitly redirect the next experiment."
-                ),
-            )
-            state["first_train_experiment_issue_created_at"] = utc_now()
-        state["phase"] = "blocked_train_experiment_spec_missing"
+    if phase and phase.startswith("blocked_"):
+        append_event("still_blocked", phase=phase)
         return
     spec = JOB_SPECS.get(phase)
     if not spec:

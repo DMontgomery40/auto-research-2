@@ -27,6 +27,7 @@ python3 -m py_compile scripts/ask_council.py
 python3 -m py_compile scripts/download_synloc.py
 python3 -m py_compile scripts/evaluate_synloc.py
 python3 -m py_compile scripts/autonomy_tick.py
+python3 -m py_compile train.py
 python3 -m py_compile cloud/synloc_smoke.py
 python3 -m py_compile cloud/synloc_cache.py
 python3 -m py_compile cloud/synloc_baseline_yolo.py
@@ -36,7 +37,7 @@ python3 -m py_compile cloud/soccermaster_synloc_eval_probe.py
 python3 - <<'PY'
 from pathlib import Path
 
-for path in sorted(Path("cloud").glob("*.py")):
+for path in [Path("train.py"), *sorted(Path("cloud").glob("*.py"))]:
     in_pep723 = False
     deps = []
     for line_no, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):

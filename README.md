@@ -26,6 +26,7 @@ The primary metric is `mAP-LocSim`. Higher is better.
 - `scripts/evaluate_synloc.py` - official SSKit metric wrapper for cloud job payloads.
 - `scripts/autonomy_tick.py` - one bounded autonomous controller tick.
 - `scripts/verify.sh` - narrow repo sanity check.
+- `train.py` - YOLO-family baseline and fine-tune script; baseline mode must pass before training mode runs.
 - `.github/workflows/autonomy.yml` - scheduled heartbeat every two hours.
 
 Local upstream clones live in ignored `refs/`:
@@ -98,7 +99,9 @@ Initial phases:
 4. `baseline_full_pending` - run the validation baseline on cloud CUDA.
 5. `soccermaster_wiring_probe_pending` - current SoccerMaster state after the role-label bug was found: rerun the tiny T4 probe with official SoccerMaster role labels.
 6. `soccermaster_synloc_conversion_probe_pending` - convert corrected SoccerMaster player/goalkeeper/referee outputs into SynLoc `results.json`, run official `mAP-LocSim` on a 64-image validation slice, and only then decide the first `train.py`/fine-tune experiment.
-7. `first_train_experiment_pending` - current post-probe phase. This phase needs a concrete train/fine-tune job spec; otherwise the controller will have no work to submit.
+7. `pretrained_yolo_baseline_pending` - run `train.py` with `TRAIN_MODE=baseline` to evaluate pretrained football YOLO26 and Soccana weights before training.
+8. `train_dataset_cache_pending` - cache `train,valid` after the pretrained baseline passes.
+9. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` for the first small SynLoc fine-tune.
 
 ## Ground Rules
 

@@ -89,6 +89,16 @@ SoccerMaster is a pretrained soccer-specific model with reported athlete-detecti
 
 Official SoccerMaster role mapping is `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`. Do not use the old copied Rondo label order (`player`, `goalkeeper`, `referee`, `ball`, `staff`, `other`) for SoccerMaster outputs.
 
+Fixing the role labels is not enough. The copied Rondo adapter is not a source-faithful SoccerMaster runtime if it drops the video/temporal backbone, replaces the official Deformable DETR/MSDeformAttn path with an approximation, or uses custom postprocessing that does not match the official `PostProcess`. A worse-than-TorchVision SynLoc score from that adapter is a runtime-parity failure, not a SoccerMaster model result.
+
+Before any SoccerMaster-based training or score promotion, run an official-runtime parity probe: official SoccerMaster repo/code, official config, 30-frame video-shaped input or documented equivalent, official detection head, official postprocess, and a comparison of boxes/roles/scores against the copied adapter on the same frames.
+
+## YOLO Train Script Rule
+
+`train.py` is the central experiment script for current YOLO-family work. Its first autonomous use must be `TRAIN_MODE=baseline`: evaluate pretrained football YOLO26 and Soccana/SoccerNet-style detector weights on SynLoc with the official `mAP-LocSim` path before any training starts. If the pretrained soccer detector cannot produce nonzero detections and a nonzero official score, block and debug the baseline/eval plumbing instead of training.
+
+Only after the pretrained baseline passes may `TRAIN_MODE=finetune` run. The fine-tune job should start from the best baseline model, train on SynLoc labels, then evaluate the trained checkpoint with the same official metric path.
+
 ## Budget
 
 Default budget is `$25/week`. Track each paid job in `BUDGET.md`.

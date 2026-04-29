@@ -228,3 +228,4 @@
 {"active_job": null, "event": "tick_start", "phase": "blocked_train_experiment_spec_missing", "ts": "2026-04-29T17:13:18.259131Z"}
 {"event": "no_job_for_phase", "phase": "blocked_train_experiment_spec_missing", "ts": "2026-04-29T17:13:18.259232Z"}
 {"active_job": null, "event": "tick_end", "phase": "blocked_train_experiment_spec_missing", "ts": "2026-04-29T17:13:18.262335Z"}
+{"event": "redirect_to_pretrained_yolo_baseline", "phase": "pretrained_yolo_baseline_pending", "reason": "Owner directed baseline eval first; run train.py in baseline mode on pretrained football YOLO26/Soccana before any training.", "ts": "2026-04-29T18:25:00Z"}

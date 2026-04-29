@@ -135,6 +135,18 @@ If SoccerMaster emits no `player`, `goalkeeper`, or `referee` detections, stop s
 
 Known fixed mismatch: official SoccerMaster role mapping is `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`. The copied Rondo adapter previously used the wrong order and mislabeled role id `3` as `ball` and id `4` as `staff`.
 
+Known unresolved mismatch: the copied Rondo adapter is not yet a source-faithful SoccerMaster runtime. Official SoccerMaster is video-shaped, uses temporal attention, uses the official Deformable DETR/MSDeformAttn detection path, and has an official `PostProcess`. If the adapter runs single images through plain SigLIP, skips temporal weights, replaces MSDeformAttn, or custom-decodes boxes, its SynLoc score is not a valid SoccerMaster score.
+
+Next SoccerMaster work must prove official-runtime parity before training: build/load the official SoccerMaster code on cloud CUDA, feed the expected video-shaped input, run the official detection postprocess, then compare boxes/roles/scores to the copied adapter on the same deterministic frames. Do not start a SoccerMaster train/fine-tune job while this parity check is unresolved.
+
+## train.py baseline-first rule
+
+The current YOLO path uses one script: `train.py`.
+
+Run `TRAIN_MODE=baseline` first. It evaluates pretrained football YOLO26 and Soccana/SoccerNet-style detector weights on SynLoc validation through the official `mAP-LocSim` evaluator. This catches broken model loading, class mapping, box-to-pitch projection, score thresholds, and artifact upload before a training job can waste money.
+
+Only run `TRAIN_MODE=finetune` after the pretrained baseline produces nonzero detections and a nonzero official validation score. The fine-tune mode starts from the best baseline model, trains on SynLoc labels, and immediately evaluates the trained checkpoint with the same official path.
+
 ## council
 
 Use the council after baseline, when stuck, before high-cost runs, or every 2-3 days during autonomous work.
