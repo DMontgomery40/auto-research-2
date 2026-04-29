@@ -1,14 +1,13 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 0.75,
-    "flavor": "t4-small",
-    "id": "69f24012d2c8bd8662bd3267",
-    "label": "pretrained-yolo-baseline",
-    "next_phase": "train_dataset_cache_pending",
-    "phase": "pretrained_yolo_baseline_pending",
-    "status": "SCHEDULING",
-    "submitted_at": "2026-04-29T17:29:54.314337Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69f24012d2c8bd8662bd3267"
+  "active_job": null,
+  "blocker": {
+    "created_at": "2026-04-29T17:37:16.424535Z",
+    "job_id": "69f24012d2c8bd8662bd3267",
+    "map_locsim": 5.7407296779217454e-05,
+    "model": "soccana-yolo11n",
+    "num_detections": 2610,
+    "recall_50": 0.0,
+    "title": "Pretrained YOLO baseline eval is effectively zero"
   },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
@@ -2468,10 +2467,119 @@
       "status": "COMPLETED",
       "submitted_at": "2026-04-29T16:47:14.171614Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69f23612d2c8bd8662bd3210"
+    },
+    {
+      "completed_at": "2026-04-29T17:37:16.424513Z",
+      "cost_estimate_usd": 0.75,
+      "flavor": "t4-small",
+      "id": "69f24012d2c8bd8662bd3267",
+      "label": "pretrained-yolo-baseline",
+      "next_phase": "train_dataset_cache_pending",
+      "phase": "pretrained_yolo_baseline_pending",
+      "result": {
+        "best": {
+          "athlete_class_ids": [
+            0
+          ],
+          "conf": 0.01,
+          "filename": "Model/weights/best.pt",
+          "imgsz": 960,
+          "iou": 0.7,
+          "max_images": 128,
+          "metrics": {
+            "f1_50": 0.0,
+            "frame_accuracy": 0.0,
+            "map_locsim": 5.7407296779217454e-05,
+            "precision_50": 0.0070921985815602835,
+            "recall_50": 0.0,
+            "score_threshold": 0.42443275451660156
+          },
+          "mode": "baseline",
+          "model": "soccana-yolo11n",
+          "num_detections": 2610,
+          "num_images": 128,
+          "ok": true,
+          "repo": "Adit-jain/soccana",
+          "run_id": "soccana-yolo11n-baseline-2026-04-29T17-33-32.712443Z",
+          "split": "valid",
+          "ts": "2026-04-29T17:33:37.842793Z",
+          "version": "fullhd"
+        },
+        "evaluated": [
+          {
+            "athlete_class_ids": [
+              1,
+              3
+            ],
+            "conf": 0.01,
+            "filename": "player_detector.pt",
+            "imgsz": 960,
+            "iou": 0.7,
+            "max_images": 128,
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 4.6702783485895764e-05,
+              "precision_50": 0.0047169811320754715,
+              "recall_50": 0.0,
+              "score_threshold": 0.4748844504356384
+            },
+            "mode": "baseline",
+            "model": "football-yolo26l",
+            "num_detections": 2338,
+            "num_images": 128,
+            "ok": true,
+            "repo": "mobadam/football-player-detection",
+            "run_id": "football-yolo26l-baseline-2026-04-29T17-33-20.763645Z",
+            "split": "valid",
+            "ts": "2026-04-29T17:33:25.866138Z",
+            "version": "fullhd"
+          },
+          {
+            "athlete_class_ids": [
+              0
+            ],
+            "conf": 0.01,
+            "filename": "Model/weights/best.pt",
+            "imgsz": 960,
+            "iou": 0.7,
+            "max_images": 128,
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 5.7407296779217454e-05,
+              "precision_50": 0.0070921985815602835,
+              "recall_50": 0.0,
+              "score_threshold": 0.42443275451660156
+            },
+            "mode": "baseline",
+            "model": "soccana-yolo11n",
+            "num_detections": 2610,
+            "num_images": 128,
+            "ok": true,
+            "repo": "Adit-jain/soccana",
+            "run_id": "soccana-yolo11n-baseline-2026-04-29T17-33-32.712443Z",
+            "split": "valid",
+            "ts": "2026-04-29T17:33:37.842793Z",
+            "version": "fullhd"
+          }
+        ],
+        "max_images": 128,
+        "metric": "mAP-LocSim",
+        "mode": "baseline",
+        "ok": true,
+        "run_id": "pretrained-yolo-baseline-2026-04-29T17-33-37.922934Z",
+        "split": "valid",
+        "ts": "2026-04-29T17:33:37.922914Z",
+        "version": "fullhd"
+      },
+      "status": "COMPLETED",
+      "submitted_at": "2026-04-29T17:29:54.314337Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69f24012d2c8bd8662bd3267"
     }
   ],
-  "phase": "pretrained_yolo_baseline_running",
+  "phase": "blocked_pretrained_yolo_baseline_eval",
   "spent_estimate_usd": 22.5,
-  "updated_at": "2026-04-29T17:30:31.340356Z",
+  "updated_at": "2026-04-29T17:37:17.046423Z",
   "weekly_budget_usd": 25.0
 }
