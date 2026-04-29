@@ -17,12 +17,14 @@ Week starts: Monday.
 | 2026-04-27 | baseline-full | HF Jobs | L4 x1 | $6.00 | pending | Full validation baseline | Completed; `mAP-LocSim=0.0000356151` on 6,777 images |
 | 2026-04-27 | soccermaster-wiring-probe | HF Jobs | L4 x1 | $2.00 | pending | Check SoccerMaster raw athlete output | Failed before inference on wrong asset path |
 | 2026-04-29 | soccermaster-wiring-probe retry | HF Jobs | L4 x1 | $2.00 | pending | Check SoccerMaster raw athlete output after asset repair | Completed; zero athlete roles, config/runtime/decode mismatch |
+| 2026-04-29 | soccermaster-wiring-probe corrected roles | HF Jobs | T4 small | $0.50 | pending | Confirm official SoccerMaster role-label decode | Completed; `player=1196`, `referee=4`, bug confirmed |
+| 2026-04-29 | soccermaster-synloc-eval-probe | HF Jobs | T4 small | $1.00 | pending | Convert SoccerMaster detections to SynLoc and score 64 images | Running as job `69f23612d2c8bd8662bd3210` |
 
-Current estimated spend: `$20.25 / $25.00`.
+Current estimated spend: `$21.75 / $25.00`.
 
 Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
-Next planned spend: one corrected-role SoccerMaster wiring rerun on `t4-small`, reserved at `$0.50`, which keeps the week under budget.
+Next planned spend: none until job `69f23612d2c8bd8662bd3210` finishes and its real `mAP-LocSim` is inspected.
 
 ## Spend Rule
 

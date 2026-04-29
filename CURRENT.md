@@ -42,6 +42,8 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Full baseline job `69efa541d70108f37ace099f` completed on HF Jobs `l4x1` for all 6,777 `fullhd valid` images with TorchVision Faster R-CNN: `mAP-LocSim=0.00003561507229859677`, 288,766 detections, selected score threshold `0.49995696544647217`, run artifact `baseline-torchvision-2026-04-27T18-17-53.729401Z`.
 - The full baseline is a scoring-pipeline sanity check, not a serious model direction: it uses COCO `person` boxes, projects each bbox bottom-center point into pitch coordinates, and scores almost zero.
 - SoccerMaster wiring probe job `69f229c4d70108f37ace174a` completed after the asset-path repair. It loaded the weights and ran CUDA inference on 4 images, but the copied Rondo adapter used the wrong role-label order. Official SoccerMaster defines `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`; the copied adapter labeled id `3` as `ball` and id `4` as `staff`. Reinterpreting the last raw counts means the probe likely emitted `player=1120` and `referee=80`, not zero athlete output.
+- Corrected-role SoccerMaster wiring probe job `69f23419d2c8bd8662bd31f2` completed on HF Jobs `t4-small`. It confirmed raw athlete output: `player=1196`, `referee=4`; at confidence `0.05`: `player=731`, `referee=4`; verdict `raw-athlete-output-present`.
+- SoccerMaster-to-SynLoc conversion/eval probe job `69f23612d2c8bd8662bd3210` is running on HF Jobs `t4-small`. It should convert detections into official SynLoc `results.json`, sweep thresholds/role sets on 64 validation images, and record `mAP-LocSim`.
 - Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
 - Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
@@ -53,6 +55,6 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Rerun the tiny `t4-small` SoccerMaster wiring probe with the official role-label order.
-2. If corrected raw SoccerMaster outputs include player/goalkeeper/referee detections, build a tiny SynLoc conversion/eval probe immediately.
-3. Then move into actual `train.py`/fine-tune experiments only after the conversion/eval path is producing a real `mAP-LocSim` number.
+1. Monitor active job `69f23612d2c8bd8662bd3210`, the cheap `t4-small` SoccerMaster-to-SynLoc conversion/eval probe.
+2. If it completes, inspect the 64-image `mAP-LocSim`, chosen threshold, role set, and uploaded `results.json`/`metadata.json`.
+3. Use that score to choose the first actual `train.py`/fine-tune experiment instead of doing more wiring probes.

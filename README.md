@@ -96,7 +96,8 @@ Initial phases:
 2. `dataset_cache_valid_pending` - cache the fullhd validation split in the private HF dataset repo.
 3. `baseline_probe_pending` - run a small YOLO baseline probe on cloud CUDA.
 4. `baseline_full_pending` - run the validation baseline on cloud CUDA.
-5. `soccermaster_wiring_probe_pending` - current SoccerMaster state after the role-label bug was found: rerun the tiny T4 probe with official SoccerMaster role labels, then move to SynLoc conversion/eval if athlete roles are nonzero.
+5. `soccermaster_wiring_probe_pending` - current SoccerMaster state after the role-label bug was found: rerun the tiny T4 probe with official SoccerMaster role labels.
+6. `soccermaster_synloc_conversion_probe_pending` - convert corrected SoccerMaster player/goalkeeper/referee outputs into SynLoc `results.json`, run official `mAP-LocSim` on a 64-image validation slice, and only then decide the first `train.py`/fine-tune experiment.
 
 ## Ground Rules
 
