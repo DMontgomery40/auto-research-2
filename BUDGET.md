@@ -22,6 +22,8 @@ Current estimated spend: `$20.25 / $25.00`.
 
 Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
+Next planned spend: one corrected-role SoccerMaster wiring rerun on `t4-small`, reserved at `$0.50`, which keeps the week under budget.
+
 ## Spend Rule
 
 If an experiment could push the week over `$25`, open a GitHub issue before running it.

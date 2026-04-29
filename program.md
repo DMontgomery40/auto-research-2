@@ -133,6 +133,8 @@ SoccerMaster is a serious pretrained soccer model, not a generic detector guess.
 
 If SoccerMaster emits no `player`, `goalkeeper`, or `referee` detections, stop scoring and debug the mismatch first: official/source-faithful config, weight placement, class dimensions, role-label order, preprocessing/normalization, thresholds, and raw logits. Do not call that underperformance and do not scale it.
 
+Known fixed mismatch: official SoccerMaster role mapping is `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`. The copied Rondo adapter previously used the wrong order and mislabeled role id `3` as `ball` and id `4` as `staff`.
+
 ## council
 
 Use the council after baseline, when stuck, before high-cost runs, or every 2-3 days during autonomous work.

@@ -48,7 +48,7 @@ There is a prior sibling SynLoc effort at `/Users/davidmontgomery/v2d-research` 
 - A copied SoccerMaster GSR adapter was tried on 64 deterministic SynLoc validation frames.
 - SoccerMaster attempt result: `mAP-LocSim = 0.0`; role decode produced mostly `ball=18370`, `staff=271`, `goalkeeper=131`, and no `player` detections.
 - Interpretation: this is probably a runtime/config/decode failure in our copied adapter path, not a model-quality result. The SoccerMaster paper reports `92.3` athlete-detection AP@50, `50.5` mAP, and `99.2` role accuracy in Table 3, plus strong pitch-registration/camera-calibration transfer. A correct SoccerMaster runtime should not decode no players on ordinary soccer frames.
-- The repaired `auto-research-2` wiring probe job `69f229c4d70108f37ace174a` loaded SoccerMaster assets and ran CUDA on 4 images, but still produced `ball=1120`, `staff=80`, and `athlete_like_at_conf_0_05=0`. Treat this as an active config/runtime/decode mismatch to isolate, not as evidence SoccerMaster is weak.
+- The repaired `auto-research-2` wiring probe job `69f229c4d70108f37ace174a` loaded SoccerMaster assets and ran CUDA on 4 images. It appeared to produce `ball=1120`, `staff=80`, and `athlete_like_at_conf_0_05=0`, but diagnosis found the copied adapter used the wrong role-label order. Official SoccerMaster maps `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`; the copied adapter mapped id `3` to `ball` and id `4` to `staff`. Reinterpreted, the last probe likely produced `player=1120` and `referee=80`.
 
 Council should distinguish:
 

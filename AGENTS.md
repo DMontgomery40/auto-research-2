@@ -87,6 +87,8 @@ If the controller needs owner input, more budget, or secret repair, it opens a G
 
 SoccerMaster is a pretrained soccer-specific model with reported athlete-detection performance far above generic out-of-the-box detectors. If a SoccerMaster path emits zero `player`/`goalkeeper`/`referee` detections on ordinary soccer frames, treat that as a runtime/config/decode mismatch until proven otherwise. Do not describe it as model underperformance, do not bury it as a low score, and do not run scoring sweeps before auditing weight placement, class/role dimensions, role-label order, preprocessing, thresholds, and raw logits.
 
+Official SoccerMaster role mapping is `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`. Do not use the old copied Rondo label order (`player`, `goalkeeper`, `referee`, `ball`, `staff`, `other`) for SoccerMaster outputs.
+
 ## Budget
 
 Default budget is `$25/week`. Track each paid job in `BUDGET.md`.

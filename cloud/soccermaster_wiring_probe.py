@@ -30,6 +30,7 @@ MODEL_REPO = os.environ["HF_MODEL_REPO"]
 TOKEN = os.environ["HF_TOKEN"]
 MAX_IMAGES = int(os.getenv("SOCCERMASTER_MAX_IMAGES", "4"))
 WORK = Path("/tmp/soccermaster_wiring_probe")
+OFFICIAL_ROLE_LABELS = ["ball", "goalkeeper", "other", "player", "referee", "none"]
 
 
 def utc_now() -> str:
@@ -93,6 +94,10 @@ def import_adapter(path: Path) -> Any:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
+    # The copied Rondo adapter used a different label order. Official SoccerMaster
+    # defines role_mapping = {'ball': 0, 'goalkeeper': 1, 'other': 2,
+    # 'player': 3, 'referee': 4, None: 5}.
+    module.ROLE_LABELS = list(OFFICIAL_ROLE_LABELS)
     return module
 
 
@@ -189,6 +194,7 @@ def main() -> None:
         "asset_repo": ASSET_REPO,
         "model_repo": MODEL_REPO,
         "role_labels": role_labels,
+        "role_label_source": "official_soccermaster_data.soccernet_gsr_detection.role_mapping",
         "detection_head": {
             "num_classes": int(head.num_classes),
             "num_roles": int(head.num_roles),

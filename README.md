@@ -96,7 +96,7 @@ Initial phases:
 2. `dataset_cache_valid_pending` - cache the fullhd validation split in the private HF dataset repo.
 3. `baseline_probe_pending` - run a small YOLO baseline probe on cloud CUDA.
 4. `baseline_full_pending` - run the validation baseline on cloud CUDA.
-5. `soccermaster_config_mismatch_review` - current SoccerMaster state after the repaired wiring probe: weights load, but zero athlete roles means config/runtime/decode mismatch. Debug against the official/source-faithful SoccerMaster config before any scoring sweep.
+5. `soccermaster_wiring_probe_pending` - current SoccerMaster state after the role-label bug was found: rerun the tiny T4 probe with official SoccerMaster role labels, then move to SynLoc conversion/eval if athlete roles are nonzero.
 
 ## Ground Rules
 
