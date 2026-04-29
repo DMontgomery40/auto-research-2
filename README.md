@@ -98,6 +98,7 @@ Initial phases:
 4. `baseline_full_pending` - run the validation baseline on cloud CUDA.
 5. `soccermaster_wiring_probe_pending` - current SoccerMaster state after the role-label bug was found: rerun the tiny T4 probe with official SoccerMaster role labels.
 6. `soccermaster_synloc_conversion_probe_pending` - convert corrected SoccerMaster player/goalkeeper/referee outputs into SynLoc `results.json`, run official `mAP-LocSim` on a 64-image validation slice, and only then decide the first `train.py`/fine-tune experiment.
+7. `first_train_experiment_pending` - current post-probe phase. This phase needs a concrete train/fine-tune job spec; otherwise the controller will have no work to submit.
 
 ## Ground Rules
 

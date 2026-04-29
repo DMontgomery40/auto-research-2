@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 1.0,
-    "flavor": "t4-small",
-    "id": "69f23612d2c8bd8662bd3210",
-    "label": "soccermaster-synloc-eval-probe",
-    "next_phase": "first_train_experiment_pending",
-    "phase": "soccermaster_synloc_conversion_probe_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-04-29T16:47:14.171614Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69f23612d2c8bd8662bd3210"
-  },
+  "active_job": null,
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
     "failed_at": "2026-04-27T19:17:02Z",
@@ -2218,10 +2208,260 @@
       "status": "COMPLETED",
       "submitted_at": "2026-04-29T16:38:49.207376Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69f23419d2c8bd8662bd31f2"
+    },
+    {
+      "completed_at": "2026-04-29T16:53:56.732163Z",
+      "cost_estimate_usd": 1.0,
+      "flavor": "t4-small",
+      "id": "69f23612d2c8bd8662bd3210",
+      "label": "soccermaster-synloc-eval-probe",
+      "next_phase": "first_train_experiment_pending",
+      "phase": "soccermaster_synloc_conversion_probe_pending",
+      "result": {
+        "best": {
+          "metrics": {
+            "f1_50": 0.0,
+            "frame_accuracy": 0.0,
+            "map_locsim": 7.373902767781469e-06,
+            "precision_50": 0.0015133680847486128,
+            "recall_50": 0.0,
+            "score_threshold": 0.24485285580158234
+          },
+          "num_detections": 18268,
+          "predictions": "results_athlete_thr_0p01.json",
+          "role_set": "athlete",
+          "threshold": 0.01
+        },
+        "device": "cuda",
+        "evaluated": [
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 7.373902767781469e-06,
+              "precision_50": 0.0015133680847486128,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 18268,
+            "predictions": "results_athlete_thr_0p01.json",
+            "role_set": "athlete",
+            "threshold": 0.01
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 7.373902767781469e-06,
+              "precision_50": 0.0015133680847486128,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 18256,
+            "predictions": "results_athlete_thr_0p03.json",
+            "role_set": "athlete",
+            "threshold": 0.03
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 7.373902767781469e-06,
+              "precision_50": 0.0015133680847486128,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 17005,
+            "predictions": "results_athlete_thr_0p05.json",
+            "role_set": "athlete",
+            "threshold": 0.05
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 7.373902767781469e-06,
+              "precision_50": 0.0015133680847486128,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 10758,
+            "predictions": "results_athlete_thr_0p1.json",
+            "role_set": "athlete",
+            "threshold": 0.1
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 6.391072371761373e-06,
+              "precision_50": 0.0011933174224343676,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 4279,
+            "predictions": "results_athlete_thr_0p2.json",
+            "role_set": "athlete",
+            "threshold": 0.2
+          },
+          {
+            "metrics": {
+              "f1_50": NaN,
+              "frame_accuracy": 0.0,
+              "map_locsim": 0.0,
+              "precision_50": 0.0,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 1223,
+            "predictions": "results_athlete_thr_0p3.json",
+            "role_set": "athlete",
+            "threshold": 0.3
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 7.373902767781469e-06,
+              "precision_50": 0.0015133680847486128,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 18278,
+            "predictions": "results_person_plus_other_thr_0p01.json",
+            "role_set": "person_plus_other",
+            "threshold": 0.01
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 7.373902767781469e-06,
+              "precision_50": 0.0015133680847486128,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 18266,
+            "predictions": "results_person_plus_other_thr_0p03.json",
+            "role_set": "person_plus_other",
+            "threshold": 0.03
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 7.373902767781469e-06,
+              "precision_50": 0.0015133680847486128,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 17015,
+            "predictions": "results_person_plus_other_thr_0p05.json",
+            "role_set": "person_plus_other",
+            "threshold": 0.05
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 7.373902767781469e-06,
+              "precision_50": 0.0015133680847486128,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 10758,
+            "predictions": "results_person_plus_other_thr_0p1.json",
+            "role_set": "person_plus_other",
+            "threshold": 0.1
+          },
+          {
+            "metrics": {
+              "f1_50": 0.0,
+              "frame_accuracy": 0.0,
+              "map_locsim": 6.391072371761373e-06,
+              "precision_50": 0.0011933174224343676,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 4279,
+            "predictions": "results_person_plus_other_thr_0p2.json",
+            "role_set": "person_plus_other",
+            "threshold": 0.2
+          },
+          {
+            "metrics": {
+              "f1_50": NaN,
+              "frame_accuracy": 0.0,
+              "map_locsim": 0.0,
+              "precision_50": 0.0,
+              "recall_50": 0.0,
+              "score_threshold": 0.24485285580158234
+            },
+            "num_detections": 1223,
+            "predictions": "results_person_plus_other_thr_0p3.json",
+            "role_set": "person_plus_other",
+            "threshold": 0.3
+          }
+        ],
+        "max_images": 64,
+        "metric": "mAP-LocSim",
+        "num_images": 64,
+        "ok": true,
+        "role_label_source": "official_soccermaster_data.soccernet_gsr_detection.role_mapping",
+        "role_labels": [
+          "ball",
+          "goalkeeper",
+          "other",
+          "player",
+          "referee",
+          "none"
+        ],
+        "run_id": "soccermaster-synloc-probe-2026-04-29T16-51-53-869121Z",
+        "split": "valid",
+        "threshold_role_hist": {
+          "0.01": {
+            "goalkeeper": 4266,
+            "other": 10,
+            "player": 11939,
+            "referee": 2063
+          },
+          "0.03": {
+            "goalkeeper": 4262,
+            "other": 10,
+            "player": 11931,
+            "referee": 2063
+          },
+          "0.05": {
+            "goalkeeper": 3350,
+            "other": 10,
+            "player": 11667,
+            "referee": 1988
+          },
+          "0.1": {
+            "goalkeeper": 570,
+            "player": 9462,
+            "referee": 726
+          },
+          "0.2": {
+            "goalkeeper": 65,
+            "player": 4067,
+            "referee": 147
+          },
+          "0.3": {
+            "player": 1212,
+            "referee": 11
+          }
+        },
+        "ts": "2026-04-29T16:53:08.550557Z",
+        "version": "fullhd"
+      },
+      "status": "COMPLETED",
+      "submitted_at": "2026-04-29T16:47:14.171614Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69f23612d2c8bd8662bd3210"
     }
   ],
-  "phase": "soccermaster_synloc_conversion_probe_running",
+  "phase": "first_train_experiment_pending",
   "spent_estimate_usd": 21.75,
-  "updated_at": "2026-04-29T16:52:32.945214Z",
+  "updated_at": "2026-04-29T16:53:56.732475Z",
   "weekly_budget_usd": 25.0
 }

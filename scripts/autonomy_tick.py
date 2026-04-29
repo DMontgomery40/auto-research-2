@@ -422,6 +422,28 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
     if phase == "awaiting_council_report":
         handle_council_report_wait(state)
         return
+    if phase == "first_train_experiment_pending":
+        append_event(
+            "train_experiment_spec_missing",
+            phase=phase,
+            reason="The loop reached the first train/fine-tune phase, but no train.py job spec exists in JOB_SPECS.",
+        )
+        if not state.get("first_train_experiment_issue_created_at"):
+            create_issue(
+                "Autonomy needs first train.py experiment spec",
+                (
+                    "The controller reached `first_train_experiment_pending` after the SoccerMaster conversion/eval probe.\n\n"
+                    "Current facts:\n\n"
+                    "- Corrected SoccerMaster role decode works.\n"
+                    "- The 64-image SoccerMaster SynLoc conversion probe completed.\n"
+                    "- Best probe score: `mAP-LocSim=0.000007373902767781469`.\n"
+                    "- This repo currently has no `train.py` and no job spec for the first train/fine-tune experiment.\n\n"
+                    "Add a concrete train/fine-tune job spec or explicitly redirect the next experiment."
+                ),
+            )
+            state["first_train_experiment_issue_created_at"] = utc_now()
+        state["phase"] = "blocked_train_experiment_spec_missing"
+        return
     spec = JOB_SPECS.get(phase)
     if not spec:
         append_event("no_job_for_phase", phase=phase)
