@@ -47,7 +47,8 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - That score is worse than the 64-image TorchVision baseline (`0.00012376237623762376`). Treat this as evidence that the copied adapter/runtime is still not source-faithful, not as evidence that SoccerMaster is bad.
 - The unresolved leak is bigger than role-label plumbing: official SoccerMaster is a video/spatiotemporal model with temporal attention, an official Deformable DETR/MSDeformAttn detection path, and official `PostProcess`. The copied Rondo adapter drops temporal weights, runs single images through plain SigLIP, approximates MSDeformAttn with `grid_sample`, and custom-decodes boxes/NMS.
 - `train.py` now exists and must baseline-evaluate pretrained soccer/football YOLO models before any training. Default autonomous baseline compares `mobadam/football-player-detection` (`YOLO26l`, football classes `ball/player/referee/goalkeeper`) and `Adit-jain/soccana` (YOLO11n SoccerNet/Soccana-style classes).
-- Current controller phase is `pretrained_yolo_baseline_pending`.
+- Pretrained YOLO baseline job `69f24012d2c8bd8662bd3267` completed on HF Jobs `t4-small`. Both models emitted detections but still scored effectively zero through official SynLoc localization: YOLO26l `mAP-LocSim=0.000046702783485895764` with 2,338 detections; Soccana `mAP-LocSim=0.000057407296779217454` with 2,610 detections.
+- Current controller phase should block as `blocked_pretrained_yolo_baseline_eval`. This is a projection/eval/data-shape problem, not a signal to train.
 - Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
 - Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
@@ -59,6 +60,6 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Run `train.py` in `TRAIN_MODE=baseline` on HF Jobs `t4-small` against the cached fullhd validation split.
-2. Block if the pretrained YOLO/Soccana baseline produces zero detections or zero official `mAP-LocSim`; debug that before training.
-3. If baseline eval passes, cache the train split and run `train.py` in `TRAIN_MODE=finetune`.
+1. Do not start `TRAIN_MODE=finetune`.
+2. Diagnose why pretrained soccer detectors produce thousands of boxes but official SynLoc recall stays `0.0` and `mAP-LocSim` stays below `0.0001`.
+3. Check class ids, bbox-to-pitch projection, camera normalization, image/annotation pairing, score threshold handling, and evaluator assumptions before spending more GPU time.

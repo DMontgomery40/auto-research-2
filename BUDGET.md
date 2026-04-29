@@ -19,13 +19,13 @@ Week starts: Monday.
 | 2026-04-29 | soccermaster-wiring-probe retry | HF Jobs | L4 x1 | $2.00 | pending | Check SoccerMaster raw athlete output after asset repair | Completed; zero athlete roles, config/runtime/decode mismatch |
 | 2026-04-29 | soccermaster-wiring-probe corrected roles | HF Jobs | T4 small | $0.50 | pending | Confirm official SoccerMaster role-label decode | Completed; `player=1196`, `referee=4`, bug confirmed |
 | 2026-04-29 | soccermaster-synloc-eval-probe | HF Jobs | T4 small | $1.00 | pending | Convert SoccerMaster detections to SynLoc and score 64 images | Completed; best `mAP-LocSim=0.0000073739` |
-| 2026-04-29 | pretrained-yolo-baseline | HF Jobs | T4 small | $0.75 | pending | Baseline-evaluate pretrained football YOLO26 and Soccana through `train.py` before training | Pending |
+| 2026-04-29 | pretrained-yolo-baseline | HF Jobs | T4 small | $0.75 | pending | Baseline-evaluate pretrained football YOLO26 and Soccana through `train.py` before training | Completed; best Soccana `mAP-LocSim=0.0000574073`, training blocked |
 
-Current estimated spend: `$21.75 / $25.00`.
+Current estimated spend: `$22.50 / $25.00`.
 
 Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
-Next planned spend: `$0.75` for `train.py` baseline eval. Remaining estimated weekly budget after that reservation is `$2.50`.
+Next planned spend: `$0.00` until the pretrained detector baseline/eval mismatch is diagnosed. Remaining estimated weekly budget after the baseline reservation is `$2.50`.
 
 ## Spend Rule
 

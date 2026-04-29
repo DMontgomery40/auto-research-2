@@ -11,7 +11,7 @@ Do not spend real GPU money until a tiny cloud smoke job proves the environment,
 
 ## Model Directions
 
-- First run `train.py` baseline mode on pretrained football YOLO26 and Soccana/SoccerNet-style weights. Training is forbidden until this official eval path produces nonzero detections and nonzero `mAP-LocSim`.
+- First run `train.py` baseline mode on pretrained football YOLO26 and Soccana/SoccerNet-style weights. Training is forbidden until this official eval path produces detections, positive recall, and meaningful `mAP-LocSim`.
 - Strong detector plus calibrated ground projection from player foot/bottom-center point.
 - Keypoint/pelvis prediction route using `position_from_keypoint_index`.
 - Synthetic-to-real augmentation sweep: blur, compression, exposure, field color, player scale, camera crop.
@@ -35,7 +35,7 @@ Do not spend real GPU money until a tiny cloud smoke job proves the environment,
 
 - `train.py` exists and is the YOLO-family experiment script.
 - First phase: `TRAIN_MODE=baseline` evaluates pretrained `mobadam/football-player-detection` YOLO26l and `Adit-jain/soccana` weights through official SynLoc `mAP-LocSim` on cached validation images.
-- If the pretrained baseline fails, do not train. Fix class ids, model loading, score thresholds, projection, or evaluator plumbing first.
+- If the pretrained baseline fails or only produces a microscopic nonzero score with `recall_50=0.0`, do not train. Fix class ids, model loading, score thresholds, projection, or evaluator plumbing first.
 - Second phase: after baseline passes, cache `train,valid` and run `TRAIN_MODE=finetune` from the best baseline model for a small first SynLoc fine-tune.
 
 ## Risky Ideas

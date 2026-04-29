@@ -95,7 +95,7 @@ Before any SoccerMaster-based training or score promotion, run an official-runti
 
 ## YOLO Train Script Rule
 
-`train.py` is the central experiment script for current YOLO-family work. Its first autonomous use must be `TRAIN_MODE=baseline`: evaluate pretrained football YOLO26 and Soccana/SoccerNet-style detector weights on SynLoc with the official `mAP-LocSim` path before any training starts. If the pretrained soccer detector cannot produce nonzero detections and a nonzero official score, block and debug the baseline/eval plumbing instead of training.
+`train.py` is the central experiment script for current YOLO-family work. Its first autonomous use must be `TRAIN_MODE=baseline`: evaluate pretrained football YOLO26 and Soccana/SoccerNet-style detector weights on SynLoc with the official `mAP-LocSim` path before any training starts. If the pretrained soccer detector cannot produce detections plus a meaningful official score, block and debug the baseline/eval plumbing instead of training. A tiny nonzero floating-point score with `recall_50=0.0` is still broken.
 
 Only after the pretrained baseline passes may `TRAIN_MODE=finetune` run. The fine-tune job should start from the best baseline model, train on SynLoc labels, then evaluate the trained checkpoint with the same official metric path.
 

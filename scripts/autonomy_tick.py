@@ -21,6 +21,7 @@ COUNCIL_INBOX = Path("challenge-council") / "data" / "automation_queue" / "inbox
 
 TERMINAL_OK = {"COMPLETED"}
 TERMINAL_BAD = {"ERROR", "CANCELED", "DELETED"}
+PRETRAINED_YOLO_BASELINE_MIN_MAP_LOCSIM = 0.01
 
 JOB_SPECS: dict[str, dict[str, Any]] = {
     "cloud_smoke_pending": {
@@ -431,7 +432,8 @@ def next_phase_for_result(active: dict[str, Any], result: dict[str, Any]) -> str
         metrics = best.get("metrics", {}) if isinstance(best.get("metrics"), dict) else {}
         detections = int(best.get("num_detections") or 0)
         score = float(metrics.get("map_locsim") or 0.0)
-        if detections <= 0 or score <= 0.0:
+        recall = float(metrics.get("recall_50") or 0.0)
+        if detections <= 0 or score < PRETRAINED_YOLO_BASELINE_MIN_MAP_LOCSIM or recall <= 0.0:
             return "blocked_pretrained_yolo_baseline_eval"
         return next_phase
     if active.get("label") != "soccermaster-wiring-probe":
@@ -457,6 +459,30 @@ def inspect_active_job(api: HfApi, state: dict[str, Any]) -> bool:
         state.setdefault("history", []).append({**active, "completed_at": utc_now(), "result": result})
         state["active_job"] = None
         state["phase"] = next_phase_for_result(active, result)
+        if state["phase"] == "blocked_pretrained_yolo_baseline_eval":
+            best = result.get("best", {}) if isinstance(result, dict) else {}
+            metrics = best.get("metrics", {}) if isinstance(best.get("metrics"), dict) else {}
+            state["blocker"] = {
+                "title": "Pretrained YOLO baseline eval is effectively zero",
+                "created_at": utc_now(),
+                "job_id": active.get("id"),
+                "model": best.get("model"),
+                "map_locsim": metrics.get("map_locsim"),
+                "recall_50": metrics.get("recall_50"),
+                "num_detections": best.get("num_detections"),
+            }
+            create_issue(
+                "Autonomy blocked: pretrained YOLO baseline eval is effectively zero",
+                (
+                    f"Job: {active.get('url') or active.get('id')}\n\n"
+                    f"Best model: `{best.get('model', 'unknown')}`\n"
+                    f"mAP-LocSim: `{metrics.get('map_locsim', 'unknown')}`\n"
+                    f"recall_50: `{metrics.get('recall_50', 'unknown')}`\n"
+                    f"num_detections: `{best.get('num_detections', 'unknown')}`\n\n"
+                    "Training is intentionally blocked. The detector is producing boxes, but projected SynLoc localization is still effectively zero. "
+                    "Debug class ids, bbox-to-pitch projection, camera normalization, annotation/image pairing, and official evaluator assumptions before starting `TRAIN_MODE=finetune`."
+                ),
+            )
         append_event("job_completed", job=active, result=result)
         return True
     if status in TERMINAL_BAD:

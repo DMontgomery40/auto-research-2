@@ -145,7 +145,7 @@ The current YOLO path uses one script: `train.py`.
 
 Run `TRAIN_MODE=baseline` first. It evaluates pretrained football YOLO26 and Soccana/SoccerNet-style detector weights on SynLoc validation through the official `mAP-LocSim` evaluator. This catches broken model loading, class mapping, box-to-pitch projection, score thresholds, and artifact upload before a training job can waste money.
 
-Only run `TRAIN_MODE=finetune` after the pretrained baseline produces nonzero detections and a nonzero official validation score. The fine-tune mode starts from the best baseline model, trains on SynLoc labels, and immediately evaluates the trained checkpoint with the same official path.
+Only run `TRAIN_MODE=finetune` after the pretrained baseline produces detections, positive recall, and a meaningful official validation score. A microscopic nonzero `mAP-LocSim` with `recall_50=0.0` is a failed baseline, not permission to train. The fine-tune mode starts from the best baseline model, trains on SynLoc labels, and immediately evaluates the trained checkpoint with the same official path.
 
 ## council
 
