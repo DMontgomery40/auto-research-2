@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
@@ -190,13 +191,23 @@ def load_state() -> dict[str, Any]:
 
 def write_state(state: dict[str, Any]) -> None:
     state["updated_at"] = utc_now()
-    STATE_PATH.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    STATE_PATH.write_text(json.dumps(json_safe(state), indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
 
 
 def append_event(event: str, **payload: Any) -> None:
     EVENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     with EVENTS_PATH.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps({"ts": utc_now(), "event": event, **payload}, sort_keys=True) + "\n")
+        handle.write(json.dumps(json_safe({"ts": utc_now(), "event": event, **payload}), sort_keys=True, allow_nan=False) + "\n")
+
+
+def json_safe(value: Any) -> Any:
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+    return value
 
 
 def run(cmd: list[str]) -> tuple[int, str]:

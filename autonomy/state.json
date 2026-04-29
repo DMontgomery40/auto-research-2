@@ -2315,7 +2315,7 @@
           },
           {
             "metrics": {
-              "f1_50": NaN,
+              "f1_50": null,
               "frame_accuracy": 0.0,
               "map_locsim": 0.0,
               "precision_50": 0.0,
@@ -2399,7 +2399,7 @@
           },
           {
             "metrics": {
-              "f1_50": NaN,
+              "f1_50": null,
               "frame_accuracy": 0.0,
               "map_locsim": 0.0,
               "precision_50": 0.0,
