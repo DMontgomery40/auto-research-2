@@ -48,8 +48,10 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - The unresolved leak is bigger than role-label plumbing: official SoccerMaster is a video/spatiotemporal model with temporal attention, an official Deformable DETR/MSDeformAttn detection path, and official `PostProcess`. The copied Rondo adapter drops temporal weights, runs single images through plain SigLIP, approximates MSDeformAttn with `grid_sample`, and custom-decodes boxes/NMS.
 - `train.py` now exists and must baseline-evaluate pretrained soccer/football YOLO models before any training. Default autonomous baseline compares `mobadam/football-player-detection` (`YOLO26l`, football classes `ball/player/referee/goalkeeper`) and `Adit-jain/soccana` (YOLO11n SoccerNet/Soccana-style classes).
 - Pretrained YOLO baseline job `69f24012d2c8bd8662bd3267` completed on HF Jobs `t4-small`. Both models emitted detections but still scored effectively zero through official SynLoc localization: YOLO26l `mAP-LocSim=0.000046702783485895764` with 2,338 detections; Soccana `mAP-LocSim=0.000057407296779217454` with 2,610 detections.
-- Current controller phase is `devkit_oracle_pending`. This is a projection/eval/data-shape problem, not a signal to train.
-- The next job is a dev-kit oracle, not another model run: exact `position_on_pitch`, ground keypoints projected by SSKit, and bbox bottom-center projected by SSKit must be measured first.
+- SSKit dev-kit oracle retry job `69f2462ed70108f37ace17b5` completed on HF Jobs `cpu-upgrade` for 64 validation images and 1,004 annotations. Exact GT `position_on_pitch` scored `mAP-LocSim=1.0`; GT ground keypoints projected by SSKit scored `0.9809895759040843`; GT bbox bottom-center through SSKit keypoint projection and `BBoxLocSimCOCOeval` both scored `0.5686594909116471` with `precision_50=0.9269269269269269` and `recall_50=0.92`.
+- Current controller phase is `devkit_oracle_review`.
+- The oracle proves the official data, camera calibration, evaluator, and SSKit projection path are not globally broken. The near-zero pretrained detector scores are on the prediction side: wrong/poor boxes for SynLoc, class or role filtering, source-domain mismatch, postprocess/decode, or using non-SynLoc pretrained detectors as if they were official SynLoc baselines.
+- Do not start training from a near-zero detector path. The next work must be dev-kit-first: use the official SSKit result formats, `position_from_keypoint_index`, `BBoxLocSimCOCOeval`, FOOTPASS/official challenge assets, and official baseline/runtime code before any fine-tune.
 - Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
 - Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
@@ -61,6 +63,6 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Run `cloud/synloc_devkit_oracle.py` on HF Jobs CPU.
-2. If exact `position_on_pitch` or SSKit-projected GT keypoints do not score near perfect, stop and fix dataset/evaluator wiring.
-3. If exact/keypoint oracle passes but bbox bottom-center is poor, stop treating detector bboxes as a serious SynLoc baseline and move to the official pose/keypoint baseline path before training.
+1. Promote the SSKit oracle result into the next experiment decision: exact/keypoint oracle passed, bbox bottom-center is a usable but lossy baseline around `0.5686594909`.
+2. Stop treating detector bottom-center sweeps as the main plan until detector boxes are proven against SynLoc athletes.
+3. Start from official/dev-kit baselines and challenge assets: SSKit result formats, `BBoxLocSimCOCOeval`, keypoint/ground-point format, FOOTPASS, and the official baseline/runtime path before any `TRAIN_MODE=finetune`.

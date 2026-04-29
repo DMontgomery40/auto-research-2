@@ -1,12 +1,5 @@
 {
   "active_job": null,
-  "blocker": {
-    "created_at": "2026-04-29T17:55:06.220774Z",
-    "failed_job_id": "69f2457ed2c8bd8662bd32b0",
-    "failure": "GitHub SSKit imports torchvision.io; cloud PEP 723 dependency omitted torchvision",
-    "next_phase": "devkit_oracle_pending",
-    "title": "SSKit oracle retry after missing torchvision dependency"
-  },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
     "failed_at": "2026-04-27T19:17:02Z",
@@ -2666,6 +2659,6 @@
   ],
   "phase": "devkit_oracle_review",
   "spent_estimate_usd": 23.0,
-  "updated_at": "2026-04-29T18:01:10.384690Z",
+  "updated_at": "2026-04-29T18:02:08Z",
   "weekly_budget_usd": 25.0
 }

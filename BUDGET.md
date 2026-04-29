@@ -21,13 +21,13 @@ Week starts: Monday.
 | 2026-04-29 | soccermaster-synloc-eval-probe | HF Jobs | T4 small | $1.00 | pending | Convert SoccerMaster detections to SynLoc and score 64 images | Completed; best `mAP-LocSim=0.0000073739` |
 | 2026-04-29 | pretrained-yolo-baseline | HF Jobs | T4 small | $0.75 | pending | Baseline-evaluate pretrained football YOLO26 and Soccana through `train.py` before training | Completed; best Soccana `mAP-LocSim=0.0000574073`, training blocked |
 | 2026-04-29 | synloc-devkit-oracle | HF Jobs | CPU upgrade | $0.25 | pending | Run SSKit oracle checks before any more model training | Failed before execution on missing `torchvision`; dependency patched |
-| 2026-04-29 | synloc-devkit-oracle retry | HF Jobs | CPU upgrade | $0.25 | pending | Run SSKit oracle checks before any more model training | Pending |
+| 2026-04-29 | synloc-devkit-oracle retry | HF Jobs | CPU upgrade | $0.25 | pending | Run SSKit oracle checks before any more model training | Completed; exact GT `1.0`, projected GT keypoint `0.9809895759`, bbox bottom-center via SSKit `0.5686594909` |
 
-Current estimated spend: `$22.75 / $25.00`.
+Current estimated spend: `$23.00 / $25.00`.
 
 Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
-Next planned spend: `$0.25` for the SSKit oracle retry. Remaining estimated weekly budget after that reservation is `$2.00`.
+Next planned spend: none until the dev-kit review selects the next bounded experiment. Remaining estimated weekly budget is `$2.00`.
 
 ## Spend Rule
 
