@@ -1,5 +1,15 @@
 {
-  "active_job": null,
+  "active_job": {
+    "cost_estimate_usd": 0.5,
+    "flavor": "t4-small",
+    "id": "69f23419d2c8bd8662bd31f2",
+    "label": "soccermaster-wiring-probe",
+    "next_phase": "soccermaster_raw_output_review",
+    "phase": "soccermaster_wiring_probe_pending",
+    "status": "RUNNING",
+    "submitted_at": "2026-04-29T16:38:49.207376Z",
+    "url": "https://huggingface.co/jobs/dmontgomery40/69f23419d2c8bd8662bd31f2"
+  },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
     "failed_at": "2026-04-27T19:17:02Z",
@@ -1222,8 +1232,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f229c4d70108f37ace174a"
     }
   ],
-  "phase": "soccermaster_wiring_probe_pending",
-  "spent_estimate_usd": 20.25,
-  "updated_at": "2026-04-29T16:35:45Z",
+  "phase": "soccermaster_wiring_probe_running",
+  "spent_estimate_usd": 20.75,
+  "updated_at": "2026-04-29T16:38:49.207519Z",
   "weekly_budget_usd": 25.0
 }
