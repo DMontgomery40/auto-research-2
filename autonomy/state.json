@@ -1,5 +1,15 @@
 {
-  "active_job": null,
+  "active_job": {
+    "cost_estimate_usd": 0.75,
+    "flavor": "t4-small",
+    "id": "69f24012d2c8bd8662bd3267",
+    "label": "pretrained-yolo-baseline",
+    "next_phase": "train_dataset_cache_pending",
+    "phase": "pretrained_yolo_baseline_pending",
+    "status": "RUNNING",
+    "submitted_at": "2026-04-29T17:29:54.314337Z",
+    "url": "https://huggingface.co/jobs/dmontgomery40/69f24012d2c8bd8662bd3267"
+  },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
     "failed_at": "2026-04-27T19:17:02Z",
@@ -2460,8 +2470,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f23612d2c8bd8662bd3210"
     }
   ],
-  "phase": "pretrained_yolo_baseline_pending",
-  "spent_estimate_usd": 21.75,
-  "updated_at": "2026-04-29T18:25:00Z",
+  "phase": "pretrained_yolo_baseline_running",
+  "spent_estimate_usd": 22.5,
+  "updated_at": "2026-04-29T17:29:54.314499Z",
   "weekly_budget_usd": 25.0
 }
