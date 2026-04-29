@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 0.25,
-    "flavor": "cpu-upgrade",
-    "id": "69f2462ed70108f37ace17b5",
-    "label": "synloc-devkit-oracle",
-    "next_phase": "devkit_oracle_review",
-    "phase": "devkit_oracle_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-04-29T17:55:58.633032Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69f2462ed70108f37ace17b5"
-  },
+  "active_job": null,
   "blocker": {
     "created_at": "2026-04-29T17:55:06.220774Z",
     "failed_job_id": "69f2457ed2c8bd8662bd32b0",
@@ -2584,10 +2574,98 @@
       "status": "COMPLETED",
       "submitted_at": "2026-04-29T17:29:54.314337Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69f24012d2c8bd8662bd3267"
+    },
+    {
+      "completed_at": "2026-04-29T18:01:10.384407Z",
+      "cost_estimate_usd": 0.25,
+      "flavor": "cpu-upgrade",
+      "id": "69f2462ed70108f37ace17b5",
+      "label": "synloc-devkit-oracle",
+      "next_phase": "devkit_oracle_review",
+      "phase": "devkit_oracle_pending",
+      "result": {
+        "cases": [
+          {
+            "metadata": {
+              "score_threshold": 0.5
+            },
+            "metrics": {
+              "f1_50": 1.0,
+              "frame_accuracy": 1.0,
+              "map_locsim": 1.0,
+              "precision_50": 1.0,
+              "recall_50": 1.0,
+              "score_threshold": 0.5
+            },
+            "name": "exact_position_on_pitch",
+            "num_predictions": 1004
+          },
+          {
+            "metadata": {
+              "position_from_keypoint_index": 1,
+              "score_threshold": 0.5
+            },
+            "metrics": {
+              "f1_50": 1.0,
+              "frame_accuracy": 1.0,
+              "map_locsim": 0.9809895759040843,
+              "precision_50": 1.0,
+              "recall_50": 1.0,
+              "score_threshold": 0.5
+            },
+            "name": "gt_projected_ground_keypoint",
+            "num_predictions": 1004
+          },
+          {
+            "metadata": {
+              "position_from_keypoint_index": 0,
+              "score_threshold": 0.5
+            },
+            "metrics": {
+              "f1_50": 0.9234504736921976,
+              "frame_accuracy": 0.5,
+              "map_locsim": 0.5686594909116471,
+              "precision_50": 0.9269269269269269,
+              "recall_50": 0.92,
+              "score_threshold": 0.5
+            },
+            "name": "gt_bbox_bottom_center_keypoint",
+            "num_predictions": 1004
+          },
+          {
+            "metadata": {
+              "position_from_keypoint_index": "BBoxLocSimCOCOeval",
+              "score_threshold": 0.5
+            },
+            "metrics": {
+              "f1_50": 0.9234504736921976,
+              "frame_accuracy": 0.5,
+              "map_locsim": 0.5686594909116471,
+              "precision_50": 0.9269269269269269,
+              "recall_50": 0.92,
+              "score_threshold": 0.5
+            },
+            "name": "gt_bbox_bottom_center_devkit_eval",
+            "num_predictions": 1004
+          }
+        ],
+        "max_images": 64,
+        "mode": "devkit_oracle",
+        "num_annotations": 1004,
+        "num_images": 64,
+        "ok": true,
+        "run_id": "synloc-devkit-oracle-2026-04-29T17-56-48.516386Z",
+        "split": "valid",
+        "ts": "2026-04-29T17:56:51.748552Z",
+        "version": "fullhd"
+      },
+      "status": "COMPLETED",
+      "submitted_at": "2026-04-29T17:55:58.633032Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69f2462ed70108f37ace17b5"
     }
   ],
-  "phase": "devkit_oracle_running",
+  "phase": "devkit_oracle_review",
   "spent_estimate_usd": 23.0,
-  "updated_at": "2026-04-29T17:55:58.633175Z",
+  "updated_at": "2026-04-29T18:01:10.384690Z",
   "weekly_budget_usd": 25.0
 }
