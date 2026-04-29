@@ -33,6 +33,7 @@ Do not spend real GPU money until a tiny cloud smoke job proves the environment,
 
 ## YOLO Baseline And Training
 
+- Run `cloud/synloc_devkit_oracle.py` before any more model work. It must prove exact GT positions, SSKit-projected GT keypoints, and GT bbox bottom-center behavior using the dev kit directly.
 - `train.py` exists and is the YOLO-family experiment script.
 - First phase: `TRAIN_MODE=baseline` evaluates pretrained `mobadam/football-player-detection` YOLO26l and `Adit-jain/soccana` weights through official SynLoc `mAP-LocSim` on cached validation images.
 - If the pretrained baseline fails or only produces a microscopic nonzero score with `recall_50=0.0`, do not train. Fix class ids, model loading, score thresholds, projection, or evaluator plumbing first.

@@ -124,6 +124,22 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
             "YOLO_IOU": "0.7",
         },
     },
+    "devkit_oracle_pending": {
+        "label": "synloc-devkit-oracle",
+        "script": "cloud/synloc_devkit_oracle.py",
+        "flavor": "cpu-upgrade",
+        "timeout": "1h",
+        "python": "3.10",
+        "required_secrets": [],
+        "required_secret_groups": [],
+        "cost_estimate_usd": 0.25,
+        "next_phase": "devkit_oracle_review",
+        "env": {
+            "SYNLOC_SPLIT": "valid",
+            "SYNLOC_VERSION": "fullhd",
+            "DEVKIT_ORACLE_MAX_IMAGES": "64",
+        },
+    },
     "train_dataset_cache_pending": {
         "label": "dataset-cache-train-valid",
         "script": "cloud/synloc_cache.py",

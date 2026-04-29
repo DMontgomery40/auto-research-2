@@ -1,13 +1,13 @@
 {
   "active_job": null,
   "blocker": {
-    "created_at": "2026-04-29T17:37:16.424535Z",
-    "job_id": "69f24012d2c8bd8662bd3267",
+    "best_model": "soccana-yolo11n",
+    "created_at": "2026-04-29T17:52:02.513172Z",
     "map_locsim": 5.7407296779217454e-05,
-    "model": "soccana-yolo11n",
-    "num_detections": 2610,
+    "next_phase": "devkit_oracle_pending",
+    "previous_job_id": "69f24012d2c8bd8662bd3267",
     "recall_50": 0.0,
-    "title": "Pretrained YOLO baseline eval is effectively zero"
+    "title": "Pretrained detector baseline needs SSKit oracle diagnosis"
   },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
@@ -2578,8 +2578,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f24012d2c8bd8662bd3267"
     }
   ],
-  "phase": "blocked_pretrained_yolo_baseline_eval",
+  "phase": "devkit_oracle_pending",
   "spent_estimate_usd": 22.5,
-  "updated_at": "2026-04-29T17:37:17.046423Z",
+  "updated_at": "2026-04-29T17:52:02.513325Z",
   "weekly_budget_usd": 25.0
 }

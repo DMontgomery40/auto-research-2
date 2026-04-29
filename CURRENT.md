@@ -48,7 +48,8 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - The unresolved leak is bigger than role-label plumbing: official SoccerMaster is a video/spatiotemporal model with temporal attention, an official Deformable DETR/MSDeformAttn detection path, and official `PostProcess`. The copied Rondo adapter drops temporal weights, runs single images through plain SigLIP, approximates MSDeformAttn with `grid_sample`, and custom-decodes boxes/NMS.
 - `train.py` now exists and must baseline-evaluate pretrained soccer/football YOLO models before any training. Default autonomous baseline compares `mobadam/football-player-detection` (`YOLO26l`, football classes `ball/player/referee/goalkeeper`) and `Adit-jain/soccana` (YOLO11n SoccerNet/Soccana-style classes).
 - Pretrained YOLO baseline job `69f24012d2c8bd8662bd3267` completed on HF Jobs `t4-small`. Both models emitted detections but still scored effectively zero through official SynLoc localization: YOLO26l `mAP-LocSim=0.000046702783485895764` with 2,338 detections; Soccana `mAP-LocSim=0.000057407296779217454` with 2,610 detections.
-- Current controller phase should block as `blocked_pretrained_yolo_baseline_eval`. This is a projection/eval/data-shape problem, not a signal to train.
+- Current controller phase is `devkit_oracle_pending`. This is a projection/eval/data-shape problem, not a signal to train.
+- The next job is a dev-kit oracle, not another model run: exact `position_on_pitch`, ground keypoints projected by SSKit, and bbox bottom-center projected by SSKit must be measured first.
 - Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
 - Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
@@ -60,6 +61,6 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Do not start `TRAIN_MODE=finetune`.
-2. Diagnose why pretrained soccer detectors produce thousands of boxes but official SynLoc recall stays `0.0` and `mAP-LocSim` stays below `0.0001`.
-3. Check class ids, bbox-to-pitch projection, camera normalization, image/annotation pairing, score threshold handling, and evaluator assumptions before spending more GPU time.
+1. Run `cloud/synloc_devkit_oracle.py` on HF Jobs CPU.
+2. If exact `position_on_pitch` or SSKit-projected GT keypoints do not score near perfect, stop and fix dataset/evaluator wiring.
+3. If exact/keypoint oracle passes but bbox bottom-center is poor, stop treating detector bboxes as a serious SynLoc baseline and move to the official pose/keypoint baseline path before training.

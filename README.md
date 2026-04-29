@@ -27,6 +27,7 @@ The primary metric is `mAP-LocSim`. Higher is better.
 - `scripts/autonomy_tick.py` - one bounded autonomous controller tick.
 - `scripts/verify.sh` - narrow repo sanity check.
 - `train.py` - YOLO-family baseline and fine-tune script; baseline mode must pass before training mode runs.
+- `cloud/synloc_devkit_oracle.py` - SSKit oracle checks for exact GT positions, official keypoint projection, and bbox bottom-center behavior before more model work.
 - `.github/workflows/autonomy.yml` - scheduled heartbeat every two hours.
 
 Local upstream clones live in ignored `refs/`:
@@ -100,8 +101,9 @@ Initial phases:
 5. `soccermaster_wiring_probe_pending` - current SoccerMaster state after the role-label bug was found: rerun the tiny T4 probe with official SoccerMaster role labels.
 6. `soccermaster_synloc_conversion_probe_pending` - convert corrected SoccerMaster player/goalkeeper/referee outputs into SynLoc `results.json`, run official `mAP-LocSim` on a 64-image validation slice, and only then decide the first `train.py`/fine-tune experiment.
 7. `pretrained_yolo_baseline_pending` - run `train.py` with `TRAIN_MODE=baseline` to evaluate pretrained football YOLO26 and Soccana weights before training.
-8. `train_dataset_cache_pending` - cache `train,valid` after the pretrained baseline passes.
-9. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` for the first small SynLoc fine-tune.
+8. `devkit_oracle_pending` - run SSKit oracle checks when detector outputs exist but official localization is effectively zero.
+9. `train_dataset_cache_pending` - cache `train,valid` after the pretrained baseline and dev-kit oracle pass.
+10. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` for the first small SynLoc fine-tune.
 
 ## Ground Rules
 
