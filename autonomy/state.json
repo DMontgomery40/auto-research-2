@@ -6,7 +6,7 @@
     "label": "pretrained-yolo-baseline",
     "next_phase": "train_dataset_cache_pending",
     "phase": "pretrained_yolo_baseline_pending",
-    "status": "RUNNING",
+    "status": "SCHEDULING",
     "submitted_at": "2026-04-29T17:29:54.314337Z",
     "url": "https://huggingface.co/jobs/dmontgomery40/69f24012d2c8bd8662bd3267"
   },
@@ -2472,6 +2472,6 @@
   ],
   "phase": "pretrained_yolo_baseline_running",
   "spent_estimate_usd": 22.5,
-  "updated_at": "2026-04-29T17:29:54.314499Z",
+  "updated_at": "2026-04-29T17:30:31.340356Z",
   "weekly_budget_usd": 25.0
 }
