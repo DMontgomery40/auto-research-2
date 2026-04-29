@@ -183,3 +183,4 @@
 {"active_job": null, "event": "tick_start", "phase": "blocked", "ts": "2026-04-29T15:01:10.477047Z"}
 {"event": "no_job_for_phase", "phase": "blocked", "ts": "2026-04-29T15:01:10.477175Z"}
 {"active_job": null, "event": "tick_end", "phase": "blocked", "ts": "2026-04-29T15:01:10.477889Z"}
+{"event":"operator_resume","from_phase":"blocked","reason":"Inventoried HF asset repo: SoccerMaster weights exist under models/soccermaster, not rondo_payload/models/soccermaster. Patched probe to try real path first, then legacy path.","to_phase":"soccermaster_wiring_probe_pending","ts":"2026-04-29T15:55:00Z"}

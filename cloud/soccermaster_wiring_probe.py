@@ -48,6 +48,16 @@ def download_asset(filename: str, local_dir: Path) -> Path:
     )
 
 
+def download_first_asset(filenames: tuple[str, ...], local_dir: Path) -> Path:
+    errors: list[str] = []
+    for filename in filenames:
+        try:
+            return download_asset(filename, local_dir)
+        except Exception as exc:
+            errors.append(f"{filename}: {type(exc).__name__}: {exc}")
+    raise FileNotFoundError("None of the candidate HF asset paths exist: " + " | ".join(errors))
+
+
 def materialize_adapter() -> Path:
     for filename in (
         "vendor/rondo/backend/app/soccermaster_adapter.py",
@@ -63,7 +73,13 @@ def materialize_adapter() -> Path:
         "LinesDetection.pt",
         "SoccerNetGSR_Detection.pt",
     ):
-        src = download_asset(f"rondo_payload/models/soccermaster/{filename}", WORK)
+        src = download_first_asset(
+            (
+                f"models/soccermaster/{filename}",
+                f"rondo_payload/models/soccermaster/{filename}",
+            ),
+            WORK,
+        )
         dst = model_dir / filename
         if not dst.exists():
             shutil.copy2(src, dst)
