@@ -1,23 +1,11 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 0.25,
-    "flavor": "cpu-upgrade",
-    "id": "69f2457ed2c8bd8662bd32b0",
-    "label": "synloc-devkit-oracle",
-    "next_phase": "devkit_oracle_review",
-    "phase": "devkit_oracle_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-04-29T17:53:02.397409Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69f2457ed2c8bd8662bd32b0"
-  },
+  "active_job": null,
   "blocker": {
-    "best_model": "soccana-yolo11n",
-    "created_at": "2026-04-29T17:52:02.513172Z",
-    "map_locsim": 5.7407296779217454e-05,
+    "created_at": "2026-04-29T17:55:06.220774Z",
+    "failed_job_id": "69f2457ed2c8bd8662bd32b0",
+    "failure": "GitHub SSKit imports torchvision.io; cloud PEP 723 dependency omitted torchvision",
     "next_phase": "devkit_oracle_pending",
-    "previous_job_id": "69f24012d2c8bd8662bd3267",
-    "recall_50": 0.0,
-    "title": "Pretrained detector baseline needs SSKit oracle diagnosis"
+    "title": "SSKit oracle retry after missing torchvision dependency"
   },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
@@ -2588,8 +2576,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f24012d2c8bd8662bd3267"
     }
   ],
-  "phase": "devkit_oracle_running",
+  "phase": "devkit_oracle_pending",
   "spent_estimate_usd": 22.75,
-  "updated_at": "2026-04-29T17:53:28.052005Z",
+  "updated_at": "2026-04-29T17:55:06.220607Z",
   "weekly_budget_usd": 25.0
 }

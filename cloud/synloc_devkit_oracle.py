@@ -6,6 +6,7 @@
 #   "scipy",
 #   "numpy<2",
 #   "torch",
+#   "torchvision",
 #   "xtcocotools"
 # ]
 # ///

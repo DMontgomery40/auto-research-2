@@ -33,6 +33,7 @@ python3 -m py_compile cloud/synloc_cache.py
 python3 -m py_compile cloud/synloc_baseline_yolo.py
 python3 -m py_compile cloud/soccermaster_wiring_probe.py
 python3 -m py_compile cloud/soccermaster_synloc_eval_probe.py
+python3 -m py_compile cloud/synloc_devkit_oracle.py
 
 python3 - <<'PY'
 from pathlib import Path
@@ -58,6 +59,8 @@ for path in [Path("train.py"), *sorted(Path("cloud").glob("*.py"))]:
         raise SystemExit(f"{path}: xtcocotools cloud jobs must pin numpy<2")
     if any(dep.startswith("sskit @ git+") for dep in deps) and "scipy" not in deps:
         raise SystemExit(f"{path}: GitHub SSKit cloud jobs must include scipy")
+    if any(dep.startswith("sskit @ git+") for dep in deps) and "torchvision" not in deps:
+        raise SystemExit(f"{path}: GitHub SSKit cloud jobs must include torchvision")
 PY
 
 python3 - <<'PY'
