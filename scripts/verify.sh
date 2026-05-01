@@ -9,6 +9,7 @@ test -f program.md
 test -f GOAL.md
 test -f CURRENT.md
 test -f LEDGER.md
+test -f JOURNAL.md
 test -f IDEAS.md
 test -f BUDGET.md
 test -f COUNCIL.md
@@ -36,6 +37,11 @@ python3 -m py_compile cloud/soccermaster_wiring_probe.py
 python3 -m py_compile cloud/soccermaster_synloc_eval_probe.py
 python3 -m py_compile cloud/synloc_devkit_oracle.py
 
+if rg -n "Adit-jain/soccana|soccana-yolo" train.py scripts/autonomy_tick.py; then
+  echo "Soccana must not be an active code default. Historical docs/state may mention it, but active scripts must not." >&2
+  exit 1
+fi
+
 python3 - <<'PY'
 from pathlib import Path
 
@@ -45,7 +51,8 @@ if "<!-- codex-goal:start -->" not in goal or "<!-- codex-goal:end -->" not in g
 required = [
     "Beat the 2026 Spiideo SoccerNet SynLoc challenge",
     "SSKit oracle passed",
-    "Do not train from the near-zero YOLO/Soccana path",
+    "Do not train from the near-zero detector path",
+    "Soccana is retired from active defaults",
     "one isolated experiment worktree",
     "CURRENT.md",
     "autonomy/state.json",

@@ -50,6 +50,58 @@ def parse_int_set(raw: str) -> set[int]:
     return {int(item.strip()) for item in raw.split(",") if item.strip()}
 
 
+def xywh_to_xyxy(box: list[float] | tuple[float, float, float, float]) -> list[float]:
+    x, y, w, h = [float(v) for v in box]
+    return [x, y, x + w, y + h]
+
+
+def box_iou_xyxy(a: list[float], b: list[float]) -> float:
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    ix1 = max(ax1, bx1)
+    iy1 = max(ay1, by1)
+    ix2 = min(ax2, bx2)
+    iy2 = min(ay2, by2)
+    iw = max(0.0, ix2 - ix1)
+    ih = max(0.0, iy2 - iy1)
+    intersection = iw * ih
+    if intersection <= 0:
+        return 0.0
+    a_area = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+    b_area = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+    union = a_area + b_area - intersection
+    return intersection / union if union > 0 else 0.0
+
+
+def image_space_diagnostics(
+    gt_boxes_by_image: dict[int, list[list[float]]],
+    det_boxes_by_image: dict[int, list[list[float]]],
+) -> dict[str, float | int]:
+    gt_best_ious: list[float] = []
+    det_best_ious: list[float] = []
+    for image_id, gt_boxes in gt_boxes_by_image.items():
+        det_boxes = det_boxes_by_image.get(image_id, [])
+        for gt_box in gt_boxes:
+            gt_best_ious.append(max((box_iou_xyxy(gt_box, det_box) for det_box in det_boxes), default=0.0))
+        for det_box in det_boxes:
+            det_best_ious.append(max((box_iou_xyxy(det_box, gt_box) for gt_box in gt_boxes), default=0.0))
+
+    def rate(values: list[float], threshold: float) -> float:
+        return float(sum(value >= threshold for value in values) / len(values)) if values else 0.0
+
+    diagnostics: dict[str, float | int] = {
+        "gt_boxes": sum(len(boxes) for boxes in gt_boxes_by_image.values()),
+        "det_boxes": sum(len(boxes) for boxes in det_boxes_by_image.values()),
+        "mean_best_iou_gt_to_det": float(np.mean(gt_best_ious)) if gt_best_ious else 0.0,
+        "mean_best_iou_det_to_gt": float(np.mean(det_best_ious)) if det_best_ious else 0.0,
+    }
+    for threshold in (0.1, 0.3, 0.5):
+        suffix = str(threshold).replace(".", "_")
+        diagnostics[f"gt_recall_iou_{suffix}"] = rate(gt_best_ious, threshold)
+        diagnostics[f"det_precision_iou_{suffix}"] = rate(det_best_ious, threshold)
+    return diagnostics
+
+
 @dataclass(frozen=True)
 class BaselineSpec:
     name: str
@@ -61,8 +113,6 @@ class BaselineSpec:
 DEFAULT_BASELINES = [
     # Current April 2026 football-specific YOLO26 lead.
     "football-yolo26l|mobadam/football-player-detection|player_detector.pt|1,3",
-    # Existing SoccerNet/Soccana YOLO-family soccer detector lead.
-    "soccana-yolo11n|Adit-jain/soccana|Model/weights/best.pt|0",
 ]
 
 
@@ -187,11 +237,23 @@ def predictions_for_model(
 ) -> dict[str, Any]:
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
     images = gt["images"][: max_images or None]
+    selected_image_ids = {int(image["id"]) for image in images}
+    gt_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    for ann in gt.get("annotations", []):
+        image_id = int(ann["image_id"])
+        if image_id not in selected_image_ids:
+            continue
+        bbox = ann.get("bbox", [0, 0, 0, 0])
+        if len(bbox) != 4 or float(bbox[2]) <= 0 or float(bbox[3]) <= 0:
+            continue
+        gt_boxes_by_image.setdefault(image_id, []).append(xywh_to_xyxy(bbox))
+    det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
     model = YOLO(str(model_path))
 
     results: list[dict[str, Any]] = []
     det_id = 1
     for image in images:
+        image_id = int(image["id"])
         path = image_path(data_root, image["file_name"])
         width = float(image["width"])
         height = float(image["height"])
@@ -215,6 +277,7 @@ def predictions_for_model(
             if int(class_id) not in spec.athlete_class_ids:
                 continue
             x1, y1, x2, y2 = [float(v) for v in box]
+            det_boxes_by_image.setdefault(image_id, []).append([x1, y1, x2, y2])
             point = np.array([[(x1 + x2) / 2.0, y2]], dtype=np.float32)
             center = np.array([[(width - 1) / 2.0, (height - 1) / 2.0]], dtype=np.float32)
             normalized = ((point - center) / width).astype(np.float32)
@@ -225,7 +288,7 @@ def predictions_for_model(
                     "bbox": [x1, y1, x2 - x1, y2 - y1],
                     "category_id": 1,
                     "id": det_id,
-                    "image_id": image["id"],
+                    "image_id": image_id,
                     "position_on_pitch": [float(bev[0]), float(bev[1]), 0.0],
                     "score": float(score),
                 }
@@ -247,6 +310,7 @@ def predictions_for_model(
         "max_images": max_images,
         "imgsz": imgsz,
         "iou": iou,
+        "diagnostics": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
     metrics = evaluate(gt_path, pred_path)
@@ -268,6 +332,7 @@ def predictions_for_model(
         "num_images": len(images),
         "num_detections": len(results),
         "metrics": metrics,
+        "diagnostics": metadata["diagnostics"],
     }
     (out_dir / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     return {"summary": summary, "out_dir": out_dir}

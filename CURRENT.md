@@ -46,11 +46,11 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - SoccerMaster-to-SynLoc conversion/eval probe job `69f23612d2c8bd8662bd3210` completed on HF Jobs `t4-small`. Best 64-image result: `mAP-LocSim=0.000007373902767781469`, role set `athlete`, threshold `0.01`, 18,268 detections, run artifact `soccermaster-synloc-probe-2026-04-29T16-51-53-869121Z`.
 - That score is worse than the 64-image TorchVision baseline (`0.00012376237623762376`). Treat this as evidence that the copied adapter/runtime is still not source-faithful, not as evidence that SoccerMaster is bad.
 - The unresolved leak is bigger than role-label plumbing: official SoccerMaster is a video/spatiotemporal model with temporal attention, an official Deformable DETR/MSDeformAttn detection path, and official `PostProcess`. The copied Rondo adapter drops temporal weights, runs single images through plain SigLIP, approximates MSDeformAttn with `grid_sample`, and custom-decodes boxes/NMS.
-- `train.py` now exists and must baseline-evaluate pretrained soccer/football YOLO models before any training. Default autonomous baseline compares `mobadam/football-player-detection` (`YOLO26l`, football classes `ball/player/referee/goalkeeper`) and `Adit-jain/soccana` (YOLO11n SoccerNet/Soccana-style classes).
-- Pretrained YOLO baseline job `69f24012d2c8bd8662bd3267` completed on HF Jobs `t4-small`. Both models emitted detections but still scored effectively zero through official SynLoc localization: YOLO26l `mAP-LocSim=0.000046702783485895764` with 2,338 detections; Soccana `mAP-LocSim=0.000057407296779217454` with 2,610 detections.
+- `train.py` now exists and must baseline-evaluate the active pretrained football YOLO26 path before any training. Soccana is retired from active defaults and remains only as historical evidence.
+- Pretrained YOLO baseline job `69f24012d2c8bd8662bd3267` completed on HF Jobs `t4-small`. It is now historical: YOLO26l scored `mAP-LocSim=0.000046702783485895764` with 2,338 detections; the now-retired Soccana row scored `mAP-LocSim=0.000057407296779217454` with 2,610 detections. Training remains blocked because official SynLoc recall was still `0.0`.
 - SSKit dev-kit oracle retry job `69f2462ed70108f37ace17b5` completed on HF Jobs `cpu-upgrade` for 64 validation images and 1,004 annotations. Exact GT `position_on_pitch` scored `mAP-LocSim=1.0`; GT ground keypoints projected by SSKit scored `0.9809895759040843`; GT bbox bottom-center through SSKit keypoint projection and `BBoxLocSimCOCOeval` both scored `0.5686594909116471` with `precision_50=0.9269269269269269` and `recall_50=0.92`.
-- Current controller phase is `blocked_next_worktree_needed`.
-- GitHub issue #7 is the live handoff: `Autonomy ready: start next SynLoc worktree experiment`.
+- Current controller phase on the remote state is `blocked_next_worktree_needed`, but the controller is now patched to auto-resume that phase into `devkit_detector_diagnostic_pending` on the next heartbeat.
+- GitHub issue #7 is historical/live context, but no longer the intended stall point.
 - The oracle proves the official data, camera calibration, evaluator, and SSKit projection path are not globally broken. The near-zero pretrained detector scores are on the prediction side: wrong/poor boxes for SynLoc, class or role filtering, source-domain mismatch, postprocess/decode, or using non-SynLoc pretrained detectors as if they were official SynLoc baselines.
 - Do not start training from a near-zero detector path. The next work must be dev-kit-first: use the official SSKit result formats, `position_from_keypoint_index`, `BBoxLocSimCOCOeval`, FOOTPASS/official challenge assets, and official baseline/runtime code before any fine-tune.
 - Codex Goals are enabled in the local Codex config and are first-class for local worktree sessions. Set the local worktree thread Goal from `GOAL.md` or issue #7. Goals are local-thread steering only; keep markdown, `autonomy/state.json`, and GitHub issues as the durable control plane.
@@ -65,6 +65,6 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Start a local Codex session/worktree from `main`, with the Codex thread Goal set from `GOAL.md`.
-2. Implement exactly one official/dev-kit-first experiment using SSKit result formats, `BBoxLocSimCOCOeval`, keypoint/ground-point format, FOOTPASS, or official challenge runtime code.
-3. Do not run `TRAIN_MODE=finetune` until a source-faithful detector baseline has meaningful recall and `mAP-LocSim`.
+1. Push the controller patch and wake the autonomy workflow.
+2. Let the next heartbeat submit `football-yolo26-diagnostic` on HF Jobs `t4-small`.
+3. Review official `mAP-LocSim` beside image-space IoU recall before any training. Soccana is retired from active defaults.

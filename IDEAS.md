@@ -11,7 +11,7 @@ Do not spend real GPU money until a tiny cloud smoke job proves the environment,
 
 ## Model Directions
 
-- First run `train.py` baseline mode on pretrained football YOLO26 and Soccana/SoccerNet-style weights. Training is forbidden until this official eval path produces detections, positive recall, and meaningful `mAP-LocSim`.
+- First run `train.py` baseline mode on the active pretrained football YOLO26 path. Training is forbidden until this official eval path produces detections, positive recall, and meaningful `mAP-LocSim`. Soccana is retired from active defaults.
 - Strong detector plus calibrated ground projection from player foot/bottom-center point.
 - Keypoint/pelvis prediction route using `position_from_keypoint_index`.
 - Synthetic-to-real augmentation sweep: blur, compression, exposure, field color, player scale, camera crop.
@@ -28,14 +28,14 @@ Do not spend real GPU money until a tiny cloud smoke job proves the environment,
 - Official SoccerMaster role mapping is `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`. The copied adapter mapped id `3` to `ball` and id `4` to `staff`, so the last probe likely had `player=1120` and `referee=80`. The next bounded test is running now as a cheap T4 rerun with official role labels.
 - `cloud/soccermaster_synloc_eval_probe.py` completed the conversion/eval probe: the copied adapter emitted athletes, but the best 64-image score was only `mAP-LocSim=0.0000073739`, worse than the 64-image TorchVision baseline. This is not a real SoccerMaster model verdict because the runtime is still not source-faithful.
 - Unresolved SoccerMaster leak: official SoccerMaster is video-shaped, uses temporal attention, uses the official Deformable DETR/MSDeformAttn detection path, and has official postprocess. The copied adapter runs single images through plain SigLIP, skips temporal weights, approximates MSDeformAttn, and custom-decodes boxes.
-- Next useful SoccerMaster-specific work would be a cheap official-runtime parity probe, but that is not the next autonomous phase. The owner redirected the loop to baseline pretrained YOLO/Soccana first.
+- Next useful SoccerMaster-specific work would be a cheap official-runtime parity probe. Soccana is retired from active defaults, so the autonomous loop should not spend another run there.
 - Run future tiny SoccerMaster probes on HF Jobs `t4-small` with tight timeouts. Escalate to `l4x1` only after a recorded T4 memory/runtime failure.
 
 ## YOLO Baseline And Training
 
 - Run `cloud/synloc_devkit_oracle.py` before any more model work. It must prove exact GT positions, SSKit-projected GT keypoints, and GT bbox bottom-center behavior using the dev kit directly.
 - `train.py` exists and is the YOLO-family experiment script.
-- First phase: `TRAIN_MODE=baseline` evaluates pretrained `mobadam/football-player-detection` YOLO26l and `Adit-jain/soccana` weights through official SynLoc `mAP-LocSim` on cached validation images.
+- First phase: `TRAIN_MODE=baseline` evaluates pretrained `mobadam/football-player-detection` YOLO26l through official SynLoc `mAP-LocSim` on cached validation images.
 - If the pretrained baseline fails or only produces a microscopic nonzero score with `recall_50=0.0`, do not train. Fix class ids, model loading, score thresholds, projection, or evaluator plumbing first.
 - Second phase: after baseline passes, cache `train,valid` and run `TRAIN_MODE=finetune` from the best baseline model for a small first SynLoc fine-tune.
 

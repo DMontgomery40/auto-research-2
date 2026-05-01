@@ -43,7 +43,7 @@ The council should also read `RESEARCH_PRIORS.md`. It gives a compact map of the
 
 There is a prior sibling SynLoc effort at `/Users/davidmontgomery/v2d-research` with useful evidence:
 
-- `soccana` soccer detector subset baseline on 128 validation frames scored `mAP-LocSim = 0.0005657708628005657`.
+- Historical `soccana` soccer detector subset baseline on 128 validation frames scored `mAP-LocSim = 0.0005657708628005657`; Soccana is retired from active defaults and should not be proposed as the next run.
 - Pitch-bounds filtering on that same 128-frame slice reached `mAP-LocSim = 0.0009900990099009901`, but did not generalize to 512 frames and should not be promoted blindly.
 - A copied SoccerMaster GSR adapter was tried on 64 deterministic SynLoc validation frames.
 - SoccerMaster attempt result: `mAP-LocSim = 0.0`; role decode produced mostly `ball=18370`, `staff=271`, `goalkeeper=131`, and no `player` detections.

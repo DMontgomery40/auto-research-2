@@ -102,7 +102,7 @@ Autonomy-labeled issue comments and issue edits also wake the same workflow imme
 
 If the Codex app exposes thread Goals, set the local thread Goal from `GOAL.md` before starting a worktree experiment.
 
-Treat the Goal as local-thread steering only. The durable control plane remains `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues.
+Treat the Goal as local-thread steering only. The durable control plane remains `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `JOURNAL.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues.
 
 ## scoring
 
@@ -149,7 +149,7 @@ Next SoccerMaster work must prove official-runtime parity before training: build
 
 The current YOLO path uses one script: `train.py`.
 
-Run `TRAIN_MODE=baseline` first. It evaluates pretrained football YOLO26 and Soccana/SoccerNet-style detector weights on SynLoc validation through the official `mAP-LocSim` evaluator. This catches broken model loading, class mapping, box-to-pitch projection, score thresholds, and artifact upload before a training job can waste money.
+Run `TRAIN_MODE=baseline` first. It evaluates the active pretrained football YOLO26 path on SynLoc validation through the official `mAP-LocSim` evaluator. This catches broken model loading, class mapping, box-to-pitch projection, score thresholds, and artifact upload before a training job can waste money. Soccana is retired from active defaults; do not rerun it unless the owner explicitly reintroduces it.
 
 Only run `TRAIN_MODE=finetune` after the pretrained baseline produces detections, positive recall, and a meaningful official validation score. A microscopic nonzero `mAP-LocSim` with `recall_50=0.0` is a failed baseline, not permission to train. The fine-tune mode starts from the best baseline model, trains on SynLoc labels, and immediately evaluates the trained checkpoint with the same official path.
 

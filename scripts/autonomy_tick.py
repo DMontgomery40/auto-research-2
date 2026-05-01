@@ -19,6 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE_PATH = ROOT / "autonomy" / "state.json"
 EVENTS_PATH = ROOT / "autonomy" / "events.jsonl"
 GOAL_PATH = ROOT / "GOAL.md"
+CURRENT_PATH = ROOT / "CURRENT.md"
+LEDGER_PATH = ROOT / "LEDGER.md"
+BUDGET_PATH = ROOT / "BUDGET.md"
+JOURNAL_PATH = ROOT / "JOURNAL.md"
 COUNCIL_INBOX = Path("challenge-council") / "data" / "automation_queue" / "inbox"
 
 TERMINAL_OK = {"COMPLETED"}
@@ -128,6 +132,27 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
             "YOLO_IOU": "0.7",
         },
     },
+    "devkit_detector_diagnostic_pending": {
+        "label": "football-yolo26-diagnostic",
+        "script": "train.py",
+        "flavor": "t4-small",
+        "timeout": "2h",
+        "python": "3.10",
+        "required_secrets": [],
+        "required_secret_groups": [],
+        "cost_estimate_usd": 0.75,
+        "next_phase": "devkit_detector_diagnostic_review",
+        "env": {
+            "TRAIN_MODE": "baseline",
+            "SYNLOC_SPLIT": "valid",
+            "SYNLOC_VERSION": "fullhd",
+            "TRAIN_MAX_IMAGES": "128",
+            "YOLO_IMGSZ": "960",
+            "YOLO_CONF": "0.01",
+            "YOLO_IOU": "0.7",
+            "YOLO_BASELINES": "football-yolo26l|mobadam/football-player-detection|player_detector.pt|1,3",
+        },
+    },
     "devkit_oracle_pending": {
         "label": "synloc-devkit-oracle",
         "script": "cloud/synloc_devkit_oracle.py",
@@ -218,6 +243,113 @@ def append_event(event: str, **payload: Any) -> None:
     EVENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     with EVENTS_PATH.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(json_safe({"ts": utc_now(), "event": event, **payload}), sort_keys=True, allow_nan=False) + "\n")
+
+
+def append_journal(message: str) -> None:
+    if not JOURNAL_PATH.exists():
+        JOURNAL_PATH.write_text("# Journal\n\n", encoding="utf-8")
+    with JOURNAL_PATH.open("a", encoding="utf-8") as handle:
+        handle.write(f"- {utc_now()} - {message}\n")
+
+
+def markdown_cell(value: Any) -> str:
+    text = str(value if value is not None else "")
+    return text.replace("\n", " ").replace("|", "\\|")
+
+
+def score_from_result(result: dict[str, Any]) -> tuple[float | None, float | None]:
+    best = result.get("best", {}) if isinstance(result.get("best"), dict) else {}
+    metrics = best.get("metrics", {}) if isinstance(best.get("metrics"), dict) else {}
+    if not metrics and isinstance(result.get("metrics"), dict):
+        metrics = result["metrics"]
+    score = metrics.get("map_locsim")
+    threshold = metrics.get("score_threshold") or best.get("threshold")
+    return (
+        float(score) if score is not None else None,
+        float(threshold) if threshold is not None else None,
+    )
+
+
+def result_dataset(result: dict[str, Any]) -> str:
+    split = result.get("split") or result.get("best", {}).get("split") if isinstance(result.get("best"), dict) else result.get("split")
+    version = result.get("version") or result.get("best", {}).get("version") if isinstance(result.get("best"), dict) else result.get("version")
+    max_images = result.get("max_images") or result.get("num_images") or result.get("best", {}).get("max_images") if isinstance(result.get("best"), dict) else result.get("max_images")
+    bits = [str(item) for item in (version, split) if item]
+    if max_images:
+        bits.append(f"{max_images} images")
+    return " ".join(bits) or "unknown"
+
+
+def append_budget_submission(active: dict[str, Any], spec: dict[str, Any]) -> None:
+    text = BUDGET_PATH.read_text(encoding="utf-8") if BUDGET_PATH.exists() else "# Budget\n\n"
+    if active.get("id") and active["id"] in text:
+        return
+    row = (
+        f"| {utc_now()[:10]} | {markdown_cell(active.get('label'))} | HF Jobs | {markdown_cell(spec.get('flavor'))} | "
+        f"${float(active.get('cost_estimate_usd') or 0):.2f} | pending | Submitted by autonomy heartbeat | "
+        f"Job `{markdown_cell(active.get('id'))}` running; {markdown_cell(active.get('url'))} |\n"
+    )
+    BUDGET_PATH.write_text(text.rstrip() + "\n" + row, encoding="utf-8")
+
+
+def append_ledger_completion(active: dict[str, Any], result: dict[str, Any]) -> None:
+    text = LEDGER_PATH.read_text(encoding="utf-8") if LEDGER_PATH.exists() else "# Experiment Ledger\n\n"
+    if active.get("id") and active["id"] in text:
+        return
+    code, commit = run(["git", "rev-parse", "--short", "HEAD"])
+    commit = commit.strip() if code == 0 else "unknown"
+    score, threshold = score_from_result(result)
+    best = result.get("best", {}) if isinstance(result.get("best"), dict) else {}
+    diagnostics = best.get("diagnostics", {}) if isinstance(best.get("diagnostics"), dict) else result.get("diagnostics", {})
+    diagnostic_bits = []
+    if isinstance(diagnostics, dict):
+        for key in ("gt_recall_iou_0_3", "gt_recall_iou_0_5", "mean_best_iou_gt_to_det"):
+            if key in diagnostics:
+                diagnostic_bits.append(f"{key}={diagnostics[key]}")
+    notes = f"Job `{active.get('id')}`; {active.get('url')}"
+    if diagnostic_bits:
+        notes += "; image-space " + ", ".join(diagnostic_bits)
+    row = (
+        f"| {utc_now()[:10]} | {markdown_cell(active.get('label'))} | {markdown_cell(commit)} | "
+        f"{markdown_cell(result_dataset(result))} | HF Jobs `{markdown_cell(active.get('flavor'))}` | "
+        f"`{markdown_cell(active.get('label'))}` | {score if score is not None else 0:.10f} | "
+        f"{threshold if threshold is not None else 0:.6f} | ${float(active.get('cost_estimate_usd') or 0):.2f} est | n/a | review | "
+        f"{markdown_cell(notes)} |\n"
+    )
+    LEDGER_PATH.write_text(text.rstrip() + "\n" + row, encoding="utf-8")
+
+
+def update_current_snapshot(state: dict[str, Any]) -> None:
+    if not CURRENT_PATH.exists():
+        return
+    start = "<!-- autonomy-snapshot:start -->"
+    end = "<!-- autonomy-snapshot:end -->"
+    active = state.get("active_job") or {}
+    blocker = state.get("blocker") or {}
+    last = state.get("history", [])[-1] if state.get("history") else {}
+    last_result = last.get("result", {}) if isinstance(last.get("result"), dict) else {}
+    score, threshold = score_from_result(last_result)
+    lines = [
+        start,
+        "## Autonomy Snapshot",
+        "",
+        f"- Updated: {utc_now()}",
+        f"- Phase: `{state.get('phase')}`",
+        f"- Active job: `{active.get('id', 'none')}` {active.get('url', '')}".rstrip(),
+        f"- Spend estimate: `${float(state.get('spent_estimate_usd', 0.0)):.2f} / ${float(state.get('weekly_budget_usd', 25.0)):.2f}`",
+        f"- Blocker: {blocker.get('title', 'none')}",
+        f"- Last result: `{last.get('label', 'none')}` `{last.get('id', 'none')}` score `{score if score is not None else 'n/a'}` threshold `{threshold if threshold is not None else 'n/a'}`",
+        end,
+    ]
+    text = CURRENT_PATH.read_text(encoding="utf-8")
+    section = "\n".join(lines) + "\n"
+    if start in text and end in text:
+        before, rest = text.split(start, 1)
+        _, after = rest.split(end, 1)
+        text = before.rstrip() + "\n\n" + section + after.lstrip("\n")
+    else:
+        text = text.rstrip() + "\n\n" + section
+    CURRENT_PATH.write_text(text, encoding="utf-8")
 
 
 def json_safe(value: Any) -> Any:
@@ -381,27 +513,91 @@ def handle_devkit_oracle_review(state: dict[str, Any], *, dry_run: bool) -> None
         )
         return
 
-    state["phase"] = "blocked_next_worktree_needed"
-    state["blocker"] = {
-        "title": "Next SynLoc experiment needs a local Codex worktree",
-        "created_at": utc_now(),
-        "exact_map": exact,
-        "keypoint_map": keypoint,
-        "bbox_map": bbox,
-    }
+    state["phase"] = "devkit_detector_diagnostic_pending"
+    state.pop("blocker", None)
+    append_journal(
+        "SSKit oracle passed; auto-resuming into football-yolo26-diagnostic instead of parking at blocked_next_worktree_needed."
+    )
     create_issue(
-        "Autonomy ready: start next SynLoc worktree experiment",
+        "Autonomy continuing: dev-kit detector diagnostic queued",
         (
-            "The SSKit oracle cleared the global data/camera/evaluator plumbing. The heartbeat should not silently spin here.\n\n"
+            "The SSKit oracle cleared the global data/camera/evaluator plumbing. The heartbeat is continuing with a cheap "
+            "`football-yolo26-diagnostic` run instead of silently spinning on a local-worktree handoff.\n\n"
             "Current verified oracle scores:\n\n"
             f"- exact GT `position_on_pitch`: `{exact}`\n"
             f"- GT ground keypoint projected by SSKit: `{keypoint}`\n"
             f"- GT bbox bottom-center via SSKit: `{bbox}`\n\n"
-            "Next action: start a local Codex session/worktree from `main`, set the Codex thread Goal below if the feature is available, "
-            "and implement exactly one official/dev-kit-first experiment. Do not run `TRAIN_MODE=finetune` until a source-faithful detector "
-            "baseline has meaningful recall and mAP.\n\n"
+            "Next action: run one cloud CUDA diagnostic that keeps training off, uses the active football YOLO26 path only, and records "
+            "image-space IoU recall beside official `mAP-LocSim`. Soccana is retired from active defaults.\n\n"
             "Suggested Codex Goal:\n\n"
             f"```text\n{codex_goal_text()}\n```\n"
+        ),
+    )
+
+
+def resume_from_worktree_block(state: dict[str, Any]) -> None:
+    blocker = state.pop("blocker", {})
+    state["phase"] = "devkit_detector_diagnostic_pending"
+    append_event(
+        "auto_resume_from_worktree_block",
+        from_phase="blocked_next_worktree_needed",
+        to_phase=state["phase"],
+        previous_blocker=blocker,
+    )
+    append_journal(
+        "Auto-resumed from blocked_next_worktree_needed into football-yolo26-diagnostic; Soccana remains retired from active defaults."
+    )
+
+
+def handle_devkit_detector_diagnostic_review(state: dict[str, Any]) -> None:
+    result = latest_result(state, "football-yolo26-diagnostic")
+    if not result:
+        state["phase"] = "blocked_detector_diagnostic_missing_result"
+        append_event("detector_diagnostic_review_missing_result")
+        create_issue(
+            "Autonomy blocked: detector diagnostic result missing",
+            "The controller reached `devkit_detector_diagnostic_review`, but no `football-yolo26-diagnostic` result exists in `autonomy/state.json` history.",
+        )
+        append_journal("Detector diagnostic review blocked because the job result is missing from state history.")
+        return
+
+    best = result.get("best", {}) if isinstance(result.get("best"), dict) else {}
+    metrics = best.get("metrics", {}) if isinstance(best.get("metrics"), dict) else {}
+    diagnostics = best.get("diagnostics", {}) if isinstance(best.get("diagnostics"), dict) else {}
+    map_locsim = float(metrics.get("map_locsim") or 0.0)
+    recall_50 = float(metrics.get("recall_50") or 0.0)
+    gt_recall_iou_03 = float(diagnostics.get("gt_recall_iou_0_3") or 0.0)
+    gt_recall_iou_05 = float(diagnostics.get("gt_recall_iou_0_5") or 0.0)
+    state["phase"] = "blocked_detector_diagnostic_review"
+    state["blocker"] = {
+        "title": "Review football YOLO26 diagnostic before spending on training",
+        "created_at": utc_now(),
+        "map_locsim": map_locsim,
+        "recall_50": recall_50,
+        "gt_recall_iou_0_3": gt_recall_iou_03,
+        "gt_recall_iou_0_5": gt_recall_iou_05,
+    }
+    append_event(
+        "detector_diagnostic_review",
+        map_locsim=map_locsim,
+        recall_50=recall_50,
+        gt_recall_iou_0_3=gt_recall_iou_03,
+        gt_recall_iou_0_5=gt_recall_iou_05,
+    )
+    append_journal(
+        "Detector diagnostic completed; training remains blocked pending review of official mAP-LocSim and image-space IoU recall."
+    )
+    create_issue(
+        "Autonomy review needed: football YOLO26 diagnostic completed",
+        (
+            "The cheap diagnostic completed. Training is still blocked until this is interpreted.\n\n"
+            f"- official `mAP-LocSim`: `{map_locsim}`\n"
+            f"- official `recall_50`: `{recall_50}`\n"
+            f"- image-space GT recall @ IoU 0.3: `{gt_recall_iou_03}`\n"
+            f"- image-space GT recall @ IoU 0.5: `{gt_recall_iou_05}`\n\n"
+            "If image-space recall is decent but official mAP is still tiny, the next experiment should be projection/keypoint/result-format repair. "
+            "If image-space recall is bad, the next experiment should be source-faithful detector/runtime work, not training from this baseline. "
+            "Soccana is retired from active defaults and was not part of this run."
         ),
     )
 
@@ -593,6 +789,10 @@ def inspect_active_job(api: HfApi, state: dict[str, Any]) -> bool:
         state.setdefault("history", []).append({**active, "completed_at": utc_now(), "result": result})
         state["active_job"] = None
         state["phase"] = next_phase_for_result(active, result)
+        append_ledger_completion(active, result)
+        append_journal(
+            f"HF job completed: {active.get('label')} {active.get('id')} -> phase {state['phase']}."
+        )
         if state["phase"] == "blocked_pretrained_yolo_baseline_eval":
             best = result.get("best", {}) if isinstance(result, dict) else {}
             metrics = best.get("metrics", {}) if isinstance(best.get("metrics"), dict) else {}
@@ -625,6 +825,7 @@ def inspect_active_job(api: HfApi, state: dict[str, Any]) -> bool:
         state["active_job"] = None
         state["phase"] = "blocked"
         append_event("job_failed", job=active, logs_tail=logs[-4000:])
+        append_journal(f"HF job failed: {active.get('label')} {active.get('id')} -> blocked.")
         create_issue(
             f"Autonomy blocked: HF job {active['label']} failed",
             f"Job: {active.get('url') or active['id']}\n\nPhase: `{active.get('phase')}`\n\nLogs tail:\n\n```text\n{logs[-4000:]}\n```",
@@ -647,6 +848,15 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
     if phase == "devkit_oracle_review":
         handle_devkit_oracle_review(state, dry_run=dry_run)
         return
+    if phase == "devkit_detector_diagnostic_review":
+        handle_devkit_detector_diagnostic_review(state)
+        return
+    if phase == "blocked_next_worktree_needed":
+        if dry_run:
+            append_event("dry_run_resume_from_worktree_block")
+            return
+        resume_from_worktree_block(state)
+        phase = state.get("phase")
     if phase and phase.startswith("blocked_"):
         append_event("still_blocked", phase=phase)
         return
@@ -728,6 +938,8 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
     state["active_job"] = active
     state["phase"] = phase.replace("_pending", "_running")
     state["spent_estimate_usd"] = round(spent + cost, 2)
+    append_budget_submission(active, spec)
+    append_journal(f"Submitted HF job: {active.get('label')} {active.get('id')} on {spec['flavor']}.")
     append_event("job_submitted", job=active)
 
 
@@ -765,6 +977,7 @@ def main() -> None:
     if not inspect_active_job(api, state):
         submit_next_job(api, state, dry_run=args.dry_run)
     write_state(state)
+    update_current_snapshot(state)
     append_event("tick_end", phase=state.get("phase"), active_job=state.get("active_job"))
 
 

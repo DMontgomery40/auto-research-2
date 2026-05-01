@@ -59,7 +59,7 @@ jobs:
         run: |
           git config user.name "auto-research-2 bot"
           git config user.email "actions@users.noreply.github.com"
-          git add autonomy/state.json autonomy/events.jsonl
+          git add autonomy/state.json autonomy/events.jsonl CURRENT.md LEDGER.md BUDGET.md JOURNAL.md
           if ! git diff --cached --quiet; then
             git commit -m "Record autonomy tick"
             if ! git pull --rebase; then

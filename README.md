@@ -19,6 +19,7 @@ The primary metric is `mAP-LocSim`. Higher is better.
 - `GOAL.md` - canonical Codex app thread Goal for local worktree experiment sessions.
 - `CURRENT.md` - live state and next action.
 - `LEDGER.md` - experiment history and score tracking.
+- `JOURNAL.md` - human-readable autonomy narrative for submissions, completions, and blockers.
 - `IDEAS.md` - backlog of candidate experiments.
 - `BUDGET.md` - weekly compute budget ledger.
 - `COUNCIL.md` - how to use the sibling challenge council.
@@ -101,12 +102,13 @@ Initial phases:
 4. `baseline_full_pending` - run the validation baseline on cloud CUDA.
 5. `soccermaster_wiring_probe_pending` - current SoccerMaster state after the role-label bug was found: rerun the tiny T4 probe with official SoccerMaster role labels.
 6. `soccermaster_synloc_conversion_probe_pending` - convert corrected SoccerMaster player/goalkeeper/referee outputs into SynLoc `results.json`, run official `mAP-LocSim` on a 64-image validation slice, and only then decide the first `train.py`/fine-tune experiment.
-7. `pretrained_yolo_baseline_pending` - run `train.py` with `TRAIN_MODE=baseline` to evaluate pretrained football YOLO26 and Soccana weights before training.
+7. `pretrained_yolo_baseline_pending` - run `train.py` with `TRAIN_MODE=baseline` to evaluate the active pretrained football YOLO26 path before training. Soccana is retired from active defaults and remains only as historical evidence.
 8. `devkit_oracle_pending` - run SSKit oracle checks when detector outputs exist but official localization is effectively zero.
 9. `devkit_oracle_review` - review oracle gates and decide whether a local official/dev-kit-first worktree experiment is needed.
-10. `blocked_next_worktree_needed` - explicit non-silent stop: a local Codex worktree experiment is needed before the heartbeat can safely spend more compute.
-11. `train_dataset_cache_pending` - cache `train,valid` only after the pretrained/source-faithful detector baseline and dev-kit review pass.
-12. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` only after a meaningful detector baseline exists.
+10. `devkit_detector_diagnostic_pending` - run the active football YOLO26 path with image-space IoU diagnostics beside official `mAP-LocSim`; no training.
+11. `devkit_detector_diagnostic_review` - interpret whether the leak is image-space detection or projection/result format.
+12. `train_dataset_cache_pending` - cache `train,valid` only after the pretrained/source-faithful detector baseline and dev-kit review pass.
+13. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` only after a meaningful detector baseline exists.
 
 Codex thread Goals are first-class for local Codex worktree sessions. Set the thread Goal from `GOAL.md` before starting an experiment. Goals are not the durable control plane; keep `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues current because the heartbeat and HF jobs cannot read a Codex app thread Goal.
 
