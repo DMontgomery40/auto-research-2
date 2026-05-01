@@ -23,6 +23,9 @@ COUNCIL_INBOX = Path("challenge-council") / "data" / "automation_queue" / "inbox
 TERMINAL_OK = {"COMPLETED"}
 TERMINAL_BAD = {"ERROR", "CANCELED", "DELETED"}
 PRETRAINED_YOLO_BASELINE_MIN_MAP_LOCSIM = 0.01
+DEVKIT_ORACLE_MIN_EXACT_MAP = 0.99
+DEVKIT_ORACLE_MIN_KEYPOINT_MAP = 0.90
+DEVKIT_ORACLE_MIN_BBOX_MAP = 0.10
 
 JOB_SPECS: dict[str, dict[str, Any]] = {
     "cloud_smoke_pending": {
@@ -299,6 +302,103 @@ def latest_result(state: dict[str, Any], label: str) -> dict[str, Any] | None:
     return None
 
 
+def case_map(result: dict[str, Any], name: str) -> float:
+    for case in result.get("cases", []):
+        if case.get("name") == name:
+            metrics = case.get("metrics", {}) if isinstance(case.get("metrics"), dict) else {}
+            return float(metrics.get("map_locsim") or 0.0)
+    return 0.0
+
+
+def codex_goal_text() -> str:
+    return (
+        "Beat the 2026 Spiideo SoccerNet SynLoc challenge by June 30 using a tiny AK-style loop. "
+        "Start from official/dev-kit paths, not hand-rolled detector scoring. Current verified baseline: SSKit oracle passed "
+        "(exact GT mAP-LocSim 1.0, projected GT keypoint 0.9809895759, bbox bottom-center via SSKit 0.5686594909). "
+        "Do not train from the near-zero YOLO/Soccana path until a source-faithful official/dev-kit detector baseline produces "
+        "meaningful recall and mAP. Work in one isolated experiment worktree, record score/cost/decision in LEDGER.md, "
+        "update CURRENT.md, and keep the repo markdown-first."
+    )
+
+
+def handle_devkit_oracle_review(state: dict[str, Any], *, dry_run: bool) -> None:
+    result = latest_result(state, "synloc-devkit-oracle")
+    if not result:
+        state["phase"] = "blocked_devkit_oracle_missing_result"
+        append_event("devkit_oracle_review_missing_result")
+        create_issue(
+            "Autonomy blocked: devkit oracle result missing",
+            "The controller reached `devkit_oracle_review`, but no `synloc-devkit-oracle` result exists in `autonomy/state.json` history.",
+        )
+        return
+
+    exact = case_map(result, "exact_position_on_pitch")
+    keypoint = case_map(result, "gt_projected_ground_keypoint")
+    bbox = max(
+        case_map(result, "gt_bbox_bottom_center_keypoint"),
+        case_map(result, "gt_bbox_bottom_center_devkit_eval"),
+    )
+    passed = (
+        result.get("ok", False)
+        and exact >= DEVKIT_ORACLE_MIN_EXACT_MAP
+        and keypoint >= DEVKIT_ORACLE_MIN_KEYPOINT_MAP
+        and bbox >= DEVKIT_ORACLE_MIN_BBOX_MAP
+    )
+    append_event(
+        "devkit_oracle_review",
+        passed=passed,
+        exact_map=exact,
+        keypoint_map=keypoint,
+        bbox_map=bbox,
+    )
+    if dry_run:
+        return
+    if not passed:
+        state["phase"] = "blocked_devkit_oracle_failed"
+        state["blocker"] = {
+            "title": "SSKit devkit oracle failed review gates",
+            "created_at": utc_now(),
+            "exact_map": exact,
+            "keypoint_map": keypoint,
+            "bbox_map": bbox,
+        }
+        create_issue(
+            "Autonomy blocked: SSKit devkit oracle failed review gates",
+            (
+                "The dev-kit oracle did not clear the review gates, so model training remains blocked.\n\n"
+                f"- exact_position_on_pitch: `{exact}`\n"
+                f"- gt_projected_ground_keypoint: `{keypoint}`\n"
+                f"- bbox bottom-center via SSKit: `{bbox}`\n\n"
+                "Fix the official data/camera/evaluator path before any detector or training experiment."
+            ),
+        )
+        return
+
+    state["phase"] = "blocked_next_worktree_needed"
+    state["blocker"] = {
+        "title": "Next SynLoc experiment needs a local Codex worktree",
+        "created_at": utc_now(),
+        "exact_map": exact,
+        "keypoint_map": keypoint,
+        "bbox_map": bbox,
+    }
+    create_issue(
+        "Autonomy ready: start next SynLoc worktree experiment",
+        (
+            "The SSKit oracle cleared the global data/camera/evaluator plumbing. The heartbeat should not silently spin here.\n\n"
+            "Current verified oracle scores:\n\n"
+            f"- exact GT `position_on_pitch`: `{exact}`\n"
+            f"- GT ground keypoint projected by SSKit: `{keypoint}`\n"
+            f"- GT bbox bottom-center via SSKit: `{bbox}`\n\n"
+            "Next action: start a local Codex session/worktree from `main`, set the Codex thread Goal below if the feature is available, "
+            "and implement exactly one official/dev-kit-first experiment. Do not run `TRAIN_MODE=finetune` until a source-faithful detector "
+            "baseline has meaningful recall and mAP.\n\n"
+            "Suggested Codex Goal:\n\n"
+            f"```text\n{codex_goal_text()}\n```\n"
+        ),
+    )
+
+
 def baseline_summary(state: dict[str, Any]) -> str:
     result = latest_result(state, "baseline-full") or latest_result(state, "baseline-probe") or {}
     metrics = result.get("metrics", {}) if isinstance(result.get("metrics"), dict) else {}
@@ -536,6 +636,9 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
         return
     if phase == "awaiting_council_report":
         handle_council_report_wait(state)
+        return
+    if phase == "devkit_oracle_review":
+        handle_devkit_oracle_review(state, dry_run=dry_run)
         return
     if phase and phase.startswith("blocked_"):
         append_event("still_blocked", phase=phase)

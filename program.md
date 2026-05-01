@@ -98,6 +98,16 @@ The tick checks or submits one Hugging Face Job, updates `autonomy/state.json`, 
 
 Autonomy-labeled issue comments and issue edits also wake the same workflow immediately. If the owner says "done" after adding a secret or approving budget, the controller should notice on that event rather than waiting for the schedule.
 
+## Codex goals
+
+If the Codex app exposes thread Goals, set the local thread Goal before starting a worktree experiment:
+
+```text
+Beat the 2026 Spiideo SoccerNet SynLoc challenge by June 30 using a tiny AK-style loop. Start from official/dev-kit paths, not hand-rolled detector scoring. Current verified baseline: SSKit oracle passed (exact GT mAP-LocSim 1.0, projected GT keypoint 0.9809895759, bbox bottom-center via SSKit 0.5686594909). Do not train from the near-zero YOLO/Soccana path until a source-faithful official/dev-kit detector baseline produces meaningful recall and mAP. Work in one isolated experiment worktree, record score/cost/decision in LEDGER.md, update CURRENT.md, and keep the repo markdown-first.
+```
+
+Treat the Goal as local-thread steering only. The durable control plane remains `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues.
+
 ## scoring
 
 Primary metric: `mAP-LocSim`, higher is better.

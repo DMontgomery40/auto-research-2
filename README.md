@@ -102,8 +102,12 @@ Initial phases:
 6. `soccermaster_synloc_conversion_probe_pending` - convert corrected SoccerMaster player/goalkeeper/referee outputs into SynLoc `results.json`, run official `mAP-LocSim` on a 64-image validation slice, and only then decide the first `train.py`/fine-tune experiment.
 7. `pretrained_yolo_baseline_pending` - run `train.py` with `TRAIN_MODE=baseline` to evaluate pretrained football YOLO26 and Soccana weights before training.
 8. `devkit_oracle_pending` - run SSKit oracle checks when detector outputs exist but official localization is effectively zero.
-9. `train_dataset_cache_pending` - cache `train,valid` after the pretrained baseline and dev-kit oracle pass.
-10. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` for the first small SynLoc fine-tune.
+9. `devkit_oracle_review` - review oracle gates and decide whether a local official/dev-kit-first worktree experiment is needed.
+10. `blocked_next_worktree_needed` - explicit non-silent stop: a local Codex worktree experiment is needed before the heartbeat can safely spend more compute.
+11. `train_dataset_cache_pending` - cache `train,valid` only after the pretrained/source-faithful detector baseline and dev-kit review pass.
+12. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` only after a meaningful detector baseline exists.
+
+Codex thread Goals are useful for local Codex worktree sessions, but they are not the durable control plane. Keep `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues current because the heartbeat and HF jobs cannot read a Codex app thread Goal.
 
 ## Ground Rules
 

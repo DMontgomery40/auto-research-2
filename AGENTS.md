@@ -74,6 +74,8 @@ This repo must not depend on an open chat thread to keep moving.
 
 If the controller needs owner input, more budget, or secret repair, it opens a GitHub issue with `autonomy` and `needs-owner` labels. Do not silently wait in chat.
 
+Codex Goals, when available in the Codex app, are useful for a local thread's north star. They do not replace `CURRENT.md`, `LEDGER.md`, `autonomy/state.json`, or GitHub issues, because GitHub Actions and HF Jobs cannot see a Codex thread goal. When starting a local Codex experiment thread, set the Goal to the current SynLoc mission and then keep the markdown/control-plane files updated.
+
 ## Experiment Discipline
 
 - Same seed, same dataset SHA, same cloud eval command, same GPU class when comparing runs.
@@ -98,6 +100,10 @@ Before any SoccerMaster-based training or score promotion, run an official-runti
 `train.py` is the central experiment script for current YOLO-family work. Its first autonomous use must be `TRAIN_MODE=baseline`: evaluate pretrained football YOLO26 and Soccana/SoccerNet-style detector weights on SynLoc with the official `mAP-LocSim` path before any training starts. If the pretrained soccer detector cannot produce detections plus a meaningful official score, block and debug the baseline/eval plumbing instead of training. A tiny nonzero floating-point score with `recall_50=0.0` is still broken.
 
 Only after the pretrained baseline passes may `TRAIN_MODE=finetune` run. The fine-tune job should start from the best baseline model, train on SynLoc labels, then evaluate the trained checkpoint with the same official metric path.
+
+## Current Devkit Review Rule
+
+After `synloc-devkit-oracle` clears exact GT, SSKit-projected keypoint, and bbox bottom-center review gates, the heartbeat must not silently spin in `devkit_oracle_review`. It should block explicitly as `blocked_next_worktree_needed` and open a GitHub issue containing the next local Codex Goal/worktree prompt. The next agent should run one official/dev-kit-first experiment in an isolated worktree; it should not jump to `TRAIN_MODE=finetune`.
 
 ## Budget
 
