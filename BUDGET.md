@@ -40,3 +40,4 @@ Issue should include:
 - estimated cost,
 - stop condition,
 - fallback if it fails.
+| 2026-05-01 | football-yolo26-diagnostic | HF Jobs | t4-small | $0.75 | pending | Submitted by autonomy heartbeat | Job `69f4facf9d85bec4d76efcb0` running; https://huggingface.co/jobs/dmontgomery40/69f4facf9d85bec4d76efcb0 |

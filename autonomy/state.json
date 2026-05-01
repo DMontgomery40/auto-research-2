@@ -1,11 +1,14 @@
 {
-  "active_job": null,
-  "blocker": {
-    "bbox_map": 0.5686594909116471,
-    "created_at": "2026-05-01T15:08:47.236218Z",
-    "exact_map": 1.0,
-    "keypoint_map": 0.9809895759040843,
-    "title": "Next SynLoc experiment needs a local Codex worktree"
+  "active_job": {
+    "cost_estimate_usd": 0.75,
+    "flavor": "t4-small",
+    "id": "69f4facf9d85bec4d76efcb0",
+    "label": "football-yolo26-diagnostic",
+    "next_phase": "devkit_detector_diagnostic_review",
+    "phase": "devkit_detector_diagnostic_pending",
+    "status": "RUNNING",
+    "submitted_at": "2026-05-01T19:11:11.867457Z",
+    "url": "https://huggingface.co/jobs/dmontgomery40/69f4facf9d85bec4d76efcb0"
   },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
@@ -2664,8 +2667,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f2462ed70108f37ace17b5"
     }
   ],
-  "phase": "blocked_next_worktree_needed",
-  "spent_estimate_usd": 23.0,
-  "updated_at": "2026-05-01T18:41:33.749290Z",
+  "phase": "devkit_detector_diagnostic_running",
+  "spent_estimate_usd": 23.75,
+  "updated_at": "2026-05-01T19:11:11.867793Z",
   "weekly_budget_usd": 25.0
 }

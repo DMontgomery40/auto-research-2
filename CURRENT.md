@@ -68,3 +68,14 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 1. Push the controller patch and wake the autonomy workflow.
 2. Let the next heartbeat submit `football-yolo26-diagnostic` on HF Jobs `t4-small`.
 3. Review official `mAP-LocSim` beside image-space IoU recall before any training. Soccana is retired from active defaults.
+
+<!-- autonomy-snapshot:start -->
+## Autonomy Snapshot
+
+- Updated: 2026-05-01T19:11:11.871205Z
+- Phase: `devkit_detector_diagnostic_running`
+- Active job: `69f4facf9d85bec4d76efcb0` https://huggingface.co/jobs/dmontgomery40/69f4facf9d85bec4d76efcb0
+- Spend estimate: `$23.75 / $25.00`
+- Blocker: none
+- Last result: `synloc-devkit-oracle` `69f2462ed70108f37ace17b5` score `n/a` threshold `n/a`
+<!-- autonomy-snapshot:end -->
