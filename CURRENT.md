@@ -72,10 +72,10 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 <!-- autonomy-snapshot:start -->
 ## Autonomy Snapshot
 
-- Updated: 2026-05-01T19:16:47.616155Z
-- Phase: `devkit_detector_diagnostic_review`
+- Updated: 2026-05-01T19:17:33.058103Z
+- Phase: `blocked_detector_diagnostic_review`
 - Active job: `none`
 - Spend estimate: `$23.75 / $25.00`
-- Blocker: none
+- Blocker: Review football YOLO26 diagnostic before spending on training
 - Last result: `football-yolo26-diagnostic` `69f4facf9d85bec4d76efcb0` score `4.6702783485895764e-05` threshold `0.4748844504356384`
 <!-- autonomy-snapshot:end -->
