@@ -338,3 +338,6 @@
 {"active_job": null, "event": "tick_start", "phase": "blocked_next_worktree_needed", "ts": "2026-05-01T16:37:06.543752Z"}
 {"event": "still_blocked", "phase": "blocked_next_worktree_needed", "ts": "2026-05-01T16:37:06.543856Z"}
 {"active_job": null, "event": "tick_end", "phase": "blocked_next_worktree_needed", "ts": "2026-05-01T16:37:06.547848Z"}
+{"active_job": null, "event": "tick_start", "phase": "blocked_next_worktree_needed", "ts": "2026-05-01T18:41:33.749139Z"}
+{"event": "still_blocked", "phase": "blocked_next_worktree_needed", "ts": "2026-05-01T18:41:33.749254Z"}
+{"active_job": null, "event": "tick_end", "phase": "blocked_next_worktree_needed", "ts": "2026-05-01T18:41:33.753354Z"}
