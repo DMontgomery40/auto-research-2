@@ -16,6 +16,7 @@ The primary metric is `mAP-LocSim`. Higher is better.
 ## Files
 
 - `program.md` - the operating instructions for the autonomous agent.
+- `GOAL.md` - canonical Codex app thread Goal for local worktree experiment sessions.
 - `CURRENT.md` - live state and next action.
 - `LEDGER.md` - experiment history and score tracking.
 - `IDEAS.md` - backlog of candidate experiments.
@@ -69,7 +70,7 @@ Keep these repos private. Checkpoints, logs, metrics, and predictions can live t
 
 ## First Run
 
-1. Read `AGENTS.md`, `program.md`, `CURRENT.md`, `LEDGER.md`, `IDEAS.md`, and `BUDGET.md`.
+1. Read `AGENTS.md`, `program.md`, `GOAL.md`, `CURRENT.md`, `LEDGER.md`, `IDEAS.md`, and `BUDGET.md`.
 2. Verify the control plane without printing secrets:
 
    ```bash
@@ -107,7 +108,7 @@ Initial phases:
 11. `train_dataset_cache_pending` - cache `train,valid` only after the pretrained/source-faithful detector baseline and dev-kit review pass.
 12. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` only after a meaningful detector baseline exists.
 
-Codex thread Goals are useful for local Codex worktree sessions, but they are not the durable control plane. Keep `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues current because the heartbeat and HF jobs cannot read a Codex app thread Goal.
+Codex thread Goals are first-class for local Codex worktree sessions. Set the thread Goal from `GOAL.md` before starting an experiment. Goals are not the durable control plane; keep `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues current because the heartbeat and HF jobs cannot read a Codex app thread Goal.
 
 ## Ground Rules
 

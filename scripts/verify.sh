@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 test -f README.md
 test -f AGENTS.md
 test -f program.md
+test -f GOAL.md
 test -f CURRENT.md
 test -f LEDGER.md
 test -f IDEAS.md
@@ -34,6 +35,25 @@ python3 -m py_compile cloud/synloc_baseline_yolo.py
 python3 -m py_compile cloud/soccermaster_wiring_probe.py
 python3 -m py_compile cloud/soccermaster_synloc_eval_probe.py
 python3 -m py_compile cloud/synloc_devkit_oracle.py
+
+python3 - <<'PY'
+from pathlib import Path
+
+goal = Path("GOAL.md").read_text(encoding="utf-8")
+if "<!-- codex-goal:start -->" not in goal or "<!-- codex-goal:end -->" not in goal:
+    raise SystemExit("GOAL.md must contain codex-goal start/end markers")
+required = [
+    "Beat the 2026 Spiideo SoccerNet SynLoc challenge",
+    "SSKit oracle passed",
+    "Do not train from the near-zero YOLO/Soccana path",
+    "one isolated experiment worktree",
+    "CURRENT.md",
+    "autonomy/state.json",
+]
+missing = [item for item in required if item not in goal]
+if missing:
+    raise SystemExit(f"GOAL.md missing required goal clauses: {missing}")
+PY
 
 python3 - <<'PY'
 from pathlib import Path

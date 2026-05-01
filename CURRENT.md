@@ -53,7 +53,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - GitHub issue #7 is the live handoff: `Autonomy ready: start next SynLoc worktree experiment`.
 - The oracle proves the official data, camera calibration, evaluator, and SSKit projection path are not globally broken. The near-zero pretrained detector scores are on the prediction side: wrong/poor boxes for SynLoc, class or role filtering, source-domain mismatch, postprocess/decode, or using non-SynLoc pretrained detectors as if they were official SynLoc baselines.
 - Do not start training from a near-zero detector path. The next work must be dev-kit-first: use the official SSKit result formats, `position_from_keypoint_index`, `BBoxLocSimCOCOeval`, FOOTPASS/official challenge assets, and official baseline/runtime code before any fine-tune.
-- If the Codex app exposes thread Goals, set the local worktree thread Goal from issue #7 or `program.md`. Goals are local-thread steering only; keep markdown, `autonomy/state.json`, and GitHub issues as the durable control plane.
+- Codex Goals are enabled in the local Codex config and are first-class for local worktree sessions. Set the local worktree thread Goal from `GOAL.md` or issue #7. Goals are local-thread steering only; keep markdown, `autonomy/state.json`, and GitHub issues as the durable control plane.
 - Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
 - Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
@@ -65,6 +65,6 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Start a local Codex session/worktree from `main`, ideally with the Codex thread Goal from issue #7.
+1. Start a local Codex session/worktree from `main`, with the Codex thread Goal set from `GOAL.md`.
 2. Implement exactly one official/dev-kit-first experiment using SSKit result formats, `BBoxLocSimCOCOeval`, keypoint/ground-point format, FOOTPASS, or official challenge runtime code.
 3. Do not run `TRAIN_MODE=finetune` until a source-faithful detector baseline has meaningful recall and `mAP-LocSim`.

@@ -22,6 +22,7 @@ Code is justified when it:
 ## Repository Shape
 
 - `program.md` is the loop contract and should stay readable enough to hand to any strong agent.
+- `GOAL.md` is the canonical Codex app thread Goal for local worktree experiment sessions.
 - `CURRENT.md` is the live state.
 - `LEDGER.md` is the experiment and score log.
 - `IDEAS.md` is the experiment backlog.
@@ -74,7 +75,7 @@ This repo must not depend on an open chat thread to keep moving.
 
 If the controller needs owner input, more budget, or secret repair, it opens a GitHub issue with `autonomy` and `needs-owner` labels. Do not silently wait in chat.
 
-Codex Goals, when available in the Codex app, are useful for a local thread's north star. They do not replace `CURRENT.md`, `LEDGER.md`, `autonomy/state.json`, or GitHub issues, because GitHub Actions and HF Jobs cannot see a Codex thread goal. When starting a local Codex experiment thread, set the Goal to the current SynLoc mission and then keep the markdown/control-plane files updated.
+Codex Goals are first-class for local worktree sessions when the feature is available. Set the Codex app thread Goal from `GOAL.md` before starting a local experiment. Goals do not replace `CURRENT.md`, `LEDGER.md`, `autonomy/state.json`, or GitHub issues, because GitHub Actions and HF Jobs cannot see a Codex thread goal.
 
 ## Experiment Discipline
 

@@ -18,6 +18,7 @@ from huggingface_hub import HfApi
 ROOT = Path(__file__).resolve().parents[1]
 STATE_PATH = ROOT / "autonomy" / "state.json"
 EVENTS_PATH = ROOT / "autonomy" / "events.jsonl"
+GOAL_PATH = ROOT / "GOAL.md"
 COUNCIL_INBOX = Path("challenge-council") / "data" / "automation_queue" / "inbox"
 
 TERMINAL_OK = {"COMPLETED"}
@@ -311,14 +312,20 @@ def case_map(result: dict[str, Any], name: str) -> float:
 
 
 def codex_goal_text() -> str:
-    return (
+    fallback = (
         "Beat the 2026 Spiideo SoccerNet SynLoc challenge by June 30 using a tiny AK-style loop. "
-        "Start from official/dev-kit paths, not hand-rolled detector scoring. Current verified baseline: SSKit oracle passed "
-        "(exact GT mAP-LocSim 1.0, projected GT keypoint 0.9809895759, bbox bottom-center via SSKit 0.5686594909). "
-        "Do not train from the near-zero YOLO/Soccana path until a source-faithful official/dev-kit detector baseline produces "
-        "meaningful recall and mAP. Work in one isolated experiment worktree, record score/cost/decision in LEDGER.md, "
-        "update CURRENT.md, and keep the repo markdown-first."
+        "Start from official/dev-kit paths, not hand-rolled detector scoring. Work in one isolated experiment worktree, "
+        "record score/cost/decision in LEDGER.md, update CURRENT.md, and keep the repo markdown-first."
     )
+    if not GOAL_PATH.exists():
+        return fallback
+    raw_lines = GOAL_PATH.read_text(encoding="utf-8").splitlines()
+    if "<!-- codex-goal:start -->" in raw_lines and "<!-- codex-goal:end -->" in raw_lines:
+        start = raw_lines.index("<!-- codex-goal:start -->") + 1
+        end = raw_lines.index("<!-- codex-goal:end -->")
+        raw_lines = raw_lines[start:end]
+    lines = [line.strip() for line in raw_lines if line.strip() and not line.startswith("#")]
+    return " ".join(lines) or fallback
 
 
 def handle_devkit_oracle_review(state: dict[str, Any], *, dry_run: bool) -> None:
