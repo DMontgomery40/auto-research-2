@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 1.25,
-    "flavor": "t4-small",
-    "id": "69f655699d85bec4d76f0adb",
-    "label": "synloc-pose-smoke",
-    "next_phase": "pose_smoke_review",
-    "phase": "synloc_pose_smoke_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-05-02T19:50:01.605602Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb"
-  },
+  "active_job": null,
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
     "failed_at": "2026-04-27T19:17:02Z",
@@ -2771,10 +2761,50 @@
       "status": "COMPLETED",
       "submitted_at": "2026-05-01T19:11:11.867457Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69f4facf9d85bec4d76efcb0"
+    },
+    {
+      "completed_at": "2026-05-02T19:58:13.825141Z",
+      "cost_estimate_usd": 1.25,
+      "flavor": "t4-small",
+      "id": "69f655699d85bec4d76f0adb",
+      "label": "synloc-pose-smoke",
+      "next_phase": "pose_smoke_review",
+      "phase": "synloc_pose_smoke_pending",
+      "result": {
+        "base_model": "yolo11n-pose.pt",
+        "batch": 4,
+        "conf": 0.01,
+        "epochs": 1,
+        "imgsz": 640,
+        "interpretation": "Pipeline smoke for SynLoc keypoint/ground-point training; validation-slice training makes this non-promotable.",
+        "metric": "mAP-LocSim",
+        "metrics": {
+          "f1_50": 0.0,
+          "frame_accuracy": 0.0,
+          "map_locsim": 0.000825082508250825,
+          "precision_50": 0.08333333333333333,
+          "recall_50": 0.0,
+          "score_threshold": 0.36052486300468445
+        },
+        "mode": "pose_smoke",
+        "num_predictions": 1126,
+        "ok": true,
+        "promotion_allowed": false,
+        "run_id": "synloc-pose-smoke-2026-05-02T19-53-37-840452Z",
+        "split": "valid",
+        "train_images": 64,
+        "ts": "2026-05-02T19:53:37.843468Z",
+        "val_annotations": 898,
+        "val_images": 64,
+        "version": "fullhd"
+      },
+      "status": "COMPLETED",
+      "submitted_at": "2026-05-02T19:50:01.605602Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb"
     }
   ],
-  "phase": "synloc_pose_smoke_running",
+  "phase": "pose_smoke_review",
   "spent_estimate_usd": 25.0,
-  "updated_at": "2026-05-02T19:53:40.550058Z",
+  "updated_at": "2026-05-02T19:58:13.827743Z",
   "weekly_budget_usd": 25.0
 }

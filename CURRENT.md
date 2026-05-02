@@ -72,10 +72,10 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 <!-- autonomy-snapshot:start -->
 ## Autonomy Snapshot
 
-- Updated: 2026-05-02T19:53:40.554042Z
-- Phase: `synloc_pose_smoke_running`
-- Active job: `69f655699d85bec4d76f0adb` https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb
+- Updated: 2026-05-02T19:58:13.831658Z
+- Phase: `pose_smoke_review`
+- Active job: `none`
 - Spend estimate: `$25.00 / $25.00`
 - Blocker: none
-- Last result: `football-yolo26-diagnostic` `69f4facf9d85bec4d76efcb0` score `4.6702783485895764e-05` threshold `0.4748844504356384`
+- Last result: `synloc-pose-smoke` `69f655699d85bec4d76f0adb` score `0.000825082508250825` threshold `0.36052486300468445`
 <!-- autonomy-snapshot:end -->

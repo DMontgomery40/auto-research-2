@@ -7,3 +7,4 @@
 - 2026-05-01T19:17:32.674117Z - Detector diagnostic completed; training remains blocked pending review of official mAP-LocSim and image-space IoU recall.
 - 2026-05-02T19:50:00.619198Z - Auto-resumed from blocked_detector_diagnostic_review into synloc-pose-smoke; the detector-only path is discarded.
 - 2026-05-02T19:50:01.605893Z - Submitted HF job: synloc-pose-smoke 69f655699d85bec4d76f0adb on t4-small.
+- 2026-05-02T19:58:13.827581Z - HF job completed: synloc-pose-smoke 69f655699d85bec4d76f0adb -> phase pose_smoke_review.
