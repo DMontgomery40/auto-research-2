@@ -392,3 +392,6 @@
 {"active_job": null, "event": "tick_start", "phase": "blocked_detector_diagnostic_review", "ts": "2026-05-02T12:35:57.608160Z"}
 {"event": "still_blocked", "phase": "blocked_detector_diagnostic_review", "ts": "2026-05-02T12:35:57.608249Z"}
 {"active_job": null, "event": "tick_end", "phase": "blocked_detector_diagnostic_review", "ts": "2026-05-02T12:35:57.611747Z"}
+{"active_job": null, "event": "tick_start", "phase": "blocked_detector_diagnostic_review", "ts": "2026-05-02T14:34:47.499223Z"}
+{"event": "still_blocked", "phase": "blocked_detector_diagnostic_review", "ts": "2026-05-02T14:34:47.499326Z"}
+{"active_job": null, "event": "tick_end", "phase": "blocked_detector_diagnostic_review", "ts": "2026-05-02T14:34:47.503575Z"}
