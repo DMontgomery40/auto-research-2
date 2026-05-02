@@ -80,7 +80,7 @@ if active:
 PY
 fi
 
-prompt_file="$(mktemp "${TMPDIR:-/tmp}/codex-research-prompt.XXXXXX.md")"
+prompt_file="$(mktemp "${TMPDIR:-/tmp}/codex-research-prompt.XXXXXX")"
 last_message="autonomy/codex_last_message.md"
 trap 'rm -f "$prompt_file"' EXIT
 

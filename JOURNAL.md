@@ -11,3 +11,4 @@
 - 2026-05-02T19:58:52.891464Z - Pose smoke completed; queued train/valid dataset cache for a real source-specific pose/keypoint experiment, subject to budget gate.
 - 2026-05-02T20:00:22Z - Autonomy hit the weekly budget gate at `$25.00 / $25.00`; issue #10 is the owner-approval path for more spend.
 - 2026-05-02T20:22:00Z - Added an explicit local Codex research tick: research/decision/code edits run locally with `gpt-5.5` and `xhigh`; HF Jobs remain CUDA execution only.
+- 2026-05-02T20:38:28Z - Local Codex tick stayed inside `blocked_budget`, refreshed `CURRENT.md`/`BUDGET.md` budget-gate wording, and left issue #10 as the approval path before `dataset-cache-train-valid`.

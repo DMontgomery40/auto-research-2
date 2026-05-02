@@ -22,14 +22,16 @@ Week starts: Monday.
 | 2026-04-29 | pretrained-yolo-baseline | HF Jobs | T4 small | $0.75 | pending | Historical baseline-eval of pretrained football YOLO26 plus the now-retired Soccana path through `train.py` before training | Completed; the now-retired Soccana row scored `mAP-LocSim=0.0000574073`; training blocked |
 | 2026-04-29 | synloc-devkit-oracle | HF Jobs | CPU upgrade | $0.25 | pending | Run SSKit oracle checks before any more model training | Failed before execution on missing `torchvision`; dependency patched |
 | 2026-04-29 | synloc-devkit-oracle retry | HF Jobs | CPU upgrade | $0.25 | pending | Run SSKit oracle checks before any more model training | Completed; exact GT `1.0`, projected GT keypoint `0.9809895759`, bbox bottom-center via SSKit `0.5686594909` |
+| 2026-05-01 | football-yolo26-diagnostic | HF Jobs | t4-small | $0.75 | pending | Submitted by autonomy heartbeat | Completed; job `69f4facf9d85bec4d76efcb0` scored `mAP-LocSim=0.0000467028` with image-space GT recall still near zero. |
+| 2026-05-02 | synloc-pose-smoke | HF Jobs | t4-small | $1.25 | pending | Submitted by autonomy heartbeat | Completed; job `69f655699d85bec4d76f0adb` scored `mAP-LocSim=0.0008250825`, non-promotable validation-slice smoke. |
 
 Current estimated spend: `$25.00 / $25.00`.
 
 Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
-Next planned spend: `football-yolo26-diagnostic` on HF Jobs `t4-small`, estimated `$0.75`, leaving about `$1.25` under the current weekly cap if it runs as expected.
+Recent autonomous spend: `football-yolo26-diagnostic` and `synloc-pose-smoke` have completed and consumed the remaining weekly budget.
 
-Next autonomous spend after the diagnostic review patch: `synloc-pose-smoke` on HF Jobs `t4-small`, estimated `$1.25`. This intentionally consumes the remaining weekly budget on a source-specific keypoint/pelvis/ground-point smoke rather than another generic detector probe. Any follow-up train-data cache or full train job should hit the budget gate and open an issue unless the cap is raised.
+Next planned paid step: `dataset-cache-train-valid` on HF Jobs `cpu-upgrade`, estimated `$1.00`, to cache the train split beside validation before a real source-specific pose/keypoint experiment. This is blocked by issue #10 until the owner approves more budget or lowers scope.
 
 Current blocker: issue #10 asks for owner approval before `dataset-cache-train-valid` can reserve another `$1.00`. Do not edit the weekly cap in this file unless the owner approves more budget.
 
@@ -46,5 +48,3 @@ Issue should include:
 - estimated cost,
 - stop condition,
 - fallback if it fails.
-| 2026-05-01 | football-yolo26-diagnostic | HF Jobs | t4-small | $0.75 | pending | Submitted by autonomy heartbeat | Job `69f4facf9d85bec4d76efcb0` running; https://huggingface.co/jobs/dmontgomery40/69f4facf9d85bec4d76efcb0 |
-| 2026-05-02 | synloc-pose-smoke | HF Jobs | t4-small | $1.25 | pending | Submitted by autonomy heartbeat | Job `69f655699d85bec4d76f0adb` running; https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb |
