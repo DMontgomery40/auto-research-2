@@ -2803,8 +2803,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb"
     }
   ],
-  "phase": "pose_smoke_review",
+  "phase": "train_dataset_cache_pending",
   "spent_estimate_usd": 25.0,
-  "updated_at": "2026-05-02T19:58:13.827743Z",
+  "updated_at": "2026-05-02T19:58:53.200351Z",
   "weekly_budget_usd": 25.0
 }

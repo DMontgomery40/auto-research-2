@@ -72,8 +72,8 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 <!-- autonomy-snapshot:start -->
 ## Autonomy Snapshot
 
-- Updated: 2026-05-02T19:58:13.831658Z
-- Phase: `pose_smoke_review`
+- Updated: 2026-05-02T19:58:53.204632Z
+- Phase: `train_dataset_cache_pending`
 - Active job: `none`
 - Spend estimate: `$25.00 / $25.00`
 - Blocker: none
