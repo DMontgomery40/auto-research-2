@@ -36,6 +36,7 @@ python3 -m py_compile cloud/synloc_baseline_yolo.py
 python3 -m py_compile cloud/soccermaster_wiring_probe.py
 python3 -m py_compile cloud/soccermaster_synloc_eval_probe.py
 python3 -m py_compile cloud/synloc_devkit_oracle.py
+python3 -m py_compile cloud/synloc_pose_smoke.py
 
 if rg -n "Adit-jain/soccana|soccana-yolo" train.py scripts/autonomy_tick.py; then
   echo "Soccana must not be an active code default. Historical docs/state may mention it, but active scripts must not." >&2

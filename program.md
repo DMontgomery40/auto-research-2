@@ -84,6 +84,8 @@ Repeat until the owner interrupts:
 
 Never ask "should I keep going?" once the loop starts.
 
+If a diagnostic phase proves a whole path is bad, do not convert that conclusion into a `blocked_*` owner-review state. Record the discard decision, pick the next smallest experiment, and continue until a real guardrail stops execution. Real guardrails are missing secrets, failed cloud jobs, and budget cap. Human review issues are status notes, not the loop controller.
+
 ## heartbeat
 
 Autonomy continues through GitHub Actions, not through an open chat window.
@@ -118,6 +120,8 @@ Secondary tracking:
 - dollars spent.
 
 Use the validation set to select thresholds. Use that fixed threshold for test/challenge-style evaluation.
+
+The SSKit oracle result is the north star for representation: exact GT `position_on_pitch` scored `1.0`, and GT ground keypoints projected through SSKit scored `0.9809895759`. Detector bottom-center boxes are a weaker fallback. When detector-only image-space recall is near zero, pivot to source-specific pose/keypoint or direct ground-point prediction rather than trying more generic detector thresholds.
 
 ## compute
 

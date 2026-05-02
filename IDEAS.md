@@ -34,10 +34,17 @@ Do not spend real GPU money until a tiny cloud smoke job proves the environment,
 ## YOLO Baseline And Training
 
 - Run `cloud/synloc_devkit_oracle.py` before any more model work. It must prove exact GT positions, SSKit-projected GT keypoints, and GT bbox bottom-center behavior using the dev kit directly.
+- `cloud/synloc_pose_smoke.py` is the next autonomous move after the YOLO26 diagnostic: it is a cheap, non-promotable pipeline smoke that trains a tiny pose/keypoint model on cached validation images and evaluates a later validation slice with `position_from_keypoint_index=1`.
 - `train.py` exists and is the YOLO-family experiment script.
 - First phase: `TRAIN_MODE=baseline` evaluates pretrained `mobadam/football-player-detection` YOLO26l through official SynLoc `mAP-LocSim` on cached validation images.
 - If the pretrained baseline fails or only produces a microscopic nonzero score with `recall_50=0.0`, do not train. Fix class ids, model loading, score thresholds, projection, or evaluator plumbing first.
 - Second phase: after baseline passes, cache `train,valid` and run `TRAIN_MODE=finetune` from the best baseline model for a small first SynLoc fine-tune.
+
+## Autonomy Loop Fixes
+
+- Do not leave `blocked_detector_diagnostic_review` as a terminal owner-review state. The controller should auto-resume it into `synloc_pose_smoke_pending`.
+- Treat GitHub issues as observability, not as the brain of the loop. If the next experiment fits budget/secrets, submit it.
+- Follow the Karpathy-style keep/discard ratchet: one bounded experiment, record score/cost/decision, discard weak paths, continue.
 
 ## Risky Ideas
 

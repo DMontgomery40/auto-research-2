@@ -29,6 +29,8 @@ Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeout
 
 Next planned spend: `football-yolo26-diagnostic` on HF Jobs `t4-small`, estimated `$0.75`, leaving about `$1.25` under the current weekly cap if it runs as expected.
 
+Next autonomous spend after the diagnostic review patch: `synloc-pose-smoke` on HF Jobs `t4-small`, estimated `$1.25`. This intentionally consumes the remaining weekly budget on a source-specific keypoint/pelvis/ground-point smoke rather than another generic detector probe. Any follow-up train-data cache or full train job should hit the budget gate and open an issue unless the cap is raised.
+
 ## Spend Rule
 
 If an experiment could push the week over `$25`, open a GitHub issue before running it.

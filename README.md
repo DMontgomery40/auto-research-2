@@ -30,6 +30,7 @@ The primary metric is `mAP-LocSim`. Higher is better.
 - `scripts/verify.sh` - narrow repo sanity check.
 - `train.py` - YOLO-family baseline and fine-tune script; baseline mode must pass before training mode runs.
 - `cloud/synloc_devkit_oracle.py` - SSKit oracle checks for exact GT positions, official keypoint projection, and bbox bottom-center behavior before more model work.
+- `cloud/synloc_pose_smoke.py` - cheap non-promotable pose/keypoint training smoke that follows the high-score SSKit keypoint route before spending on full train data.
 - `.github/workflows/autonomy.yml` - scheduled heartbeat every two hours.
 
 Local upstream clones live in ignored `refs/`:
@@ -106,9 +107,11 @@ Initial phases:
 8. `devkit_oracle_pending` - run SSKit oracle checks when detector outputs exist but official localization is effectively zero.
 9. `devkit_oracle_review` - review oracle gates and decide whether a local official/dev-kit-first worktree experiment is needed.
 10. `devkit_detector_diagnostic_pending` - run the active football YOLO26 path with image-space IoU diagnostics beside official `mAP-LocSim`; no training.
-11. `devkit_detector_diagnostic_review` - interpret whether the leak is image-space detection or projection/result format.
-12. `train_dataset_cache_pending` - cache `train,valid` only after the pretrained/source-faithful detector baseline and dev-kit review pass.
-13. `first_train_experiment_pending` - run `train.py` with `TRAIN_MODE=finetune` only after a meaningful detector baseline exists.
+11. `devkit_detector_diagnostic_review` - auto-discard detector-only YOLO if image-space recall is near zero and queue the pose/keypoint smoke.
+12. `synloc_pose_smoke_pending` - train a tiny YOLO pose/keypoint smoke on cached validation slices and evaluate a later validation slice through `position_from_keypoint_index=1`; this is a pipeline test, not a promotable score.
+13. `pose_smoke_review` - auto-queue train/valid cache if the smoke proves the pose/keypoint path is runnable.
+14. `train_dataset_cache_pending` - cache `train,valid` for real source-specific pose/keypoint experiments, subject to budget.
+15. `first_train_experiment_pending` - legacy YOLO fine-tune phase; do not use as the next frontier while pose/keypoint work is active.
 
 Codex thread Goals are first-class for local Codex worktree sessions. Set the thread Goal from `GOAL.md` before starting an experiment. Goals are not the durable control plane; keep `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues current because the heartbeat and HF jobs cannot read a Codex app thread Goal.
 

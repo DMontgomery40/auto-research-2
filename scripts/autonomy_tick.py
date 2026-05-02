@@ -153,6 +153,28 @@ JOB_SPECS: dict[str, dict[str, Any]] = {
             "YOLO_BASELINES": "football-yolo26l|mobadam/football-player-detection|player_detector.pt|1,3",
         },
     },
+    "synloc_pose_smoke_pending": {
+        "label": "synloc-pose-smoke",
+        "script": "cloud/synloc_pose_smoke.py",
+        "flavor": "t4-small",
+        "timeout": "2h",
+        "python": "3.10",
+        "required_secrets": [],
+        "required_secret_groups": [],
+        "cost_estimate_usd": 1.25,
+        "next_phase": "pose_smoke_review",
+        "env": {
+            "SYNLOC_SPLIT": "valid",
+            "SYNLOC_VERSION": "fullhd",
+            "POSE_TRAIN_MAX_IMAGES": "64",
+            "POSE_VAL_START": "64",
+            "POSE_VAL_MAX_IMAGES": "64",
+            "YOLO_IMGSZ": "640",
+            "YOLO_EPOCHS": "1",
+            "YOLO_BATCH": "4",
+            "YOLO_CONF": "0.01",
+        },
+    },
     "devkit_oracle_pending": {
         "label": "synloc-devkit-oracle",
         "script": "cloud/synloc_devkit_oracle.py",
@@ -568,15 +590,6 @@ def handle_devkit_detector_diagnostic_review(state: dict[str, Any]) -> None:
     recall_50 = float(metrics.get("recall_50") or 0.0)
     gt_recall_iou_03 = float(diagnostics.get("gt_recall_iou_0_3") or 0.0)
     gt_recall_iou_05 = float(diagnostics.get("gt_recall_iou_0_5") or 0.0)
-    state["phase"] = "blocked_detector_diagnostic_review"
-    state["blocker"] = {
-        "title": "Review football YOLO26 diagnostic before spending on training",
-        "created_at": utc_now(),
-        "map_locsim": map_locsim,
-        "recall_50": recall_50,
-        "gt_recall_iou_0_3": gt_recall_iou_03,
-        "gt_recall_iou_0_5": gt_recall_iou_05,
-    }
     append_event(
         "detector_diagnostic_review",
         map_locsim=map_locsim,
@@ -584,20 +597,72 @@ def handle_devkit_detector_diagnostic_review(state: dict[str, Any]) -> None:
         gt_recall_iou_0_3=gt_recall_iou_03,
         gt_recall_iou_0_5=gt_recall_iou_05,
     )
+    state.pop("blocker", None)
+    state["phase"] = "synloc_pose_smoke_pending"
     append_journal(
-        "Detector diagnostic completed; training remains blocked pending review of official mAP-LocSim and image-space IoU recall."
+        "Detector diagnostic completed; low image-space recall auto-discarded the detector-only path and queued SynLoc pose smoke."
     )
     create_issue(
-        "Autonomy review needed: football YOLO26 diagnostic completed",
+        "Autonomy continuing: football YOLO26 discarded, pose smoke queued",
         (
-            "The cheap diagnostic completed. Training is still blocked until this is interpreted.\n\n"
+            "The cheap diagnostic completed and the controller made the next decision without waiting for the owner.\n\n"
             f"- official `mAP-LocSim`: `{map_locsim}`\n"
             f"- official `recall_50`: `{recall_50}`\n"
             f"- image-space GT recall @ IoU 0.3: `{gt_recall_iou_03}`\n"
             f"- image-space GT recall @ IoU 0.5: `{gt_recall_iou_05}`\n\n"
-            "If image-space recall is decent but official mAP is still tiny, the next experiment should be projection/keypoint/result-format repair. "
-            "If image-space recall is bad, the next experiment should be source-faithful detector/runtime work, not training from this baseline. "
-            "Soccana is retired from active defaults and was not part of this run."
+            "Decision: discard detector-only YOLO26 as the current frontier and run `synloc-pose-smoke` next. "
+            "That smoke trains a tiny YOLO pose/keypoint model on one cached validation slice and evaluates a later validation slice with "
+            "`position_from_keypoint_index=1`. It is not promotable as a leaderboard score; it is only a cheap proof that the pose/keypoint "
+            "training/eval route can move toward the `.98` SSKit keypoint oracle. Soccana remains retired."
+        ),
+    )
+
+
+def resume_detector_diagnostic_block(state: dict[str, Any]) -> None:
+    blocker = state.pop("blocker", {})
+    state["phase"] = "synloc_pose_smoke_pending"
+    append_event(
+        "auto_resume_from_detector_diagnostic_block",
+        from_phase="blocked_detector_diagnostic_review",
+        to_phase=state["phase"],
+        previous_blocker=blocker,
+    )
+    append_journal(
+        "Auto-resumed from blocked_detector_diagnostic_review into synloc-pose-smoke; the detector-only path is discarded."
+    )
+
+
+def handle_pose_smoke_review(state: dict[str, Any]) -> None:
+    result = latest_result(state, "synloc-pose-smoke")
+    if not result:
+        state["phase"] = "blocked_pose_smoke_missing_result"
+        append_event("pose_smoke_review_missing_result")
+        create_issue(
+            "Autonomy blocked: pose smoke result missing",
+            "The controller reached `pose_smoke_review`, but no `synloc-pose-smoke` result exists in `autonomy/state.json` history.",
+        )
+        append_journal("Pose smoke review blocked because the job result is missing from state history.")
+        return
+
+    metrics = result.get("metrics", {}) if isinstance(result.get("metrics"), dict) else {}
+    map_locsim = float(metrics.get("map_locsim") or 0.0)
+    recall_50 = float(metrics.get("recall_50") or 0.0)
+    state.pop("blocker", None)
+    state["phase"] = "train_dataset_cache_pending"
+    append_event("pose_smoke_review", map_locsim=map_locsim, recall_50=recall_50)
+    append_journal(
+        "Pose smoke completed; queued train/valid dataset cache for a real source-specific pose/keypoint experiment, subject to budget gate."
+    )
+    create_issue(
+        "Autonomy continuing: pose smoke reviewed, real train data next",
+        (
+            "The SynLoc pose smoke completed. It is not a promotable score because it trained on a validation slice, but it is the first "
+            "controller step aimed at the keypoint route that matched the SSKit oracle.\n\n"
+            f"- smoke `mAP-LocSim`: `{map_locsim}`\n"
+            f"- smoke `recall_50`: `{recall_50}`\n"
+            f"- predictions: `{result.get('num_predictions', 'unknown')}`\n\n"
+            "Next autonomous phase is `train_dataset_cache_pending` so a real train/valid pose experiment can run. "
+            "If the weekly cap blocks that, the controller should open the budget issue instead of silently looping."
         ),
     )
 
@@ -851,11 +916,20 @@ def submit_next_job(api: HfApi, state: dict[str, Any], *, dry_run: bool) -> None
     if phase == "devkit_detector_diagnostic_review":
         handle_devkit_detector_diagnostic_review(state)
         return
+    if phase == "pose_smoke_review":
+        handle_pose_smoke_review(state)
+        return
     if phase == "blocked_next_worktree_needed":
         if dry_run:
             append_event("dry_run_resume_from_worktree_block")
             return
         resume_from_worktree_block(state)
+        phase = state.get("phase")
+    if phase == "blocked_detector_diagnostic_review":
+        if dry_run:
+            append_event("dry_run_resume_from_detector_diagnostic_block")
+            return
+        resume_detector_diagnostic_block(state)
         phase = state.get("phase")
     if phase and phase.startswith("blocked_"):
         append_event("still_blocked", phase=phase)
