@@ -1,12 +1,14 @@
 {
-  "active_job": null,
-  "blocker": {
-    "created_at": "2026-05-01T19:17:32.673916Z",
-    "gt_recall_iou_0_3": 0.0021041557075223566,
-    "gt_recall_iou_0_5": 0.0005260389268805891,
-    "map_locsim": 4.6702783485895764e-05,
-    "recall_50": 0.0,
-    "title": "Review football YOLO26 diagnostic before spending on training"
+  "active_job": {
+    "cost_estimate_usd": 1.25,
+    "flavor": "t4-small",
+    "id": "69f655699d85bec4d76f0adb",
+    "label": "synloc-pose-smoke",
+    "next_phase": "pose_smoke_review",
+    "phase": "synloc_pose_smoke_pending",
+    "status": "RUNNING",
+    "submitted_at": "2026-05-02T19:50:01.605602Z",
+    "url": "https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb"
   },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
@@ -2771,8 +2773,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f4facf9d85bec4d76efcb0"
     }
   ],
-  "phase": "blocked_detector_diagnostic_review",
-  "spent_estimate_usd": 23.75,
-  "updated_at": "2026-05-02T18:35:59.085830Z",
+  "phase": "synloc_pose_smoke_running",
+  "spent_estimate_usd": 25.0,
+  "updated_at": "2026-05-02T19:50:01.606033Z",
   "weekly_budget_usd": 25.0
 }

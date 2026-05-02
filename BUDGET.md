@@ -43,3 +43,4 @@ Issue should include:
 - stop condition,
 - fallback if it fails.
 | 2026-05-01 | football-yolo26-diagnostic | HF Jobs | t4-small | $0.75 | pending | Submitted by autonomy heartbeat | Job `69f4facf9d85bec4d76efcb0` running; https://huggingface.co/jobs/dmontgomery40/69f4facf9d85bec4d76efcb0 |
+| 2026-05-02 | synloc-pose-smoke | HF Jobs | t4-small | $1.25 | pending | Submitted by autonomy heartbeat | Job `69f655699d85bec4d76f0adb` running; https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb |
