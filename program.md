@@ -16,6 +16,14 @@ Run one local research pass with:
 scripts/codex_research_tick.sh
 ```
 
+Run the continuous AK-style local loop with:
+
+```bash
+scripts/codex_research_loop.sh
+```
+
+The loop runs every `300` seconds by default. It pulls fresh state, runs one local Codex research tick when no HF job is active, refuses to dispatch blocked states by default, and wakes the GitHub Actions heartbeat when the durable state is actionable.
+
 Use `scripts/codex_research_tick.sh --print-prompt` to inspect exactly what the local Codex researcher will see before launching it.
 
 Hugging Face Jobs are CUDA execution substrate only. They execute bounded payloads for dataset download, training, inference, official metric evaluation, threshold selection, and artifact upload. They are not the research brain.
@@ -102,10 +110,12 @@ If a diagnostic phase proves a whole path is bad, do not convert that conclusion
 
 Autonomy has two loops:
 
-1. Local research loop: `scripts/codex_research_tick.sh` runs Codex `gpt-5.5`/`xhigh` on the control-plane Mac for reasoning and code changes.
+1. Local research loop: `scripts/codex_research_loop.sh` runs Codex `gpt-5.5`/`xhigh` on the control-plane Mac every `300` seconds for reasoning and code changes.
 2. Execution heartbeat: GitHub Actions runs `scripts/autonomy_tick.py` to submit or inspect one bounded HF job.
 
 The execution heartbeat must not become the research brain.
+
+Research becomes action only after the local tick commits and pushes a durable state/code change. Then `scripts/codex_research_loop.sh` dispatches `.github/workflows/autonomy.yml`; the workflow runs `scripts/autonomy_tick.py`, submits/checks one HF job, records the result, and leaves the next decision for the following local Codex tick.
 
 Every two hours, `.github/workflows/autonomy.yml` runs:
 

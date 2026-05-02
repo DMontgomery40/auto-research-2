@@ -55,6 +55,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - Do not start training from a near-zero detector path. The next work must be dev-kit-first: use the official SSKit result formats, `position_from_keypoint_index`, `BBoxLocSimCOCOeval`, FOOTPASS/official challenge assets, and official baseline/runtime code before any fine-tune.
 - Codex Goals are enabled in the local Codex config and are first-class for local worktree sessions. Set the local worktree thread Goal from `GOAL.md` or issue #7. Goals are local-thread steering only; keep markdown, `autonomy/state.json`, and GitHub issues as the durable control plane.
 - Research/decision-making is now explicitly local Codex work, not Hugging Face work. Use `scripts/codex_research_tick.sh` to launch one local `gpt-5.5`/`xhigh` research tick; HF Jobs remain CUDA-only execution payloads.
+- AK-style cadence now has an executable local loop: `scripts/codex_research_loop.sh` runs one local research chance every `300` seconds and dispatches the GitHub Actions heartbeat only when the pushed state is actionable.
 - Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
 - Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
 
@@ -68,7 +69,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 1. Do not submit more paid HF work while phase is `blocked_budget`.
 2. If owner approves more budget in issue #10, wake the heartbeat so it can cache `train,valid`.
-3. In parallel, use `scripts/codex_research_tick.sh` locally for no-spend research/controller work. The local Codex pass may improve the next train/valid pose experiment plan, inspect sources, patch code, and update issues, but it must not spend or edit the weekly cap without owner approval.
+3. In parallel, run `scripts/codex_research_loop.sh --iterations 12` locally for a bounded one-hour no-spend research pass. The local Codex pass may improve the next train/valid pose experiment plan, inspect sources, patch code, and update issues, but it must not spend or edit the weekly cap without owner approval.
 
 <!-- autonomy-snapshot:start -->
 ## Autonomy Snapshot

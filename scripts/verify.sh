@@ -31,7 +31,9 @@ python3 -m py_compile scripts/evaluate_synloc.py
 python3 -m py_compile scripts/autonomy_tick.py
 python3 -m py_compile scripts/codex_research_prompt.py
 bash -n scripts/codex_research_tick.sh
+bash -n scripts/codex_research_loop.sh
 scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-research-dry-run.txt
+scripts/codex_research_loop.sh --allow-dirty --dry-run --no-dispatch --iterations 1 >/tmp/auto-research-2-codex-research-loop-dry-run.txt
 python3 -m py_compile train.py
 python3 -m py_compile cloud/synloc_smoke.py
 python3 -m py_compile cloud/synloc_cache.py
@@ -75,17 +77,20 @@ required_docs = {
     "AGENTS.md": [
         "Research happens in local Codex",
         "Hugging Face Jobs are CUDA execution substrate only",
+        "scripts/codex_research_loop.sh",
         "gpt-5.5",
         "xhigh",
     ],
     "program.md": [
         "Research happens in local Codex",
         "scripts/codex_research_tick.sh",
+        "scripts/codex_research_loop.sh",
         "gpt-5.5",
         "xhigh",
     ],
     "README.md": [
         "scripts/codex_research_tick.sh",
+        "scripts/codex_research_loop.sh",
         "Research happens in local Codex",
         "Hugging Face Jobs execute CUDA work",
     ],
@@ -103,6 +108,12 @@ dry_run = Path("/tmp/auto-research-2-codex-research-dry-run.txt").read_text(enco
 missing = [needle for needle in ["codex", "gpt-5.5", "model_reasoning_effort", "xhigh", "-a", "never", "--search", "exec"] if needle not in dry_run]
 if missing:
     raise SystemExit(f"codex_research_tick.sh dry run missing expected Codex invocation clauses: {missing}")
+loop = Path("scripts/codex_research_loop.sh").read_text(encoding="utf-8")
+if "300" not in loop or "gh workflow run autonomy.yml" not in loop:
+    raise SystemExit("codex_research_loop.sh must encode the 300s loop and heartbeat dispatch")
+loop_dry_run = Path("/tmp/auto-research-2-codex-research-loop-dry-run.txt").read_text(encoding="utf-8")
+if "codex" not in loop_dry_run or "exec" not in loop_dry_run:
+    raise SystemExit("codex_research_loop.sh dry run did not reach the Codex research tick")
 PY
 
 python3 - <<'PY'

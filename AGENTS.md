@@ -41,6 +41,14 @@ Research happens in local Codex with `gpt-5.5` and `xhigh` reasoning. This is th
 scripts/codex_research_tick.sh
 ```
 
+For the AK-style cadence, run the local loop:
+
+```bash
+scripts/codex_research_loop.sh
+```
+
+That loop runs every `300` seconds by default, giving 12 local research chances per hour. It is responsible for turning local research into action by dispatching the GitHub Actions heartbeat after a pushed, actionable state change.
+
 Hugging Face Jobs are CUDA execution substrate only. They may download data, train, infer, evaluate, and upload artifacts, but they must not be treated as the researcher or delegated open-ended reasoning.
 
 Do not validate model quality locally. Do not make keep/discard decisions from local ML scores.
@@ -75,6 +83,7 @@ Inside the loop:
 This repo must not depend on an open chat thread to keep moving.
 
 - `scripts/codex_research_tick.sh` is the local Codex research tick. Run it on the control-plane Mac when the repo needs reasoning, source inspection, controller edits, or the next experiment choice.
+- `scripts/codex_research_loop.sh` is the local 300-second AK-style loop. It runs local Codex ticks, skips thinking while an HF job is active, and wakes the execution heartbeat when state is actionable.
 - `scripts/codex_research_prompt.py` builds the compact state prompt for that local tick.
 - `.github/workflows/autonomy.yml` is the heartbeat.
 - Autonomy-labeled issue comments and issue edits wake the heartbeat immediately.
@@ -82,6 +91,8 @@ This repo must not depend on an open chat thread to keep moving.
 - `autonomy/state.json` is the durable state.
 - `autonomy/events.jsonl` is the concise event log.
 - `cloud/` contains Hugging Face Jobs payloads.
+
+Research-to-action path: local Codex tick researches/edits/verifies/commits/pushes, the local loop dispatches `.github/workflows/autonomy.yml`, the heartbeat submits or checks one bounded HF job, and the next local Codex tick consumes the recorded result. The scheduled two-hour GitHub heartbeat is only a fallback, not the 12/hour research cadence.
 
 If the controller needs owner input, more budget, or secret repair, it opens a GitHub issue with `autonomy` and `needs-owner` labels. Do not silently wait in chat.
 

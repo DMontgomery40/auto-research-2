@@ -27,6 +27,7 @@ The primary metric is `mAP-LocSim`. Higher is better.
 - `scripts/download_synloc.py` - official SoccerNet download wrapper for cloud job payloads.
 - `scripts/evaluate_synloc.py` - official SSKit metric wrapper for cloud job payloads.
 - `scripts/codex_research_tick.sh` - local Codex `gpt-5.5`/`xhigh` research tick; never run it from HF or GitHub Actions.
+- `scripts/codex_research_loop.sh` - local 300-second research loop that runs Codex ticks and wakes the execution heartbeat when state is actionable.
 - `scripts/codex_research_prompt.py` - compact prompt builder for the local research tick.
 - `scripts/autonomy_tick.py` - one bounded autonomous controller tick.
 - `scripts/verify.sh` - narrow repo sanity check.
@@ -53,6 +54,14 @@ scripts/codex_research_tick.sh
 ```
 
 That local tick is where source inspection, web research, hypothesis choice, code edits, controller changes, markdown updates, commits, pushes, and GitHub issue comments happen. Use `scripts/codex_research_tick.sh --print-prompt` to inspect the compact state prompt first.
+
+For AK-style cadence, run the local loop instead of a single tick:
+
+```bash
+scripts/codex_research_loop.sh
+```
+
+The loop runs once every `300` seconds, giving 12 local research chances per hour. It pulls fresh state, skips local Codex thinking while an HF job is active, runs one local Codex tick when reasoning is needed, and wakes `.github/workflows/autonomy.yml` only when `autonomy/state.json` is actionable. Use `scripts/codex_research_loop.sh --iterations 12` for a bounded one-hour run.
 
 Hugging Face Jobs execute CUDA work. They should download data, train, infer, evaluate, select thresholds, and upload artifacts, but they are not the research brain.
 
@@ -100,12 +109,21 @@ Keep these repos private. Checkpoints, logs, metrics, and predictions can live t
 The repo has a persistent heartbeat:
 
 - GitHub Actions runs `scripts/autonomy_tick.py` every two hours and on manual dispatch.
+- The local 300-second research loop is `scripts/codex_research_loop.sh`; this is the path that gives AK-style 12/hour thinking cadence.
 - Comments or changes on autonomy-labeled GitHub issues wake the same controller immediately.
 - The tick submits or checks exactly one Hugging Face Job.
 - State lives in `autonomy/state.json`.
 - Events live in `autonomy/events.jsonl`.
 - If a secret, budget, or cloud job blocks progress, the controller opens a GitHub issue instead of going silent.
 - If the owner fixes the blocker and replies on that issue, the issue event wakes the heartbeat without waiting for the next two-hour schedule.
+
+Research turns into action through this chain:
+
+1. Local Codex tick researches, edits, verifies, commits, and pushes.
+2. The local loop dispatches `autonomy.yml` when the pushed state is actionable.
+3. `scripts/autonomy_tick.py` submits or checks exactly one bounded HF job.
+4. The heartbeat records result/state in markdown plus `autonomy/state.json`.
+5. The next local Codex tick reads that state and picks the next smallest move.
 
 Initial phases:
 

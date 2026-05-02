@@ -35,7 +35,7 @@ Next planned paid step: `dataset-cache-train-valid` on HF Jobs `cpu-upgrade`, es
 
 Current blocker: issue #10 asks for owner approval before `dataset-cache-train-valid` can reserve another `$1.00`. Do not edit the weekly cap in this file unless the owner approves more budget.
 
-Local Codex research ticks cost `$0.00` in this compute ledger. They may inspect sources, patch code, update issues, and improve the next experiment plan, but they must not launch paid HF Jobs while the budget gate is closed.
+Local Codex research ticks and the local `scripts/codex_research_loop.sh` cost `$0.00` in this compute ledger. They may inspect sources, patch code, update issues, and improve the next experiment plan, but they must not launch paid HF Jobs while the budget gate is closed.
 
 ## Spend Rule
 
