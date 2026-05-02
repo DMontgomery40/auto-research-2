@@ -23,13 +23,17 @@ Week starts: Monday.
 | 2026-04-29 | synloc-devkit-oracle | HF Jobs | CPU upgrade | $0.25 | pending | Run SSKit oracle checks before any more model training | Failed before execution on missing `torchvision`; dependency patched |
 | 2026-04-29 | synloc-devkit-oracle retry | HF Jobs | CPU upgrade | $0.25 | pending | Run SSKit oracle checks before any more model training | Completed; exact GT `1.0`, projected GT keypoint `0.9809895759`, bbox bottom-center via SSKit `0.5686594909` |
 
-Current estimated spend: `$23.00 / $25.00`.
+Current estimated spend: `$25.00 / $25.00`.
 
 Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
 Next planned spend: `football-yolo26-diagnostic` on HF Jobs `t4-small`, estimated `$0.75`, leaving about `$1.25` under the current weekly cap if it runs as expected.
 
 Next autonomous spend after the diagnostic review patch: `synloc-pose-smoke` on HF Jobs `t4-small`, estimated `$1.25`. This intentionally consumes the remaining weekly budget on a source-specific keypoint/pelvis/ground-point smoke rather than another generic detector probe. Any follow-up train-data cache or full train job should hit the budget gate and open an issue unless the cap is raised.
+
+Current blocker: issue #10 asks for owner approval before `dataset-cache-train-valid` can reserve another `$1.00`. Do not edit the weekly cap in this file unless the owner approves more budget.
+
+Local Codex research ticks cost `$0.00` in this compute ledger. They may inspect sources, patch code, update issues, and improve the next experiment plan, but they must not launch paid HF Jobs while the budget gate is closed.
 
 ## Spend Rule
 

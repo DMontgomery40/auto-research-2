@@ -35,6 +35,14 @@ Code is justified when it:
 
 Local is orchestration only. This machine is MLX/Mac-shaped and has no parity with the CUDA GPU training and inference environment.
 
+Research happens in local Codex with `gpt-5.5` and `xhigh` reasoning. This is the research brain: source inspection, web research, hypothesis selection, code edits, controller edits, journal/ledger updates, commits, pushes, and issue comments happen locally. Start one bounded local research pass with:
+
+```bash
+scripts/codex_research_tick.sh
+```
+
+Hugging Face Jobs are CUDA execution substrate only. They may download data, train, infer, evaluate, and upload artifacts, but they must not be treated as the researcher or delegated open-ended reasoning.
+
 Do not validate model quality locally. Do not make keep/discard decisions from local ML scores.
 
 Local commands are allowed for repo sanity, syntax, packaging, council queueing, and log review. Meaningful baseline, training, inference, evaluation, threshold selection, and prediction generation must run on cloud CUDA GPUs, preferably Hugging Face Jobs while the budget allows.
@@ -66,6 +74,8 @@ Inside the loop:
 
 This repo must not depend on an open chat thread to keep moving.
 
+- `scripts/codex_research_tick.sh` is the local Codex research tick. Run it on the control-plane Mac when the repo needs reasoning, source inspection, controller edits, or the next experiment choice.
+- `scripts/codex_research_prompt.py` builds the compact state prompt for that local tick.
 - `.github/workflows/autonomy.yml` is the heartbeat.
 - Autonomy-labeled issue comments and issue edits wake the heartbeat immediately.
 - `scripts/autonomy_tick.py` runs one bounded controller step.

@@ -8,6 +8,18 @@ Keep the system simple. The work is not to build a platform; the work is to beat
 
 This laptop is the control plane only.
 
+Research happens in local Codex, not on Hugging Face. Use `gpt-5.5` with `xhigh` reasoning for the local research pass. That local pass owns reading sources, choosing the next hypothesis, editing this repo, updating markdown/state, committing, pushing, and deciding whether the heartbeat should submit a cloud job.
+
+Run one local research pass with:
+
+```bash
+scripts/codex_research_tick.sh
+```
+
+Use `scripts/codex_research_tick.sh --print-prompt` to inspect exactly what the local Codex researcher will see before launching it.
+
+Hugging Face Jobs are CUDA execution substrate only. They execute bounded payloads for dataset download, training, inference, official metric evaluation, threshold selection, and artifact upload. They are not the research brain.
+
 Do not validate model quality locally. Local execution is MLX/Mac-shaped and does not match the real CUDA GPU training/inference environment. Local scores have no authority.
 
 Use local commands only for repo sanity checks, packaging, council requests, and reading/writing markdown. Run all baseline, training, inference, threshold selection, and official metric evaluation on cloud CUDA GPUs, preferably Hugging Face Jobs.
@@ -88,7 +100,12 @@ If a diagnostic phase proves a whole path is bad, do not convert that conclusion
 
 ## heartbeat
 
-Autonomy continues through GitHub Actions, not through an open chat window.
+Autonomy has two loops:
+
+1. Local research loop: `scripts/codex_research_tick.sh` runs Codex `gpt-5.5`/`xhigh` on the control-plane Mac for reasoning and code changes.
+2. Execution heartbeat: GitHub Actions runs `scripts/autonomy_tick.py` to submit or inspect one bounded HF job.
+
+The execution heartbeat must not become the research brain.
 
 Every two hours, `.github/workflows/autonomy.yml` runs:
 

@@ -23,6 +23,7 @@ worktrees/
 *.onnx
 
 # Local logs and scratch files
+autonomy/codex_last_message.md
 *.log
 *.tmp
 .DS_Store

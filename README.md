@@ -26,6 +26,8 @@ The primary metric is `mAP-LocSim`. Higher is better.
 - `scripts/ask_council.py` - drop a markdown request into the council automation queue.
 - `scripts/download_synloc.py` - official SoccerNet download wrapper for cloud job payloads.
 - `scripts/evaluate_synloc.py` - official SSKit metric wrapper for cloud job payloads.
+- `scripts/codex_research_tick.sh` - local Codex `gpt-5.5`/`xhigh` research tick; never run it from HF or GitHub Actions.
+- `scripts/codex_research_prompt.py` - compact prompt builder for the local research tick.
 - `scripts/autonomy_tick.py` - one bounded autonomous controller tick.
 - `scripts/verify.sh` - narrow repo sanity check.
 - `train.py` - YOLO-family baseline and fine-tune script; baseline mode must pass before training mode runs.
@@ -43,6 +45,16 @@ They are references, not vendored source.
 ## Runtime Model
 
 This laptop is the control plane. It is not a validation target.
+
+Research happens in local Codex with `gpt-5.5` and `xhigh` reasoning:
+
+```bash
+scripts/codex_research_tick.sh
+```
+
+That local tick is where source inspection, web research, hypothesis choice, code edits, controller changes, markdown updates, commits, pushes, and GitHub issue comments happen. Use `scripts/codex_research_tick.sh --print-prompt` to inspect the compact state prompt first.
+
+Hugging Face Jobs execute CUDA work. They should download data, train, infer, evaluate, select thresholds, and upload artifacts, but they are not the research brain.
 
 Local ML runs are not comparable to the real environment because local execution is MLX/Mac-shaped while challenge training and inference must run on cloud CUDA GPUs. Do not use local model scores to make keep/discard decisions.
 

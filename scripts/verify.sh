@@ -29,6 +29,8 @@ python3 -m py_compile scripts/ask_council.py
 python3 -m py_compile scripts/download_synloc.py
 python3 -m py_compile scripts/evaluate_synloc.py
 python3 -m py_compile scripts/autonomy_tick.py
+python3 -m py_compile scripts/codex_research_prompt.py
+bash -n scripts/codex_research_tick.sh
 python3 -m py_compile train.py
 python3 -m py_compile cloud/synloc_smoke.py
 python3 -m py_compile cloud/synloc_cache.py
@@ -51,6 +53,8 @@ if "<!-- codex-goal:start -->" not in goal or "<!-- codex-goal:end -->" not in g
     raise SystemExit("GOAL.md must contain codex-goal start/end markers")
 required = [
     "Beat the 2026 Spiideo SoccerNet SynLoc challenge",
+    "Research happens in local Codex",
+    "Hugging Face Jobs are CUDA execution only",
     "SSKit oracle passed",
     "Do not train from the near-zero detector path",
     "Soccana is retired from active defaults",
@@ -61,6 +65,41 @@ required = [
 missing = [item for item in required if item not in goal]
 if missing:
     raise SystemExit(f"GOAL.md missing required goal clauses: {missing}")
+PY
+
+python3 - <<'PY'
+from pathlib import Path
+
+required_docs = {
+    "AGENTS.md": [
+        "Research happens in local Codex",
+        "Hugging Face Jobs are CUDA execution substrate only",
+        "gpt-5.5",
+        "xhigh",
+    ],
+    "program.md": [
+        "Research happens in local Codex",
+        "scripts/codex_research_tick.sh",
+        "gpt-5.5",
+        "xhigh",
+    ],
+    "README.md": [
+        "scripts/codex_research_tick.sh",
+        "Research happens in local Codex",
+        "Hugging Face Jobs execute CUDA work",
+    ],
+}
+for filename, needles in required_docs.items():
+    text = Path(filename).read_text(encoding="utf-8")
+    missing = [needle for needle in needles if needle not in text]
+    if missing:
+        raise SystemExit(f"{filename} missing local Codex research contract clauses: {missing}")
+
+tick = Path("scripts/codex_research_tick.sh").read_text(encoding="utf-8")
+if "gpt-5.5" not in tick or "xhigh" not in tick:
+    raise SystemExit("codex_research_tick.sh must default to gpt-5.5/xhigh")
+if "codex exec" not in tick:
+    raise SystemExit("codex_research_tick.sh must invoke codex exec")
 PY
 
 python3 - <<'PY'
