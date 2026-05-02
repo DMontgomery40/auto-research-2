@@ -9,10 +9,11 @@ EFFORT="${CODEX_RESEARCH_EFFORT:-xhigh}"
 ALLOW_DIRTY=0
 ALLOW_ACTIVE_JOB=0
 PRINT_PROMPT=0
+DRY_RUN=0
 
 usage() {
   cat <<'EOF'
-Usage: scripts/codex_research_tick.sh [--print-prompt] [--allow-dirty] [--allow-active-job]
+Usage: scripts/codex_research_tick.sh [--print-prompt] [--dry-run] [--allow-dirty] [--allow-active-job]
 
 Runs one local Codex research tick. Research and code edits happen on this
 machine with Codex; Hugging Face Jobs remain CUDA execution substrate only.
@@ -27,6 +28,9 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --print-prompt)
       PRINT_PROMPT=1
+      ;;
+    --dry-run)
+      DRY_RUN=1
       ;;
     --allow-dirty)
       ALLOW_DIRTY=1
@@ -88,12 +92,23 @@ if [ "$PRINT_PROMPT" -eq 1 ]; then
 fi
 
 echo "Starting local Codex research tick with model=${MODEL}, reasoning=${EFFORT}" >&2
-codex exec \
+cmd=(
+  codex
   -m "$MODEL" \
   -c "model_reasoning_effort=\"$EFFORT\"" \
   -a never \
   -s danger-full-access \
   --search \
   -C "$ROOT" \
+  exec \
   -o "$last_message" \
-  - < "$prompt_file"
+  -
+)
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  printf '%q ' "${cmd[@]}"
+  printf '< %q\n' "$prompt_file"
+  exit 0
+fi
+
+"${cmd[@]}" < "$prompt_file"

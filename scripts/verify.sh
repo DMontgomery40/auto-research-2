@@ -31,6 +31,7 @@ python3 -m py_compile scripts/evaluate_synloc.py
 python3 -m py_compile scripts/autonomy_tick.py
 python3 -m py_compile scripts/codex_research_prompt.py
 bash -n scripts/codex_research_tick.sh
+scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-research-dry-run.txt
 python3 -m py_compile train.py
 python3 -m py_compile cloud/synloc_smoke.py
 python3 -m py_compile cloud/synloc_cache.py
@@ -98,8 +99,10 @@ for filename, needles in required_docs.items():
 tick = Path("scripts/codex_research_tick.sh").read_text(encoding="utf-8")
 if "gpt-5.5" not in tick or "xhigh" not in tick:
     raise SystemExit("codex_research_tick.sh must default to gpt-5.5/xhigh")
-if "codex exec" not in tick:
-    raise SystemExit("codex_research_tick.sh must invoke codex exec")
+dry_run = Path("/tmp/auto-research-2-codex-research-dry-run.txt").read_text(encoding="utf-8")
+missing = [needle for needle in ["codex", "gpt-5.5", "model_reasoning_effort", "xhigh", "-a", "never", "--search", "exec"] if needle not in dry_run]
+if missing:
+    raise SystemExit(f"codex_research_tick.sh dry run missing expected Codex invocation clauses: {missing}")
 PY
 
 python3 - <<'PY'
