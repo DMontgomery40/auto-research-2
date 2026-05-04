@@ -1,5 +1,15 @@
 {
-  "active_job": null,
+  "active_job": {
+    "cost_estimate_usd": 1.0,
+    "flavor": "cpu-upgrade",
+    "id": "69f7fc189d85bec4d76f1b29",
+    "label": "dataset-cache-train-valid",
+    "next_phase": "first_train_experiment_pending",
+    "phase": "train_dataset_cache_pending",
+    "status": "RUNNING",
+    "submitted_at": "2026-05-04T01:53:28.265122Z",
+    "url": "https://huggingface.co/jobs/dmontgomery40/69f7fc189d85bec4d76f1b29"
+  },
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
     "failed_at": "2026-04-27T19:17:02Z",
@@ -2803,8 +2813,8 @@
       "url": "https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb"
     }
   ],
-  "phase": "train_dataset_cache_pending",
-  "spent_estimate_usd": 25.0,
-  "updated_at": "2026-05-04T01:52:33Z",
+  "phase": "train_dataset_cache_running",
+  "spent_estimate_usd": 26.0,
+  "updated_at": "2026-05-04T01:53:28.265610Z",
   "weekly_budget_usd": 50.0
 }

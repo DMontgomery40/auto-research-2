@@ -50,3 +50,4 @@ Issue should include:
 - estimated cost,
 - stop condition,
 - fallback if it fails.
+| 2026-05-04 | dataset-cache-train-valid | HF Jobs | cpu-upgrade | $1.00 | pending | Submitted by autonomy heartbeat | Job `69f7fc189d85bec4d76f1b29` running; https://huggingface.co/jobs/dmontgomery40/69f7fc189d85bec4d76f1b29 |

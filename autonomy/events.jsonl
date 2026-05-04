@@ -480,3 +480,6 @@
 {"active_job": null, "event": "tick_start", "phase": "blocked_budget", "ts": "2026-05-04T01:42:48.176650Z"}
 {"event": "still_blocked", "phase": "blocked_budget", "ts": "2026-05-04T01:42:48.176748Z"}
 {"active_job": null, "event": "tick_end", "phase": "blocked_budget", "ts": "2026-05-04T01:42:48.181089Z"}
+{"active_job": null, "event": "tick_start", "phase": "train_dataset_cache_pending", "ts": "2026-05-04T01:53:26.604042Z"}
+{"event": "job_submitted", "job": {"cost_estimate_usd": 1.0, "flavor": "cpu-upgrade", "id": "69f7fc189d85bec4d76f1b29", "label": "dataset-cache-train-valid", "next_phase": "first_train_experiment_pending", "phase": "train_dataset_cache_pending", "status": "RUNNING", "submitted_at": "2026-05-04T01:53:28.265122Z", "url": "https://huggingface.co/jobs/dmontgomery40/69f7fc189d85bec4d76f1b29"}, "ts": "2026-05-04T01:53:28.265545Z"}
+{"active_job": {"cost_estimate_usd": 1.0, "flavor": "cpu-upgrade", "id": "69f7fc189d85bec4d76f1b29", "label": "dataset-cache-train-valid", "next_phase": "first_train_experiment_pending", "phase": "train_dataset_cache_pending", "status": "RUNNING", "submitted_at": "2026-05-04T01:53:28.265122Z", "url": "https://huggingface.co/jobs/dmontgomery40/69f7fc189d85bec4d76f1b29"}, "event": "tick_end", "phase": "train_dataset_cache_running", "ts": "2026-05-04T01:53:28.269949Z"}
