@@ -51,3 +51,4 @@ Issue should include:
 - stop condition,
 - fallback if it fails.
 | 2026-05-04 | dataset-cache-train-valid | HF Jobs | cpu-upgrade | $1.00 | pending | Submitted by autonomy heartbeat | Job `69f7fc189d85bec4d76f1b29` running; https://huggingface.co/jobs/dmontgomery40/69f7fc189d85bec4d76f1b29 |
+| 2026-05-04 | first-yolo-train | HF Jobs | t4-small | $1.50 | pending | Submitted by autonomy heartbeat | Job `69f82ec59d85bec4d76f1d3d` running; https://huggingface.co/jobs/dmontgomery40/69f82ec59d85bec4d76f1d3d |
