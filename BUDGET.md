@@ -27,7 +27,7 @@ Week starts: Monday.
 | 2026-05-01 | football-yolo26-diagnostic | HF Jobs | t4-small | $0.75 | pending | Submitted by autonomy heartbeat | Completed; job `69f4facf9d85bec4d76efcb0` scored `mAP-LocSim=0.0000467028` with image-space GT recall still near zero. |
 | 2026-05-02 | synloc-pose-smoke | HF Jobs | t4-small | $1.25 | pending | Submitted by autonomy heartbeat | Completed; job `69f655699d85bec4d76f0adb` scored `mAP-LocSim=0.0008250825`, non-promotable validation-slice smoke. |
 
-Current estimated spend: `$25.00 / $50.00`.
+Current estimated spend: `$26.00 / $50.00`.
 
 Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
@@ -37,11 +37,11 @@ Next planned paid step: `dataset-cache-train-valid` on HF Jobs `cpu-upgrade`, es
 
 Current blocker: none. Issue #10 contains the owner approval for the `$25` reload.
 
-Local Codex research ticks and the local `scripts/codex_research_loop.sh` cost `$0.00` in this compute ledger. They may inspect sources, patch code, update issues, and improve the next experiment plan, but they must not launch paid HF Jobs while the budget gate is closed.
+Local Codex research ticks and the local `scripts/codex_research_loop.sh` cost `$0.00` in this compute ledger. They may inspect sources, patch code, update issues, and improve the next experiment plan, but they must not launch paid HF Jobs beyond the refreshed cap without owner approval.
 
 ## Spend Rule
 
-If an experiment could push the week over `$25`, open a GitHub issue before running it.
+If an experiment could push the week over `$50`, open a GitHub issue before running it.
 
 Issue should include:
 
