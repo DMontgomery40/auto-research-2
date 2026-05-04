@@ -1,6 +1,8 @@
 # Budget
 
-Weekly compute budget: `$25/week`.
+Weekly compute budget: `$50/week`.
+
+Owner approved a `$25` reload on 2026-05-03 after confirming Hugging Face billing showed available funds. Do not exceed the refreshed `$50` cap without another owner approval.
 
 Week starts: Monday.
 
@@ -25,15 +27,15 @@ Week starts: Monday.
 | 2026-05-01 | football-yolo26-diagnostic | HF Jobs | t4-small | $0.75 | pending | Submitted by autonomy heartbeat | Completed; job `69f4facf9d85bec4d76efcb0` scored `mAP-LocSim=0.0000467028` with image-space GT recall still near zero. |
 | 2026-05-02 | synloc-pose-smoke | HF Jobs | t4-small | $1.25 | pending | Submitted by autonomy heartbeat | Completed; job `69f655699d85bec4d76f0adb` scored `mAP-LocSim=0.0008250825`, non-promotable validation-slice smoke. |
 
-Current estimated spend: `$25.00 / $25.00`.
+Current estimated spend: `$25.00 / $50.00`.
 
 Future tiny SoccerMaster probes should use HF Jobs `t4-small` with tight timeouts, not `l4x1`, unless T4 fails for memory/runtime reasons that are recorded in the ledger.
 
-Recent autonomous spend: `football-yolo26-diagnostic` and `synloc-pose-smoke` have completed and consumed the remaining weekly budget.
+Recent autonomous spend: `football-yolo26-diagnostic` and `synloc-pose-smoke` completed the original `$25` budget. The owner approved a `$25` reload so the next cache job can proceed under a refreshed `$50` cap.
 
-Next planned paid step: `dataset-cache-train-valid` on HF Jobs `cpu-upgrade`, estimated `$1.00`, to cache the train split beside validation before a real source-specific pose/keypoint experiment. This is blocked by issue #10 until the owner approves more budget or lowers scope.
+Next planned paid step: `dataset-cache-train-valid` on HF Jobs `cpu-upgrade`, estimated `$1.00`, to cache the train split beside validation before a real source-specific pose/keypoint experiment.
 
-Current blocker: issue #10 asks for owner approval before `dataset-cache-train-valid` can reserve another `$1.00`. Do not edit the weekly cap in this file unless the owner approves more budget.
+Current blocker: none. Issue #10 contains the owner approval for the `$25` reload.
 
 Local Codex research ticks and the local `scripts/codex_research_loop.sh` cost `$0.00` in this compute ledger. They may inspect sources, patch code, update issues, and improve the next experiment plan, but they must not launch paid HF Jobs while the budget gate is closed.
 

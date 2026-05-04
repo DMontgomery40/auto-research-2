@@ -49,7 +49,7 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 - `train.py` now exists and must baseline-evaluate the active pretrained football YOLO26 path before any training. Soccana is retired from active defaults and remains only as historical evidence.
 - Pretrained YOLO baseline job `69f24012d2c8bd8662bd3267` completed on HF Jobs `t4-small`. It is now historical: YOLO26l scored `mAP-LocSim=0.000046702783485895764` with 2,338 detections; the now-retired Soccana row scored `mAP-LocSim=0.000057407296779217454` with 2,610 detections. Training remains blocked because official SynLoc recall was still `0.0`.
 - SSKit dev-kit oracle retry job `69f2462ed70108f37ace17b5` completed on HF Jobs `cpu-upgrade` for 64 validation images and 1,004 annotations. Exact GT `position_on_pitch` scored `mAP-LocSim=1.0`; GT ground keypoints projected by SSKit scored `0.9809895759040843`; GT bbox bottom-center through SSKit keypoint projection and `BBoxLocSimCOCOeval` both scored `0.5686594909116471` with `precision_50=0.9269269269269269` and `recall_50=0.92`.
-- Current controller phase is `blocked_budget`; no active HF job exists, and issue #10 is the owner-approval path before the next paid `dataset-cache-train-valid` job.
+- Current controller phase is `train_dataset_cache_pending`; no active HF job exists, and issue #10 contains the owner approval for a `$25` budget reload before the next paid `dataset-cache-train-valid` job.
 - GitHub issue #7 is historical/live context, but no longer the intended stall point.
 - The oracle proves the official data, camera calibration, evaluator, and SSKit projection path are not globally broken. The near-zero pretrained detector scores are on the prediction side: wrong/poor boxes for SynLoc, class or role filtering, source-domain mismatch, postprocess/decode, or using non-SynLoc pretrained detectors as if they were official SynLoc baselines.
 - Do not start training from a near-zero detector path. The next work must be dev-kit-first: use the official SSKit result formats, `position_from_keypoint_index`, `BBoxLocSimCOCOeval`, FOOTPASS/official challenge assets, and official baseline/runtime code before any fine-tune.
@@ -67,17 +67,17 @@ Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by J
 
 ## Next Action
 
-1. Do not submit more paid HF work while phase is `blocked_budget`.
-2. If owner approves more budget in issue #10, wake the heartbeat so it can cache `train,valid`.
-3. In parallel, run `scripts/codex_research_loop.sh --iterations 12` locally for a bounded one-hour no-spend research pass. The local Codex pass may improve the next train/valid pose experiment plan, inspect sources, patch code, and update issues, but it must not spend or edit the weekly cap without owner approval.
+1. Wake the heartbeat so it can cache `train,valid` under the refreshed `$50` budget cap.
+2. After the cache job completes, record artifacts and only then advance toward a real source-specific pose/keypoint train/valid experiment.
+3. In parallel, run `scripts/codex_research_loop.sh --iterations 12` locally for a bounded one-hour no-spend research pass. The local Codex pass may improve the next train/valid pose experiment plan, inspect sources, patch code, and update issues, but it must not spend beyond the refreshed cap without owner approval.
 
 <!-- autonomy-snapshot:start -->
 ## Autonomy Snapshot
 
-- Updated: 2026-05-04T01:42:48.180888Z
-- Phase: `blocked_budget`
+- Updated: 2026-05-04T01:52:33Z
+- Phase: `train_dataset_cache_pending`
 - Active job: `none`
-- Spend estimate: `$25.00 / $25.00`
+- Spend estimate: `$25.00 / $50.00`
 - Blocker: none
 - Last result: `synloc-pose-smoke` `69f655699d85bec4d76f0adb` score `0.000825082508250825` threshold `0.36052486300468445`
 <!-- autonomy-snapshot:end -->

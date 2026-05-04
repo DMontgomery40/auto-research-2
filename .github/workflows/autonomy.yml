@@ -36,7 +36,7 @@ jobs:
       SOCCERNET_PASSWORD: ${{ secrets.SOCCERNET_PASSWORD }}
       SOCCERNET_SIGNIN_PASSWORD: ${{ secrets.SOCCERNET_SIGNIN_PASSWORD }}
       SOCCERNET_PASSWORD_2: ${{ secrets.SOCCERNET_PASSWORD_2 }}
-      WEEKLY_BUDGET_USD: "25"
+      WEEKLY_BUDGET_USD: "50"
     steps:
       - uses: actions/checkout@v4
         with:
