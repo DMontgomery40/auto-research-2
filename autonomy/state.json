@@ -1,15 +1,5 @@
 {
-  "active_job": {
-    "cost_estimate_usd": 1.0,
-    "flavor": "cpu-upgrade",
-    "id": "69f7fc189d85bec4d76f1b29",
-    "label": "dataset-cache-train-valid",
-    "next_phase": "first_train_experiment_pending",
-    "phase": "train_dataset_cache_pending",
-    "status": "RUNNING",
-    "submitted_at": "2026-05-04T01:53:28.265122Z",
-    "url": "https://huggingface.co/jobs/dmontgomery40/69f7fc189d85bec4d76f1b29"
-  },
+  "active_job": null,
   "council_request": {
     "error": "Council run failed with zero Stage 1 analyses after the default 120s model window.",
     "failed_at": "2026-04-27T19:17:02Z",
@@ -2811,10 +2801,54 @@
       "status": "COMPLETED",
       "submitted_at": "2026-05-02T19:50:01.605602Z",
       "url": "https://huggingface.co/jobs/dmontgomery40/69f655699d85bec4d76f0adb"
+    },
+    {
+      "completed_at": "2026-05-04T03:27:47.428253Z",
+      "cost_estimate_usd": 1.0,
+      "flavor": "cpu-upgrade",
+      "id": "69f7fc189d85bec4d76f1b29",
+      "label": "dataset-cache-train-valid",
+      "next_phase": "first_train_experiment_pending",
+      "phase": "train_dataset_cache_pending",
+      "result": {
+        "files": [
+          {
+            "name": "annotations.zip",
+            "relative_path": "SpiideoSynLoc/annotations.zip",
+            "sha256": "848c15ee5ad00494e636d5ca776f57aa10fd2533ad5bc5088c9702782ebabb87",
+            "size_bytes": 92462538,
+            "zip_ok": true
+          },
+          {
+            "name": "train.zip",
+            "relative_path": "SpiideoSynLoc/train.zip",
+            "sha256": "e192fde59f7c7b18efbf4e7b10d3bd0babfcd97e9f6744f59f883032f1d01bd8",
+            "size_bytes": 12839139265,
+            "zip_ok": true
+          },
+          {
+            "name": "val.zip",
+            "relative_path": "SpiideoSynLoc/val.zip",
+            "sha256": "a0d19585df77e18253f9d35d4c0b1c07d36af8e53797bc04fc8aa901d7c3d68e",
+            "size_bytes": 2048120641,
+            "zip_ok": true
+          }
+        ],
+        "ok": true,
+        "splits": [
+          "train",
+          "valid"
+        ],
+        "ts": "2026-05-04T01:59:04.294284Z",
+        "version": "fullhd"
+      },
+      "status": "COMPLETED",
+      "submitted_at": "2026-05-04T01:53:28.265122Z",
+      "url": "https://huggingface.co/jobs/dmontgomery40/69f7fc189d85bec4d76f1b29"
     }
   ],
-  "phase": "train_dataset_cache_running",
+  "phase": "first_train_experiment_pending",
   "spent_estimate_usd": 26.0,
-  "updated_at": "2026-05-04T01:53:28.265610Z",
+  "updated_at": "2026-05-04T03:27:47.430998Z",
   "weekly_budget_usd": 50.0
 }
