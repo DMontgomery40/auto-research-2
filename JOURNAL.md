@@ -16,3 +16,4 @@
 - 2026-05-04T01:53:28.265443Z - Submitted HF job: dataset-cache-train-valid 69f7fc189d85bec4d76f1b29 on cpu-upgrade.
 - 2026-05-04T03:27:47.430808Z - HF job completed: dataset-cache-train-valid 69f7fc189d85bec4d76f1b29 -> phase first_train_experiment_pending.
 - 2026-05-04T05:29:41.598201Z - Submitted HF job: first-yolo-train 69f82ec59d85bec4d76f1d3d on t4-small.
+- 2026-05-04T07:22:23.259213Z - HF job completed: first-yolo-train 69f82ec59d85bec4d76f1d3d -> phase train_result_review.
