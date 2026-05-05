@@ -24,9 +24,11 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   smoke, public COCO RT-DETR stayed far below the pose smoke despite slightly
   better IoU diagnostics, and public EasyChamp/MartijnJolif/Uisikdag
   soccer-football YOLO detectors also had zero IoU-0.5 GT recall on the same
-  frames. The useful next unit is official SSKit/SoccerNet-format candidates,
-  SoccerMaster runtime parity that proves real athlete boxes on the same
-  frames, or a track/pose candidate source with saved recall diagnostics.
+  frames. `Adit-jain/soccana` is now in the same discard bucket despite its
+  SoccerNet-labeled model card and loaded `Player/Ball/Referee` labels. The
+  useful next unit is official SSKit/SoccerNet-format candidates, SoccerMaster
+  runtime parity that proves real athlete boxes on the same frames, or a
+  track/pose candidate source with saved recall diagnostics.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A
@@ -139,6 +141,17 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   GT boxes. Keep the large-model loader mechanics; do not spend another
   RF-DETR SoccerNet scoring pass without a new preprocessing/coordinate-parity
   hypothesis.
+- `soccana-yolo11-soccernet-candidate-audit` scored
+  `4.304778303917348e-05` official `mAP-LocSim` on 64 validation frames with
+  public `Adit-jain/soccana` YOLO11 detections. Loaded labels were `0=Player`,
+  `1=Ball`, `2=Referee`; the audit selected `0,1,2,3`, produced 1,584
+  detections for 1,004 GT boxes, and still had `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.0`, `gt_recall_iou_0_3=0.00199203187250996`, and
+  `mean_best_iou_gt_to_det=0.0018615731134729054`. Discard this public
+  SoccerNet-labeled YOLO detector as the next candidate source for the point
+  regressor. The first wrapper job failed before scoring because wrapper
+  dependencies omitted `numpy`; Python 3.10 plus the full `train.py` dependency
+  header is the working connector recipe.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -181,6 +194,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   recall on the SynLoc validation slice.
 - Pairing the direct point regressor with public Uisikdag football YOLOv8
   detections; the corrected athlete-class audit produced many boxes but still
+  had zero IoU-0.5 GT recall on the SynLoc validation slice.
+- Pairing the direct point regressor with public `Adit-jain/soccana`
+  detections; the SoccerNet-labeled YOLO11 audit produced many boxes but still
   had zero IoU-0.5 GT recall on the SynLoc validation slice.
 - Running another RF-DETR SoccerNet scoring job just because the architecture
   mismatch is fixed. The large-model smoke scored zero with near-zero image-space
