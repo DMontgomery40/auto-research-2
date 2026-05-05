@@ -711,6 +711,202 @@ def evaluate_point_regressor(
     return {"summary": summary, "out_dir": out_dir}
 
 
+def evaluate_point_regressor_on_yolo_candidates(
+    *,
+    point_model: nn.Module,
+    detector_model_path: Path,
+    detector_spec: BaselineSpec,
+    data_root: Path,
+    gt_path: Path,
+    max_images: int,
+    detector_imgsz: int,
+    detector_conf: float,
+    detector_iou: float,
+    max_detections_per_image: int,
+    image_size: int,
+    crop_padding: float,
+    device: torch.device,
+    keypoint_target: str,
+    source_keypoint_index: int,
+    audit_sample_images: int,
+) -> dict[str, Any]:
+    point_model.eval()
+    gt = json.loads(gt_path.read_text(encoding="utf-8"))
+    images = gt["images"][: max_images or None]
+    selected_image_ids = {int(image["id"]) for image in images}
+    gt_annotations_by_image: dict[int, list[dict[str, Any]]] = {
+        image_id: [] for image_id in selected_image_ids
+    }
+    gt_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    gt_points_by_image: dict[int, list[tuple[float, float]]] = {image_id: [] for image_id in selected_image_ids}
+    for ann in gt.get("annotations", []):
+        image_id = int(ann["image_id"])
+        if image_id not in selected_image_ids:
+            continue
+        gt_annotations_by_image.setdefault(image_id, []).append(ann)
+        bbox = ann.get("bbox", [0, 0, 0, 0])
+        if len(bbox) == 4 and float(bbox[2]) > 0 and float(bbox[3]) > 0:
+            gt_boxes_by_image.setdefault(image_id, []).append(xywh_to_xyxy(bbox))
+        point = target_keypoint(
+            ann,
+            target=keypoint_target,
+            source_keypoint_index=source_keypoint_index,
+        )
+        if point is not None and point[2] > 0 and np.isfinite([point[0], point[1]]).all():
+            gt_points_by_image.setdefault(image_id, []).append((float(point[0]), float(point[1])))
+
+    det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    pred_points_by_image: dict[int, list[tuple[float, float]]] = {image_id: [] for image_id in selected_image_ids}
+    detector = YOLO(str(detector_model_path))
+    detector_device: int | str = 0 if torch.cuda.is_available() else "cpu"
+
+    results: list[dict[str, Any]] = []
+    audit_examples: list[dict[str, Any]] = []
+    det_id = 1
+    for image in images:
+        image_id = int(image["id"])
+        path = image_path(data_root, image["file_name"])
+        preds = detector.predict(
+            source=str(path),
+            imgsz=detector_imgsz,
+            conf=detector_conf,
+            iou=detector_iou,
+            verbose=False,
+            device=detector_device,
+        )
+        if not preds or preds[0].boxes is None:
+            continue
+        boxes = preds[0].boxes
+        xyxy = boxes.xyxy.detach().cpu().numpy()
+        scores = boxes.conf.detach().cpu().numpy()
+        classes = boxes.cls.detach().cpu().numpy().astype(int)
+        candidates: list[dict[str, Any]] = []
+        raw_class_counts: dict[int, int] = {}
+        for box, score, class_id in zip(xyxy, scores, classes):
+            raw_class_counts[int(class_id)] = raw_class_counts.get(int(class_id), 0) + 1
+            if int(class_id) not in detector_spec.athlete_class_ids:
+                continue
+            x1, y1, x2, y2 = [float(v) for v in box]
+            if x2 <= x1 or y2 <= y1:
+                continue
+            sample = PointSample(
+                image_path=path,
+                image_id=image_id,
+                annotation_id=None,
+                bbox_xywh=(x1, y1, x2 - x1, y2 - y1),
+                point_xy=(0.0, 0.0),
+            )
+            px, py = predict_point_from_crop(
+                point_model,
+                sample,
+                image_size=image_size,
+                crop_padding=crop_padding,
+                device=device,
+            )
+            candidates.append(
+                {
+                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "xyxy": [x1, y1, x2, y2],
+                    "keypoints": [px, py, 2.0],
+                    "point": (px, py),
+                    "score": float(score),
+                    "class_id": int(class_id),
+                }
+            )
+        if max_detections_per_image > 0:
+            candidates = sorted(candidates, key=lambda item: item["score"], reverse=True)[:max_detections_per_image]
+        if audit_sample_images > 0 and len(audit_examples) < audit_sample_images:
+            gt_points = gt_points_by_image.get(image_id, [])
+            gt_rows = []
+            for ann in gt_annotations_by_image.get(image_id, []):
+                target_point = target_keypoint(
+                    ann,
+                    target=keypoint_target,
+                    source_keypoint_index=source_keypoint_index,
+                )
+                gt_rows.append(
+                    {
+                        "annotation_id": ann.get("id"),
+                        "bbox_xywh": ann.get("bbox"),
+                        "target_keypoint": None
+                        if target_point is None
+                        else {"x": target_point[0], "y": target_point[1], "visibility": target_point[2]},
+                        "category_id": ann.get("category_id"),
+                    }
+                )
+            pred_rows = []
+            for candidate in sorted(candidates, key=lambda item: item["score"], reverse=True)[:10]:
+                pred_rows.append(
+                    {
+                        "bbox_xywh": candidate["bbox"],
+                        "keypoints": candidate["keypoints"],
+                        "score": candidate["score"],
+                        "class_id": candidate["class_id"],
+                        "nearest_gt_point_px": nearest_point_distance(candidate["point"], gt_points),
+                    }
+                )
+            audit_examples.append(
+                {
+                    "image_id": image_id,
+                    "file_name": image["file_name"],
+                    "width": image.get("width"),
+                    "height": image.get("height"),
+                    "raw_class_counts": raw_class_counts,
+                    "gt": gt_rows,
+                    "predictions_top10_after_filter": pred_rows,
+                }
+            )
+        for candidate in candidates:
+            det_boxes_by_image.setdefault(image_id, []).append(candidate["xyxy"])
+            pred_points_by_image.setdefault(image_id, []).append(candidate["point"])
+            results.append(
+                {
+                    "area": 0,
+                    "bbox": candidate["bbox"],
+                    "category_id": 1,
+                    "id": det_id,
+                    "image_id": image_id,
+                    "keypoints": candidate["keypoints"],
+                    "score": candidate["score"],
+                }
+            )
+            det_id += 1
+
+    run_id = f"synloc-point-regressor-yolo-eval-{utc_now().replace(':', '-')}"
+    out_dir = Path("/tmp") / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pred_path = out_dir / "results.json"
+    pred_path.write_text(json.dumps(results), encoding="utf-8")
+    metrics = evaluate_keypoints(gt_path, pred_path, 0)
+    diagnostics = {
+        "boxes": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
+        "keypoints": keypoint_diagnostics(gt_points_by_image, pred_points_by_image),
+    }
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "run_id": run_id,
+        "mode": "point_regressor_yolo_candidate_eval",
+        "oracle_candidate_boxes": False,
+        "detector": detector_spec.name,
+        "detector_repo": detector_spec.repo,
+        "detector_filename": detector_spec.filename,
+        "athlete_class_ids": sorted(detector_spec.athlete_class_ids),
+        "position_from_keypoint_index": 0,
+        "num_images": len(images),
+        "num_predictions": len(results),
+        "detector_imgsz": detector_imgsz,
+        "detector_conf": detector_conf,
+        "detector_iou": detector_iou,
+        "max_detections_per_image": max_detections_per_image,
+        "metrics": metrics,
+        "diagnostics": diagnostics,
+        "audit_examples": audit_examples,
+    }
+    (out_dir / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    return {"summary": summary, "out_dir": out_dir}
+
+
 def keypoint_candidate_score(mode: str, box_score: float, keypoint_score: float) -> float:
     if mode == "combined":
         return box_score * keypoint_score
@@ -1395,6 +1591,13 @@ def run_point_regressor() -> dict[str, Any]:
     source_keypoint_index = env_int("SYNLOC_SOURCE_KEYPOINT_INDEX", 1)
     keypoint_target = os.getenv("SYNLOC_KEYPOINT_TARGET", "annotation").strip().lower()
     audit_sample_images = env_int("SYNLOC_AUDIT_SAMPLE_IMAGES", 8)
+    candidate_mode = os.getenv("POINT_CANDIDATE_MODE", "oracle").strip().lower()
+    if candidate_mode not in {"oracle", "yolo"}:
+        raise RuntimeError("POINT_CANDIDATE_MODE must be one of: oracle, yolo")
+    detector_imgsz = env_int("POINT_DETECTOR_IMGSZ", env_int("YOLO_IMGSZ", 960))
+    detector_conf = env_float("POINT_DETECTOR_CONF", env_float("YOLO_CONF", 0.01))
+    detector_iou = env_float("POINT_DETECTOR_IOU", env_float("YOLO_IOU", 0.7))
+    max_detections_per_image = env_int("POINT_MAX_DETECTIONS_PER_IMAGE", 25)
 
     data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
     train_gt = find_annotation(data_root, "train")
@@ -1439,22 +1642,46 @@ def run_point_regressor() -> dict[str, Any]:
             losses.append(float(loss.detach().cpu()))
         epoch_losses.append(float(np.mean(losses)) if losses else 0.0)
 
-    item = evaluate_point_regressor(
-        model=model,
-        samples=val_samples,
-        gt_path=val_gt,
-        image_size=image_size,
-        crop_padding=crop_padding,
-        device=device,
-        audit_sample_images=audit_sample_images,
-    )
+    detector_spec = None
+    if candidate_mode == "oracle":
+        item = evaluate_point_regressor(
+            model=model,
+            samples=val_samples,
+            gt_path=val_gt,
+            image_size=image_size,
+            crop_padding=crop_padding,
+            device=device,
+            audit_sample_images=audit_sample_images,
+        )
+    else:
+        detector_spec = parse_baselines(os.getenv("POINT_DETECTOR_BASELINE", DEFAULT_BASELINES[0]))[0]
+        detector_path = download_model(detector_spec, Path("/tmp/synloc-point-detectors"))
+        item = evaluate_point_regressor_on_yolo_candidates(
+            point_model=model,
+            detector_model_path=detector_path,
+            detector_spec=detector_spec,
+            data_root=data_root,
+            gt_path=val_gt,
+            max_images=val_max,
+            detector_imgsz=detector_imgsz,
+            detector_conf=detector_conf,
+            detector_iou=detector_iou,
+            max_detections_per_image=max_detections_per_image,
+            image_size=image_size,
+            crop_padding=crop_padding,
+            device=device,
+            keypoint_target=keypoint_target,
+            source_keypoint_index=source_keypoint_index,
+            audit_sample_images=audit_sample_images,
+        )
     validation = item["summary"]
     summary = {
         "ok": True,
         "ts": utc_now(),
         "mode": "point_regressor",
         "run_id": f"synloc-point-regressor-smoke-{utc_now().replace(':', '-')}",
-        "oracle_candidate_boxes": True,
+        "candidate_mode": candidate_mode,
+        "oracle_candidate_boxes": candidate_mode == "oracle",
         "keypoint_target": keypoint_target,
         "source_keypoint_index": source_keypoint_index,
         "train_images": train_max,
@@ -1468,10 +1695,22 @@ def run_point_regressor() -> dict[str, Any]:
         "image_size": image_size,
         "crop_padding": crop_padding,
         "lr": lr,
+        "detector": None if detector_spec is None else detector_spec.name,
+        "detector_repo": None if detector_spec is None else detector_spec.repo,
+        "detector_filename": None if detector_spec is None else detector_spec.filename,
+        "detector_athlete_class_ids": None if detector_spec is None else sorted(detector_spec.athlete_class_ids),
+        "detector_imgsz": detector_imgsz if candidate_mode == "yolo" else None,
+        "detector_conf": detector_conf if candidate_mode == "yolo" else None,
+        "detector_iou": detector_iou if candidate_mode == "yolo" else None,
+        "max_detections_per_image": max_detections_per_image if candidate_mode == "yolo" else None,
         "epoch_losses": epoch_losses,
         "validation": validation,
         "metric": "mAP-LocSim",
-        "note": "Uses GT boxes as oracle candidates to isolate direct point quality; not challenge-submittable.",
+        "note": (
+            "Uses GT boxes as oracle candidates to isolate direct point quality; not challenge-submittable."
+            if candidate_mode == "oracle"
+            else "Uses YOLO detector boxes as real candidates for the direct crop point regressor."
+        ),
     }
     upload_root = Path("/tmp") / summary["run_id"]
     if upload_root.exists():
