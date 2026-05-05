@@ -142,6 +142,17 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   pose smoke and does not unblock direct point regression. `train.py` now keeps
   a reusable `TRAIN_MODE=transformer_baseline` lane for future non-YOLO
   detector audits. Artifact upload still failed with HF model-repo `403`.
+- `uisikdag-yolov8-football-candidate-audit` is a discard-result: corrected
+  job `69fa71b6b745af80fb373541` evaluated
+  `uisikdag/yolo-v8-football-players-detection` on 64 validation frames with
+  athlete classes `1,2,3` after initial job `69fa7058f2f4addb7839c058`
+  accidentally selected `ball=0`. The corrected official score was
+  `mAP-LocSim=7.084787190704759e-06`, `precision_50=0.0017889087656529517`,
+  `recall_50=0.0`, `gt_recall_iou_0_5=0.0`, and
+  `mean_best_iou_gt_to_det=0.003439228441225626` from 2,265 detections for
+  1,004 GT boxes. This older public football YOLO source does not unblock
+  direct point regression. Artifact upload still failed with HF model-repo
+  `403`.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -172,13 +183,14 @@ direct crop-regressor point head is not dead. Pairing it with the existing
 football YOLO26 candidate source scored zero because image-space candidate
 recall was essentially absent, and a larger-image/lower-threshold YOLO26 audit
 did not fix it. Public COCO `yolo11n` person detections, public COCO RT-DETR
-person detections, and two different public soccer-specific detectors
-(`easychamp-yolov8`, `martinjolif-yolo11m`) all failed as useful candidate
-sources despite producing many boxes. Do not spend another pass pairing the
-point regressor with generic COCO person boxes, COCO transformer detector
-boxes, or these public soccer YOLO detectors. The next blocker is an official
-SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
-or a track/pose source with real athlete-box recall on the same frames.
+person detections, and three public soccer/football YOLO detectors
+(`easychamp-yolov8`, `martinjolif-yolo11m`, `uisikdag-yolov8-football`) all
+failed as useful candidate sources despite producing many boxes. Do not spend
+another pass pairing the point regressor with generic COCO person boxes, COCO
+transformer detector boxes, or these public soccer/football YOLO detectors.
+The next blocker is an official SSKit/SoccerNet-format candidate source,
+SoccerMaster official-runtime parity, or a track/pose source with real
+athlete-box recall on the same frames.
 
 SoccerMaster remains a possible lead only after official-runtime parity. Copied
 adapter scores are not valid SoccerMaster verdicts.
@@ -191,7 +203,8 @@ candidates, SoccerMaster official-runtime parity that proves real athlete boxes
 on the same validation frames, or a track/pose source with saved box-recall
 diagnostics. Do not spend the next pass on football YOLO26 image-size/confidence
 tuning, generic COCO person detectors, COCO RT-DETR detector boxes, or the
-public EasyChamp/MartijnJolif soccer YOLO detectors. Keep treating GT-box
-oracle point-regressor runs as diagnostics only. Also fix or work around HF
-model-repo write permission before relying on uploaded artifacts; job logs are
-currently the only durable result source for these smokes.
+public EasyChamp/MartijnJolif/Uisikdag soccer-football YOLO detectors. Keep
+treating GT-box oracle point-regressor runs as diagnostics only. Also fix or
+work around HF model-repo write permission before relying on uploaded
+artifacts; job logs are currently the only durable result source for these
+smokes.
