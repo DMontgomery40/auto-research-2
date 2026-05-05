@@ -71,6 +71,14 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   `mAP-LocSim=7.316002536214212e-06`, `precision_50=0.0024630541871921183`,
   `recall_50=0.0`, `gt_recall_px_50=0.017110266159695818`, and
   `gt_recall_iou_0_5=0.0019011406844106464`, still far below the pose smoke.
+- `direct-point-regressor-oracle-candidates` added no new score yet:
+  `train.py TRAIN_MODE=point_regressor` now trains a tiny crop-based direct
+  point regressor and evaluates through official SSKit
+  `position_from_keypoint_index=0`, using GT boxes as oracle validation
+  candidates to isolate point quality from detector recall. This is not a
+  challenge-submittable setup. A tiny `t4-small` smoke command was prepared for
+  64 train / 32 valid / 2 epochs, but no HF job was created because this shell
+  is not logged into Hugging Face.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -96,16 +104,24 @@ saved audit examples show candidate points often hundreds of pixels from the
 nearest GT point, which points to a point-quality/model-family problem more than
 an SSKit ingestion problem.
 
+`TRAIN_MODE=point_regressor` is the next bounded point-quality probe. Its first
+cloud run should be interpreted as an oracle-candidate experiment: if it cannot
+beat the pose smoke while given GT boxes, the direct crop-regressor idea is weak;
+if it scores well, the next blocker is pairing a learned point head with a real
+candidate generator.
+
 SoccerMaster remains a possible lead only after official-runtime parity. Copied
 adapter scores are not valid SoccerMaster verdicts.
 
 ## Next Action
 
-Move to a genuinely different point-quality or model-family experiment while
-keeping the official keypoint evaluator path. A good next bounded pass is a tiny
-direct footpoint/ground-point payload that does not start from `yolo11n-pose.pt`
-COCO pose priors: generate the same 64 train / 32 valid slice, train a minimal
-source-specific point regressor or heatmap head, emit one `position_from_keypoint_index=0`
-prediction per athlete candidate, and compare official `mAP-LocSim`,
-image-space recall, and point-distance diagnostics against pose smoke
-`0.000825082508250825`.
+Run the prepared tiny cloud smoke once HF auth is available:
+
+```bash
+TRAIN_MODE=point_regressor HF_FLAVOR=t4-small HF_TIMEOUT=2h scripts/run_hf_train.sh -- --env TRAIN_MAX_IMAGES=64 --env VAL_MAX_IMAGES=32 --env POINT_EPOCHS=2 --env POINT_BATCH=16
+```
+
+Follow it to official `mAP-LocSim`, record keep/discard in `LEDGER.md`, and
+compare against pose smoke `0.000825082508250825`. Treat any positive result as
+a point-head/candidate-generator split, not as a valid submission path, because
+the validation candidates are GT boxes.

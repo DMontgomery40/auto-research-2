@@ -9,7 +9,8 @@
 #   "scipy",
 #   "numpy<2",
 #   "xtcocotools",
-#   "pyyaml"
+#   "pyyaml",
+#   "pillow"
 # ]
 # ///
 from __future__ import annotations
@@ -24,6 +25,10 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import torch
+from PIL import Image
+from torch import nn
+from torch.utils.data import DataLoader, Dataset
 import yaml
 from huggingface_hub import HfApi, hf_hub_download, snapshot_download
 from sskit import image_to_ground
@@ -468,6 +473,242 @@ def nearest_point_distance(point: tuple[float, float], others: list[tuple[float,
         return None
     px, py = point
     return float(min(((px - ox) ** 2 + (py - oy) ** 2) ** 0.5 for ox, oy in others))
+
+
+@dataclass(frozen=True)
+class PointSample:
+    image_path: Path
+    image_id: int
+    annotation_id: int | None
+    bbox_xywh: tuple[float, float, float, float]
+    point_xy: tuple[float, float]
+
+
+def build_point_samples(
+    data_root: Path,
+    gt_path: Path,
+    *,
+    max_images: int,
+    source_keypoint_index: int,
+    keypoint_target: str,
+) -> tuple[list[PointSample], list[dict[str, Any]]]:
+    gt = json.loads(gt_path.read_text(encoding="utf-8"))
+    images = gt["images"][: max_images or None]
+    images_by_id = {int(image["id"]): image for image in images}
+    annotations_by_image: dict[int, list[dict[str, Any]]] = {}
+    for ann in gt.get("annotations", []):
+        image_id = int(ann["image_id"])
+        if image_id in images_by_id:
+            annotations_by_image.setdefault(image_id, []).append(ann)
+
+    samples: list[PointSample] = []
+    skipped: list[dict[str, Any]] = []
+    for image_id, image in images_by_id.items():
+        path = image_path(data_root, image["file_name"])
+        width = float(image["width"])
+        height = float(image["height"])
+        for ann in annotations_by_image.get(image_id, []):
+            x, y, w, h = [float(v) for v in ann.get("bbox", [0, 0, 0, 0])]
+            point = target_keypoint(
+                ann,
+                target=keypoint_target,
+                source_keypoint_index=source_keypoint_index,
+            )
+            if w <= 1 or h <= 1 or point is None:
+                skipped.append({"annotation_id": ann.get("id"), "reason": "missing_box_or_point"})
+                continue
+            px, py, visibility = point
+            if visibility <= 0 or not np.isfinite([x, y, w, h, px, py]).all():
+                skipped.append({"annotation_id": ann.get("id"), "reason": "invalid_point"})
+                continue
+            if not (0 <= px < width and 0 <= py < height):
+                skipped.append({"annotation_id": ann.get("id"), "reason": "point_outside_image"})
+                continue
+            samples.append(
+                PointSample(
+                    image_path=path,
+                    image_id=image_id,
+                    annotation_id=ann.get("id"),
+                    bbox_xywh=(x, y, w, h),
+                    point_xy=(px, py),
+                )
+            )
+    return samples, skipped
+
+
+def crop_bounds(
+    bbox_xywh: tuple[float, float, float, float],
+    width: int,
+    height: int,
+    padding: float,
+) -> tuple[int, int, int, int]:
+    x, y, w, h = bbox_xywh
+    pad_x = w * padding
+    pad_y = h * padding
+    left = max(0, int(np.floor(x - pad_x)))
+    top = max(0, int(np.floor(y - pad_y)))
+    right = min(width, int(np.ceil(x + w + pad_x)))
+    bottom = min(height, int(np.ceil(y + h + pad_y)))
+    if right <= left:
+        right = min(width, left + 1)
+    if bottom <= top:
+        bottom = min(height, top + 1)
+    return left, top, right, bottom
+
+
+class PointCropDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
+    def __init__(self, samples: list[PointSample], *, image_size: int, crop_padding: float) -> None:
+        self.samples = samples
+        self.image_size = image_size
+        self.crop_padding = crop_padding
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        sample = self.samples[index]
+        with Image.open(sample.image_path) as image:
+            rgb = image.convert("RGB")
+            left, top, right, bottom = crop_bounds(sample.bbox_xywh, rgb.width, rgb.height, self.crop_padding)
+            crop = rgb.crop((left, top, right, bottom)).resize((self.image_size, self.image_size))
+        array = np.asarray(crop, dtype=np.float32) / 255.0
+        tensor = torch.from_numpy(array).permute(2, 0, 1)
+        px, py = sample.point_xy
+        target = torch.tensor(
+            [
+                float(np.clip((px - left) / max(1, right - left), 0.0, 1.0)),
+                float(np.clip((py - top) / max(1, bottom - top), 0.0, 1.0)),
+            ],
+            dtype=torch.float32,
+        )
+        return tensor, target
+
+
+class TinyPointRegressor(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(3, 16, 3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(16, 32, 3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 64, 3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(64, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 2),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, images: torch.Tensor) -> torch.Tensor:
+        return self.net(images)
+
+
+def predict_point_from_crop(
+    model: nn.Module,
+    sample: PointSample,
+    *,
+    image_size: int,
+    crop_padding: float,
+    device: torch.device,
+) -> tuple[float, float]:
+    with Image.open(sample.image_path) as image:
+        rgb = image.convert("RGB")
+        left, top, right, bottom = crop_bounds(sample.bbox_xywh, rgb.width, rgb.height, crop_padding)
+        crop = rgb.crop((left, top, right, bottom)).resize((image_size, image_size))
+    array = np.asarray(crop, dtype=np.float32) / 255.0
+    tensor = torch.from_numpy(array).permute(2, 0, 1).unsqueeze(0).to(device)
+    with torch.no_grad():
+        pred = model(tensor).detach().cpu().numpy()[0]
+    px = left + float(pred[0]) * max(1, right - left)
+    py = top + float(pred[1]) * max(1, bottom - top)
+    return px, py
+
+
+def evaluate_point_regressor(
+    *,
+    model: nn.Module,
+    samples: list[PointSample],
+    gt_path: Path,
+    image_size: int,
+    crop_padding: float,
+    device: torch.device,
+    audit_sample_images: int,
+) -> dict[str, Any]:
+    model.eval()
+    results: list[dict[str, Any]] = []
+    gt_boxes_by_image: dict[int, list[list[float]]] = {}
+    det_boxes_by_image: dict[int, list[list[float]]] = {}
+    gt_points_by_image: dict[int, list[tuple[float, float]]] = {}
+    pred_points_by_image: dict[int, list[tuple[float, float]]] = {}
+    audit_examples: list[dict[str, Any]] = []
+    det_id = 1
+    for sample in samples:
+        x, y, w, h = sample.bbox_xywh
+        px, py = predict_point_from_crop(
+            model,
+            sample,
+            image_size=image_size,
+            crop_padding=crop_padding,
+            device=device,
+        )
+        gt_box = xywh_to_xyxy([x, y, w, h])
+        gt_point = sample.point_xy
+        gt_boxes_by_image.setdefault(sample.image_id, []).append(gt_box)
+        det_boxes_by_image.setdefault(sample.image_id, []).append(gt_box)
+        gt_points_by_image.setdefault(sample.image_id, []).append(gt_point)
+        pred_points_by_image.setdefault(sample.image_id, []).append((px, py))
+        error_px = nearest_point_distance((px, py), [gt_point])
+        if audit_sample_images > 0 and len(audit_examples) < audit_sample_images:
+            audit_examples.append(
+                {
+                    "image_id": sample.image_id,
+                    "annotation_id": sample.annotation_id,
+                    "bbox_xywh": [x, y, w, h],
+                    "target_keypoint": [gt_point[0], gt_point[1], 2.0],
+                    "predicted_keypoint": [px, py, 2.0],
+                    "point_error_px": error_px,
+                }
+            )
+        results.append(
+            {
+                "area": 0,
+                "bbox": [x, y, w, h],
+                "category_id": 1,
+                "id": det_id,
+                "image_id": sample.image_id,
+                "keypoints": [px, py, 2.0],
+                "score": 1.0,
+            }
+        )
+        det_id += 1
+
+    run_id = f"synloc-point-regressor-eval-{utc_now().replace(':', '-')}"
+    out_dir = Path("/tmp") / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pred_path = out_dir / "results.json"
+    pred_path.write_text(json.dumps(results), encoding="utf-8")
+    metrics = evaluate_keypoints(gt_path, pred_path, 0)
+    diagnostics = {
+        "boxes": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
+        "keypoints": keypoint_diagnostics(gt_points_by_image, pred_points_by_image),
+    }
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "run_id": run_id,
+        "mode": "point_regressor_eval",
+        "oracle_candidate_boxes": True,
+        "position_from_keypoint_index": 0,
+        "num_predictions": len(results),
+        "metrics": metrics,
+        "diagnostics": diagnostics,
+        "audit_examples": audit_examples,
+    }
+    (out_dir / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    return {"summary": summary, "out_dir": out_dir}
 
 
 def keypoint_candidate_score(mode: str, box_score: float, keypoint_score: float) -> float:
@@ -1137,6 +1378,112 @@ def run_keypoint() -> dict[str, Any]:
     return summary
 
 
+def run_point_regressor() -> dict[str, Any]:
+    required = ["HF_TOKEN", "HF_DATASET_REPO", "HF_MODEL_REPO"]
+    missing = [key for key in required if not os.getenv(key)]
+    if missing:
+        raise RuntimeError(f"Missing required environment variables: {missing}")
+
+    version = os.getenv("SYNLOC_VERSION", "fullhd")
+    train_max = env_int("TRAIN_MAX_IMAGES", 256)
+    val_max = env_int("VAL_MAX_IMAGES", 64)
+    epochs = env_int("POINT_EPOCHS", 3)
+    batch = env_int("POINT_BATCH", 32)
+    image_size = env_int("POINT_IMAGE_SIZE", 128)
+    lr = env_float("POINT_LR", 0.001)
+    crop_padding = env_float("POINT_CROP_PADDING", 0.15)
+    source_keypoint_index = env_int("SYNLOC_SOURCE_KEYPOINT_INDEX", 1)
+    keypoint_target = os.getenv("SYNLOC_KEYPOINT_TARGET", "annotation").strip().lower()
+    audit_sample_images = env_int("SYNLOC_AUDIT_SAMPLE_IMAGES", 8)
+
+    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    train_gt = find_annotation(data_root, "train")
+    val_gt = find_annotation(data_root, "valid")
+    train_samples, train_skipped = build_point_samples(
+        data_root,
+        train_gt,
+        max_images=train_max,
+        source_keypoint_index=source_keypoint_index,
+        keypoint_target=keypoint_target,
+    )
+    val_samples, val_skipped = build_point_samples(
+        data_root,
+        val_gt,
+        max_images=val_max,
+        source_keypoint_index=source_keypoint_index,
+        keypoint_target=keypoint_target,
+    )
+    if not train_samples or not val_samples:
+        raise RuntimeError(
+            f"Point regressor needs train and validation samples; got train={len(train_samples)} val={len(val_samples)}"
+        )
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed(env_int("POINT_SEED", 20260505))
+    model = TinyPointRegressor().to(device)
+    dataset = PointCropDataset(train_samples, image_size=image_size, crop_padding=crop_padding)
+    loader = DataLoader(dataset, batch_size=batch, shuffle=True, num_workers=2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    loss_fn = nn.SmoothL1Loss()
+    epoch_losses: list[float] = []
+    model.train()
+    for _epoch in range(epochs):
+        losses: list[float] = []
+        for images, targets in loader:
+            images = images.to(device)
+            targets = targets.to(device)
+            optimizer.zero_grad(set_to_none=True)
+            loss = loss_fn(model(images), targets)
+            loss.backward()
+            optimizer.step()
+            losses.append(float(loss.detach().cpu()))
+        epoch_losses.append(float(np.mean(losses)) if losses else 0.0)
+
+    item = evaluate_point_regressor(
+        model=model,
+        samples=val_samples,
+        gt_path=val_gt,
+        image_size=image_size,
+        crop_padding=crop_padding,
+        device=device,
+        audit_sample_images=audit_sample_images,
+    )
+    validation = item["summary"]
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "mode": "point_regressor",
+        "run_id": f"synloc-point-regressor-smoke-{utc_now().replace(':', '-')}",
+        "oracle_candidate_boxes": True,
+        "keypoint_target": keypoint_target,
+        "source_keypoint_index": source_keypoint_index,
+        "train_images": train_max,
+        "val_images": val_max,
+        "train_samples": len(train_samples),
+        "val_samples": len(val_samples),
+        "train_skipped": len(train_skipped),
+        "val_skipped": len(val_skipped),
+        "epochs": epochs,
+        "batch": batch,
+        "image_size": image_size,
+        "crop_padding": crop_padding,
+        "lr": lr,
+        "epoch_losses": epoch_losses,
+        "validation": validation,
+        "metric": "mAP-LocSim",
+        "note": "Uses GT boxes as oracle candidates to isolate direct point quality; not challenge-submittable.",
+    }
+    upload_root = Path("/tmp") / summary["run_id"]
+    if upload_root.exists():
+        shutil.rmtree(upload_root)
+    upload_root.mkdir(parents=True, exist_ok=True)
+    torch.save(model.state_dict(), upload_root / "point_regressor.pt")
+    shutil.copytree(Path(item["out_dir"]), upload_root / "validation")
+    (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    upload_result(summary["run_id"], upload_root)
+    return summary
+
+
 def main() -> None:
     mode = os.getenv("TRAIN_MODE", "baseline").strip().lower()
     if mode == "baseline":
@@ -1145,6 +1492,8 @@ def main() -> None:
         summary = run_finetune()
     elif mode in {"keypoint", "pose", "footpoint"}:
         summary = run_keypoint()
+    elif mode in {"point_regressor", "direct_point", "ground_point"}:
+        summary = run_point_regressor()
     else:
         raise RuntimeError(f"Unsupported TRAIN_MODE={mode!r}")
     print("AUTONOMY_RESULT " + json.dumps(summary, sort_keys=True))

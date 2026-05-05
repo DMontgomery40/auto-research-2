@@ -11,10 +11,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Use the saved keypoint matrix audit examples to pick a different point-quality
   signal or target: current candidate points are often hundreds of pixels from
   the nearest GT point, and confidence ranking did not fix official recall.
-- Try a tiny direct footpoint/ground-point payload that keeps the official
+- Run the new tiny direct footpoint/ground-point payload:
+  `TRAIN_MODE=point_regressor` keeps the official
   `position_from_keypoint_index=0` evaluator path but does not start from
-  `yolo11n-pose.pt` COCO pose priors. The bbox-bottom-center target smoke
-  showed target switching alone did not improve point recall.
+  `yolo11n-pose.pt` COCO pose priors. It uses GT boxes as oracle validation
+  candidates to isolate point quality, so treat the result as a direction
+  signal rather than a challenge-submittable score.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A
@@ -62,6 +64,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `gt_recall_px_50=0.017110266159695818`, and
   `gt_recall_iou_0_5=0.0019011406844106464`. Discard target switching alone as
   a rescue for this exact YOLO11n-pose keypoint setup.
+- `direct-point-regressor-oracle-candidates` added
+  `TRAIN_MODE=point_regressor` to `train.py`; no HF score exists yet because
+  local `hf auth whoami` returned `Not logged in`. The prepared smoke is 64
+  train / 32 valid / 2 epochs on `t4-small`.
 
 ## Maybe Later
 
