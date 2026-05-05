@@ -5,6 +5,7 @@
 #   "ultralytics-opencv-headless>=8.4.29",
 #   "torch",
 #   "torchvision",
+#   "transformers",
 #   "sskit @ git+https://github.com/Spiideo/sskit.git",
 #   "scipy",
 #   "numpy<2",
@@ -30,6 +31,7 @@ from PIL import Image
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 import yaml
+from transformers import AutoImageProcessor, AutoModelForObjectDetection
 from huggingface_hub import HfApi, hf_hub_download, snapshot_download
 from sskit import image_to_ground
 from sskit.coco import LocSimCOCOeval
@@ -135,6 +137,10 @@ DEFAULT_BASELINES = [
     "yolo11n-coco-person|ultralytics|yolo11n.pt|0",
 ]
 
+DEFAULT_TRANSFORMER_BASELINES = [
+    "rtdetr-r18-coco-person|PekingU/rtdetr_r18vd|0",
+]
+
 
 def parse_baselines(raw: str) -> list[BaselineSpec]:
     specs: list[BaselineSpec] = []
@@ -150,6 +156,25 @@ def parse_baselines(raw: str) -> list[BaselineSpec]:
                 repo=parts[1],
                 filename=parts[2],
                 athlete_class_ids=parse_int_set(parts[3]),
+            )
+        )
+    return specs
+
+
+def parse_transformer_baselines(raw: str) -> list[BaselineSpec]:
+    specs: list[BaselineSpec] = []
+    for entry in [item.strip() for item in raw.split(";") if item.strip()]:
+        parts = entry.split("|")
+        if len(parts) != 3:
+            raise RuntimeError(
+                "Each TRANSFORMER_BASELINES entry must be name|model_id|class_ids"
+            )
+        specs.append(
+            BaselineSpec(
+                name=parts[0],
+                repo=parts[1],
+                filename=parts[1],
+                athlete_class_ids=parse_int_set(parts[2]),
             )
         )
     return specs
@@ -395,6 +420,118 @@ def predictions_for_model(
         "imgsz": imgsz,
         "conf": conf,
         "iou": iou,
+        "num_images": len(images),
+        "num_detections": len(results),
+        "metrics": metrics,
+        "diagnostics": metadata["diagnostics"],
+    }
+    (out_dir / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    return {"summary": summary, "out_dir": out_dir}
+
+
+def predictions_for_transformer_model(
+    *,
+    spec: BaselineSpec,
+    data_root: Path,
+    gt_path: Path,
+    split: str,
+    max_images: int,
+    threshold: float,
+) -> dict[str, Any]:
+    gt = json.loads(gt_path.read_text(encoding="utf-8"))
+    images = gt["images"][: max_images or None]
+    selected_image_ids = {int(image["id"]) for image in images}
+    gt_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    for ann in gt.get("annotations", []):
+        image_id = int(ann["image_id"])
+        if image_id not in selected_image_ids:
+            continue
+        bbox = ann.get("bbox", [0, 0, 0, 0])
+        if len(bbox) != 4 or float(bbox[2]) <= 0 or float(bbox[3]) <= 0:
+            continue
+        gt_boxes_by_image.setdefault(image_id, []).append(xywh_to_xyxy(bbox))
+
+    det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    processor = AutoImageProcessor.from_pretrained(spec.repo)
+    model = AutoModelForObjectDetection.from_pretrained(spec.repo)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.eval()
+    model_class_names = {str(key): value for key, value in getattr(model.config, "id2label", {}).items()}
+
+    results: list[dict[str, Any]] = []
+    det_id = 1
+    for image in images:
+        image_id = int(image["id"])
+        path = image_path(data_root, image["file_name"])
+        width = float(image["width"])
+        height = float(image["height"])
+        pil_image = Image.open(path).convert("RGB")
+        inputs = processor(images=pil_image, return_tensors="pt")
+        inputs = {key: value.to(device) for key, value in inputs.items()}
+        with torch.no_grad():
+            outputs = model(**inputs)
+        target_sizes = torch.tensor([[height, width]], device=device)
+        processed = processor.post_process_object_detection(
+            outputs,
+            threshold=threshold,
+            target_sizes=target_sizes,
+        )[0]
+        boxes = processed["boxes"].detach().cpu().numpy()
+        scores = processed["scores"].detach().cpu().numpy()
+        labels = processed["labels"].detach().cpu().numpy().astype(int)
+        for box, score, class_id in zip(boxes, scores, labels):
+            if int(class_id) not in spec.athlete_class_ids:
+                continue
+            x1, y1, x2, y2 = [float(v) for v in box]
+            det_boxes_by_image.setdefault(image_id, []).append([x1, y1, x2, y2])
+            point = np.array([[(x1 + x2) / 2.0, y2]], dtype=np.float32)
+            center = np.array([[(width - 1) / 2.0, (height - 1) / 2.0]], dtype=np.float32)
+            normalized = ((point - center) / width).astype(np.float32)
+            bev = image_to_ground(image["camera_matrix"], image["undist_poly"], normalized)[0]
+            results.append(
+                {
+                    "area": 0,
+                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "category_id": 1,
+                    "id": det_id,
+                    "image_id": image_id,
+                    "position_on_pitch": [float(bev[0]), float(bev[1]), 0.0],
+                    "score": float(score),
+                }
+            )
+            det_id += 1
+
+    run_id = f"{spec.name}-transformer-baseline-{utc_now().replace(':', '-')}"
+    out_dir = Path("/tmp") / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pred_path = out_dir / "results.json"
+    pred_path.write_text(json.dumps(results), encoding="utf-8")
+    metadata = {
+        "score_threshold": threshold,
+        "model": spec.name,
+        "repo": spec.repo,
+        "athlete_class_ids": sorted(spec.athlete_class_ids),
+        "model_class_names": model_class_names,
+        "split": split,
+        "max_images": max_images,
+        "diagnostics": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
+    }
+    (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
+    metrics = evaluate(gt_path, pred_path)
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "run_id": run_id,
+        "mode": "transformer_baseline",
+        "split": split,
+        "version": os.getenv("SYNLOC_VERSION", "fullhd"),
+        "model": spec.name,
+        "repo": spec.repo,
+        "athlete_class_ids": sorted(spec.athlete_class_ids),
+        "model_class_names": model_class_names,
+        "max_images": max_images,
+        "threshold": threshold,
         "num_images": len(images),
         "num_detections": len(results),
         "metrics": metrics,
@@ -1386,6 +1523,63 @@ def run_baseline() -> dict[str, Any]:
     return summary
 
 
+def run_transformer_baseline() -> dict[str, Any]:
+    required = ["HF_TOKEN", "HF_DATASET_REPO", "HF_MODEL_REPO"]
+    missing = [key for key in required if not os.getenv(key)]
+    if missing:
+        raise RuntimeError(f"Missing required environment variables: {missing}")
+
+    split = os.getenv("SYNLOC_SPLIT", "valid")
+    version = os.getenv("SYNLOC_VERSION", "fullhd")
+    max_images = env_int("TRAIN_MAX_IMAGES", 64)
+    threshold = env_float("TRANSFORMER_CONF", 0.05)
+    raw_specs = os.getenv("TRANSFORMER_BASELINES", ";".join(DEFAULT_TRANSFORMER_BASELINES))
+    specs = parse_transformer_baselines(raw_specs)
+
+    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    gt_path = find_annotation(data_root, split)
+    upload_root = Path("/tmp/transformer-baseline-results")
+    if upload_root.exists():
+        shutil.rmtree(upload_root)
+    upload_root.mkdir(parents=True, exist_ok=True)
+
+    evaluated: list[dict[str, Any]] = []
+    best: dict[str, Any] | None = None
+    for spec in specs:
+        item = predictions_for_transformer_model(
+            spec=spec,
+            data_root=data_root,
+            gt_path=gt_path,
+            split=split,
+            max_images=max_images,
+            threshold=threshold,
+        )
+        summary = item["summary"]
+        evaluated.append(summary)
+        shutil.copytree(item["out_dir"], upload_root / summary["run_id"])
+        if best is None or summary["metrics"]["map_locsim"] > best["metrics"]["map_locsim"]:
+            best = summary
+
+    assert best is not None
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "mode": "transformer_baseline",
+        "run_id": f"transformer-candidate-baseline-{utc_now().replace(':', '-')}",
+        "evaluated": evaluated,
+        "best": best,
+        "metric": "mAP-LocSim",
+        "split": split,
+        "version": version,
+        "max_images": max_images,
+        "threshold": threshold,
+        "note": "Non-YOLO COCO transformer detector candidate source; bottom-center projection only.",
+    }
+    (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    upload_result(summary["run_id"], upload_root)
+    return summary
+
+
 def run_finetune() -> dict[str, Any]:
     required = ["HF_TOKEN", "HF_DATASET_REPO", "HF_MODEL_REPO"]
     missing = [key for key in required if not os.getenv(key)]
@@ -1735,6 +1929,8 @@ def main() -> None:
     mode = os.getenv("TRAIN_MODE", "baseline").strip().lower()
     if mode == "baseline":
         summary = run_baseline()
+    elif mode in {"transformer_baseline", "rtdetr_baseline", "detr_baseline"}:
+        summary = run_transformer_baseline()
     elif mode in {"train", "finetune"}:
         summary = run_finetune()
     elif mode in {"keypoint", "pose", "footpoint"}:
