@@ -119,6 +119,19 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   `mean_best_iou_gt_to_det=0.0012062984910266583`. Image scale and confidence
   threshold did not rescue this candidate source. Artifact upload still failed
   with HF model-repo `403`.
+- `easychamp-martinjolif-source-candidate-audit` is a discard-result: job
+  `69fa6a3ab745af80fb3734f9` evaluated two different soccer-specific public
+  detector candidates on 64 validation frames. Best was
+  `martinjolif-yolo11m` with official
+  `mAP-LocSim=1.0820754206568197e-05`, `precision_50=0.00273224043715847`,
+  `recall_50=0.0`, `gt_recall_iou_0_5=0.0`,
+  `gt_recall_iou_0_3=0.00099601593625498`, and
+  `mean_best_iou_gt_to_det=0.0013935321462024005`; `easychamp-yolov8` was
+  similar at `mAP-LocSim=9.32798528843463e-06`. These public soccer detectors
+  do not unblock direct point regression. First launch
+  `69fa6a1db745af80fb3734f7` failed before scoring on the known Python 3.12
+  `xtcocotools` build-isolation issue; Python 3.10 remains the working HF Jobs
+  recipe. Artifact upload still failed with HF model-repo `403`.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -148,24 +161,26 @@ an SSKit ingestion problem.
 direct crop-regressor point head is not dead. Pairing it with the existing
 football YOLO26 candidate source scored zero because image-space candidate
 recall was essentially absent, and a larger-image/lower-threshold YOLO26 audit
-did not fix it. Do not spend another pass on that detector family through scale
-or threshold tuning. Public COCO `yolo11n` person detections also failed as a
-useful candidate source despite producing many boxes, so do not spend another
-pass pairing the point regressor with generic COCO person boxes. The next
-blocker is a genuinely different source-specific candidate generator or
-track/pose source before the point head can matter.
+did not fix it. Public COCO `yolo11n` person detections and two different
+public soccer-specific detectors (`easychamp-yolov8`, `martinjolif-yolo11m`)
+also failed as useful candidate sources despite producing many boxes. Do not
+spend another pass pairing the point regressor with generic COCO person boxes
+or these public soccer YOLO detectors. The next blocker is an official
+SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
+or a track/pose source with real athlete-box recall on the same frames.
 
 SoccerMaster remains a possible lead only after official-runtime parity. Copied
 adapter scores are not valid SoccerMaster verdicts.
 
 ## Next Action
 
-Choose one genuinely different source-specific candidate-generation experiment
-before revisiting direct point regression at scale: official SSKit/SoccerNet
-format candidates, a SoccerMaster parity probe that proves real athlete boxes
-on the same validation frames, or another soccer-specific track/pose source
-with saved box-recall diagnostics. Do not spend the next pass on football
-YOLO26 image-size/confidence tuning or generic COCO person boxes. Keep treating
-GT-box oracle point-regressor runs as diagnostics only. Also fix or work around
-HF model-repo write permission before relying on uploaded artifacts; job logs
-are currently the only durable result source for these smokes.
+Choose one genuinely different candidate-generation experiment before
+revisiting direct point regression at scale: official SSKit/SoccerNet-format
+candidates, SoccerMaster official-runtime parity that proves real athlete boxes
+on the same validation frames, or a non-YOLO track/pose source with saved
+box-recall diagnostics. Do not spend the next pass on football YOLO26
+image-size/confidence tuning, generic COCO person boxes, or the public
+EasyChamp/MartijnJolif soccer YOLO detectors. Keep treating GT-box oracle
+point-regressor runs as diagnostics only. Also fix or work around HF model-repo
+write permission before relying on uploaded artifacts; job logs are currently
+the only durable result source for these smokes.

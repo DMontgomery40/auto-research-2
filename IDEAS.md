@@ -20,10 +20,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Find a better real candidate source before scaling the direct point regressor:
   the first YOLO26 detector-box bridge scored zero because candidate recall was
   essentially absent, the larger-image/lower-threshold YOLO26 audit did not
-  fix it, and public COCO `yolo11n.pt` person boxes also stayed far below the
-  pose smoke. The useful next unit is source-specific detector/track
-  candidates, official SSKit/SoccerNet-format candidates, or SoccerMaster
-  runtime parity that proves real athlete boxes on the same frames.
+  fix it, public COCO `yolo11n.pt` person boxes stayed far below the pose
+  smoke, and public EasyChamp/MartijnJolif soccer YOLO detectors also had
+  zero IoU-0.5 GT recall on the same frames. The useful next unit is official
+  SSKit/SoccerNet-format candidates, SoccerMaster runtime parity that proves
+  real athlete boxes on the same frames, or a non-YOLO track/pose candidate
+  source with saved recall diagnostics.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A
@@ -99,6 +101,13 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `gt_recall_iou_0_5=0.0`, and 2,125 detections for 1,004 GT boxes. Discard
   image-size/confidence tuning as a rescue for this football YOLO26 candidate
   source.
+- `easychamp-martinjolif-source-candidate-audit` scored
+  `1.0820754206568197e-05` best official `mAP-LocSim` on 64 validation frames
+  with `martinjolif-yolo11m`; `easychamp-yolov8` scored
+  `9.32798528843463e-06`. Both had `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.0`, and only `gt_recall_iou_0_3=0.00099601593625498`,
+  so discard these public soccer YOLO detectors as the next candidate source
+  for the point regressor.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -133,6 +142,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Pairing the direct point regressor with generic COCO `yolo11n.pt` person
   candidate boxes; the candidate audit stayed far below the pose smoke and had
   near-zero image-space GT recall despite many detections.
+- Pairing the direct point regressor with public EasyChamp or MartijnJolif
+  soccer YOLO detectors; both produced many boxes but had zero IoU-0.5 GT
+  recall on the SynLoc validation slice.
 - Treating zero or near-zero official scores from soccer/football-pretrained
   models as model underperformance before auditing runtime/plumbing.
 - Another confidence-only candidate filter or score-mode job on the same

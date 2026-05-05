@@ -312,6 +312,7 @@ def predictions_for_model(
         gt_boxes_by_image.setdefault(image_id, []).append(xywh_to_xyxy(bbox))
     det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
     model = YOLO(str(model_path))
+    model_class_names = {str(key): value for key, value in getattr(model, "names", {}).items()}
 
     results: list[dict[str, Any]] = []
     det_id = 1
@@ -369,6 +370,7 @@ def predictions_for_model(
         "repo": spec.repo,
         "filename": spec.filename,
         "athlete_class_ids": sorted(spec.athlete_class_ids),
+        "model_class_names": model_class_names,
         "split": split,
         "max_images": max_images,
         "imgsz": imgsz,
@@ -388,6 +390,7 @@ def predictions_for_model(
         "repo": spec.repo,
         "filename": spec.filename,
         "athlete_class_ids": sorted(spec.athlete_class_ids),
+        "model_class_names": model_class_names,
         "max_images": max_images,
         "imgsz": imgsz,
         "conf": conf,
