@@ -1,199 +1,193 @@
 # program.md
 
-You are the autonomous researcher for `auto-research-2`.
+You are the local Codex researcher for `auto-research-2`.
 
-Keep the system simple. The work is not to build a platform; the work is to beat SynLoc.
+The mission is to beat the best tracked score for the 2026 Spiideo SoccerNet
+SynLoc challenge by June 30, 2026.
 
-## runtime
+Primary metric: official SSKit `mAP-LocSim`, higher is better.
 
-This laptop is the control plane only.
+This repo should feel like Karpathy's `autoresearch`: a small repo, one clear
+loop, one editable experiment file, fixed helpers for mechanics, and a concise
+result log. Do not rebuild a platform.
 
-Research happens in local Codex, not on Hugging Face. Use `gpt-5.5` with `xhigh` reasoning for the local research pass. That local pass owns reading sources, choosing the next hypothesis, editing this repo, updating markdown/state, committing, pushing, and deciding whether the heartbeat should submit a cloud job.
+## Runtime Split
 
-Run one local research pass with:
+Local Codex is the researcher. Use `gpt-5.5` with `low` reasoning on this
+Mac for source inspection, web research, hypothesis selection, code edits,
+ledger updates, commits, and deciding the next experiment.
 
-```bash
-scripts/codex_research_tick.sh
-```
+Hugging Face Jobs are CUDA execution substrate. They run bounded scripts for
+dataset setup, training, inference, official evaluation, and artifact upload.
+They do not decide what to try next.
 
-Run the continuous AK-style local loop with:
+Do not use local Mac ML scores for keep/discard decisions. Local commands are
+for repo sanity, source reading, syntax checks, packaging checks, and log review.
+
+## Repo Contract
+
+Editable research surface:
+
+- `train.py` is the central experiment/training payload. Change this file for
+  the next real experiment. It may evolve away from its current YOLO-family
+  form if the chosen track/pose/keypoint route requires that.
+
+Fixed mechanics:
+
+- `scripts/download_synloc.py` handles official SoccerNet download mechanics.
+- `cloud/synloc_cache.py` caches official data into private Hugging Face storage.
+- `scripts/evaluate_synloc.py` wraps the official SSKit metric path.
+- `scripts/run_hf_train.sh` submits `train.py` to Hugging Face Jobs.
+- `scripts/ask_council.py` queues a sibling council request when useful.
+- `scripts/codex_research_tick.sh` starts one local Codex research pass. This
+  is one iteration, not autonomy by itself.
+- `scripts/codex_research_loop.sh` is the actual Codex overnight loop. It
+  repeats local Codex passes every `300` seconds, about 12 chances/hour, until
+  interrupted.
+
+State and logs:
+
+- `CURRENT.md` is the live state and next-action note.
+- `LEDGER.md` is the concise experiment log: experiment, score, keep/discard,
+  and notes.
+- `IDEAS.md` is the backlog.
+- `COUNCIL.md` explains the sibling council.
+
+Use sibling repos only as evidence sources. Pull any still-useful fact into
+`CURRENT.md`, `LEDGER.md`, or `IDEAS.md`, then keep the actual loop here.
+
+## Setup Once
+
+1. Read `README.md`, `CURRENT.md`, `LEDGER.md`, and `IDEAS.md`.
+2. Run `scripts/verify.sh`.
+3. Confirm private Hugging Face storage names:
+   - `dmontgomery40/auto-research-2-synloc-data`
+   - `dmontgomery40/auto-research-2-synloc-models`
+4. Confirm data/cache facts in `CURRENT.md`. The owner has signed the SoccerNet
+   NDA and has an official SoccerNet password; SynLoc data is cleared for this
+   project. Keep data, checkpoints, predictions, and logs out of git.
+
+## Baseline Once
+
+The useful baseline evidence already exists:
+
+- Generic detector/projection scores are near zero.
+- SSKit oracle exact GT scored `1.0`.
+- SSKit projected GT ground keypoint scored `0.9809895759`.
+- BBox bottom-center through SSKit scored `0.5686594909`.
+- The pose/keypoint smoke scored `0.000825082508250825`, much better than the
+  failed first YOLO fine-tune.
+- `first-yolo-train` is a discard: `mAP-LocSim=3.572767401302389e-06`,
+  `recall_50=0.0`.
+
+Do not run another generic detector fine-tune trying to rescue that path.
+The next pass should choose a concrete track/pose/keypoint or direct ground
+point experiment that uses official SSKit formats and evaluation.
+
+## Loop Forever
+
+Karpathy's `autoresearch` loop is an agent reading `program.md`, running an
+experiment, logging the result, and immediately trying the next one. With Codex,
+do not rely on a single `codex exec` process to obey "never stop" forever. The
+outer shell loop is the loop; each tick is one bounded Codex process.
+
+Start the actual loop from a clean worktree:
 
 ```bash
 scripts/codex_research_loop.sh
 ```
 
-The loop runs every `300` seconds by default. It pulls fresh state, runs one local Codex research tick when no HF job is active, refuses to dispatch blocked states by default, and wakes the GitHub Actions heartbeat when the durable state is actionable.
-
-Use `scripts/codex_research_tick.sh --print-prompt` to inspect exactly what the local Codex researcher will see before launching it.
-
-Hugging Face Jobs are CUDA execution substrate only. They execute bounded payloads for dataset download, training, inference, official metric evaluation, threshold selection, and artifact upload. They are not the research brain.
-
-Do not validate model quality locally. Local execution is MLX/Mac-shaped and does not match the real CUDA GPU training/inference environment. Local scores have no authority.
-
-Use local commands only for repo sanity checks, packaging, council requests, and reading/writing markdown. Run all baseline, training, inference, threshold selection, and official metric evaluation on cloud CUDA GPUs, preferably Hugging Face Jobs.
-
-## setup-once
-
-Do this only when the repo is fresh or the environment changed:
-
-1. Read `README.md`, `CURRENT.md`, `LEDGER.md`, `IDEAS.md`, `BUDGET.md`, and `COUNCIL.md`.
-2. Verify credentials exist without printing secrets: `scripts/verify.sh`.
-3. Inspect the official references in ignored local clones:
-   - `refs/karpathy-autoresearch`
-   - `refs/sskit`
-4. Ensure the SynLoc dataset is present in the cloud runtime or cloud storage used by jobs.
-5. Record exact dataset files, sizes, and any checksums in `CURRENT.md`.
-
-The owner has signed the SoccerNet NDA and has an official SoccerNet password, so SynLoc data is cleared for this project. Use private Hugging Face storage as the cloud cache:
-
-- `HF_DATASET_REPO=dmontgomery40/auto-research-2-synloc-data`
-- `HF_MODEL_REPO=dmontgomery40/auto-research-2-synloc-models`
-
-If data is missing, download through the official SoccerNet path inside a cloud job using the `.env` credentials as job secrets, then mirror/cache it in the private dataset repo. `scripts/download_synloc.py` exists as a payload helper; do not run it locally for parity.
+For a short proof that the runner really loops, use:
 
 ```bash
-python3 scripts/download_synloc.py --version fullhd
+scripts/codex_research_loop.sh --dry-run --iterations 2
 ```
 
-Keep archives and extracted files out of git.
+Inside each iteration:
 
-## baseline-once
+1. Read `CURRENT.md`, `LEDGER.md`, `IDEAS.md`, and this file.
+2. Choose exactly one experiment with a plausible path to move official
+   `mAP-LocSim`.
+3. Work in an isolated branch/worktree under `worktrees/<tag>/` when the change
+   is more than a tiny doc/helper cleanup.
+4. Edit the smallest needed surface, usually `train.py`.
+5. Run local sanity checks, then one tiny cloud CUDA smoke if the idea needs GPU.
+6. Run one bounded Hugging Face job with a fixed timeout and cheap hardware first.
+7. Evaluate with the official SSKit `mAP-LocSim` path.
+8. Append one row to `LEDGER.md` with command/job, score, keep/discard, and
+   the reason.
+9. Update `CURRENT.md` with the new best fact and next action.
+10. Keep the change only if the score movement justifies the complexity.
+11. If files changed and verification passes, commit the completed iteration so
+    the outer shell loop can start the next pass from a clean tree.
 
-Before inventing model ideas:
+Never ask "should I keep going?" once the loop starts. Stop only for missing
+secrets, broken cloud substrate, or owner interruption.
 
-1. Run the official SSKit baseline or the thinnest equivalent cloud baseline.
-2. Evaluate with the official SSKit `mAP-LocSim` path on validation inside the same cloud runtime family:
+## Cloud Command
 
-   ```bash
-   python3 scripts/evaluate_synloc.py --pred runs/<tag>/results.json --out runs/<tag>/metrics.json
-   ```
-3. Record:
-   - command,
-   - commit,
-   - dataset SHA or checksum summary,
-   - score threshold,
-   - `mAP-LocSim`,
-   - cost,
-   - runtime,
-   - notes.
-4. Put the result in `LEDGER.md`.
-5. Update `CURRENT.md` with the best cloud score and next experiment.
-
-## loop-forever
-
-Repeat until the owner interrupts:
-
-1. Read `CURRENT.md`, `LEDGER.md`, and `IDEAS.md`.
-2. Choose exactly one experiment.
-3. Create an isolated branch and worktree:
-
-   ```bash
-   git checkout main
-   git checkout -b exp/<tag>
-   git worktree add worktrees/<tag> exp/<tag>
-   ```
-
-4. Change the smallest set of files needed for the idea.
-5. Run a tiny cloud smoke job first.
-6. Run the real training/eval job.
-7. Evaluate with the same dataset, seed, GPU class, and cloud command family as the baseline.
-8. Append the result to `LEDGER.md`.
-9. If it improves enough to justify complexity, keep the branch and summarize the delta.
-10. If it fails, record the reason and move on.
-11. Update `CURRENT.md`.
-
-Never ask "should I keep going?" once the loop starts.
-
-If a diagnostic phase proves a whole path is bad, do not convert that conclusion into a `blocked_*` owner-review state. Record the discard decision, pick the next smallest experiment, and continue until a real guardrail stops execution. Real guardrails are missing secrets, failed cloud jobs, and budget cap. Human review issues are status notes, not the loop controller.
-
-## heartbeat
-
-Autonomy has two loops:
-
-1. Local research loop: `scripts/codex_research_loop.sh` runs Codex `gpt-5.5`/`xhigh` on the control-plane Mac every `300` seconds for reasoning and code changes.
-2. Execution heartbeat: GitHub Actions runs `scripts/autonomy_tick.py` to submit or inspect one bounded HF job.
-
-The execution heartbeat must not become the research brain.
-
-Research becomes action only after the local tick commits and pushes a durable state/code change. Then `scripts/codex_research_loop.sh` dispatches `.github/workflows/autonomy.yml`; the workflow runs `scripts/autonomy_tick.py`, submits/checks one HF job, records the result, and leaves the next decision for the following local Codex tick.
-
-Every two hours, `.github/workflows/autonomy.yml` runs:
+Use the fixed helper for the central payload:
 
 ```bash
-python scripts/autonomy_tick.py
+TRAIN_MODE=baseline scripts/run_hf_train.sh
 ```
 
-The tick checks or submits one Hugging Face Job, updates `autonomy/state.json`, appends `autonomy/events.jsonl`, and opens a GitHub issue if owner input is required.
-
-Autonomy-labeled issue comments and issue edits also wake the same workflow immediately. If the owner says "done" after adding a secret or approving budget, the controller should notice on that event rather than waiting for the schedule.
-
-## Codex goals
-
-If the Codex app exposes thread Goals, set the local thread Goal from `GOAL.md` before starting a worktree experiment.
-
-Treat the Goal as local-thread steering only. The durable control plane remains `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `JOURNAL.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues.
-
-## scoring
-
-Primary metric: `mAP-LocSim`, higher is better.
-
-Secondary tracking:
-
-- precision/recall/F1 at selected threshold,
-- frame accuracy,
-- runtime,
-- GPU type,
-- VRAM,
-- dollars spent.
-
-Use the validation set to select thresholds. Use that fixed threshold for test/challenge-style evaluation.
-
-The SSKit oracle result is the north star for representation: exact GT `position_on_pitch` scored `1.0`, and GT ground keypoints projected through SSKit scored `0.9809895759`. Detector bottom-center boxes are a weaker fallback. When detector-only image-space recall is near zero, pivot to source-specific pose/keypoint or direct ground-point prediction rather than trying more generic detector thresholds.
-
-## compute
-
-Default budget: `$25/week`.
-
-Use cheap Hugging Face Jobs first. Hugging Face Jobs are billed by runtime, so keep timeouts tight and choose the cheapest flavor that can answer the current question:
-
-- CPU flavor for packaging, file layout, asset inventory, and metadata checks.
-- `t4-small` for tiny CUDA probes and raw inference debugging.
-- `l4x1` or larger only after a documented T4 memory/runtime failure, or when a full validation/training run has a clear expected-value case.
-
-Do not spend L4 money to discover import errors, missing files, wrong paths, or config mismatches.
-
-If one experiment could exceed the weekly budget, open a GitHub issue requesting approval before running it.
-
-## SoccerMaster mismatch rule
-
-SoccerMaster is a serious pretrained soccer model, not a generic detector guess. Its reported athlete-detection performance is high enough that zero decoded athlete output on soccer frames means the integration is broken until proven otherwise.
-
-If SoccerMaster emits no `player`, `goalkeeper`, or `referee` detections, stop scoring and debug the mismatch first: official/source-faithful config, weight placement, class dimensions, role-label order, preprocessing/normalization, thresholds, and raw logits. Do not call that underperformance and do not scale it.
-
-Known fixed mismatch: official SoccerMaster role mapping is `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`. The copied Rondo adapter previously used the wrong order and mislabeled role id `3` as `ball` and id `4` as `staff`.
-
-Known unresolved mismatch: the copied Rondo adapter is not yet a source-faithful SoccerMaster runtime. Official SoccerMaster is video-shaped, uses temporal attention, uses the official Deformable DETR/MSDeformAttn detection path, and has an official `PostProcess`. If the adapter runs single images through plain SigLIP, skips temporal weights, replaces MSDeformAttn, or custom-decodes boxes, its SynLoc score is not a valid SoccerMaster score.
-
-Next SoccerMaster work must prove official-runtime parity before training: build/load the official SoccerMaster code on cloud CUDA, feed the expected video-shaped input, run the official detection postprocess, then compare boxes/roles/scores to the copied adapter on the same deterministic frames. Do not start a SoccerMaster train/fine-tune job while this parity check is unresolved.
-
-## train.py baseline-first rule
-
-The current YOLO path uses one script: `train.py`.
-
-Run `TRAIN_MODE=baseline` first. It evaluates the active pretrained football YOLO26 path on SynLoc validation through the official `mAP-LocSim` evaluator. This catches broken model loading, class mapping, box-to-pitch projection, score thresholds, and artifact upload before a training job can waste money. Soccana is retired from active defaults; do not rerun it unless the owner explicitly reintroduces it.
-
-Only run `TRAIN_MODE=finetune` after the pretrained baseline produces detections, positive recall, and a meaningful official validation score. A microscopic nonzero `mAP-LocSim` with `recall_50=0.0` is a failed baseline, not permission to train. The fine-tune mode starts from the best baseline model, trains on SynLoc labels, and immediately evaluates the trained checkpoint with the same official path.
-
-## council
-
-Use the council after baseline, when stuck, before high-cost runs, or every 2-3 days during autonomous work.
-
-Create a request with:
+or, for a chosen experiment:
 
 ```bash
-python3 scripts/ask_council.py --title "SynLoc strategy after baseline"
+TRAIN_MODE=finetune HF_FLAVOR=t4-small HF_TIMEOUT=2h scripts/run_hf_train.sh
 ```
 
-Then paste or edit the generated markdown request in the sibling queue if needed.
+Pass extra `hf jobs uv run` arguments after `--` if needed. Keep the job
+detached, record the job URL, and pull logs/results back into `LEDGER.md`.
 
-Do not ask the council to use leaked solutions or post-deadline winner writeups. It can review official docs, our logs, our ideas, and general public research.
+Use the helper or the HF CLI upload path for local scripts. If using the HF Jobs
+MCP connector directly, pass inline script contents or a reachable URL; do not
+pass a local `train.py` path because the remote container cannot see it.
+
+## Current Research Direction
+
+Active direction: track/pose/keypoint or direct ground-point prediction.
+
+The oracle says the evaluator and projection path can score very high when the
+ground point is right. The next experiment should exploit that fact rather than
+polishing generic boxes.
+
+Zero or near-zero official scores from a soccer/football-pretrained model on
+SoccerNet data are plumbing warnings first, not model verdicts. Before another
+model idea, audit class names and ids, preprocessing/image scale, bbox format,
+score thresholds, category ids, camera projection, and SSKit result ingestion on
+a tiny slice with saved GT/prediction examples.
+
+Good next experiment shapes:
+
+- A tiny pretrained-model/evaluator audit that saves prediction JSON, GT excerpt,
+  model class names, selected class ids, image dimensions, and projected points.
+- Train or adapt a source-specific keypoint/footpoint predictor and emit
+  `position_from_keypoint_index`.
+- Use official SSKit baseline/runtime code as the format oracle.
+- Add a tiny validation-slice smoke before a full train/valid run.
+- Track errors by image-space recall, point error, and official `mAP-LocSim`.
+
+Bad next experiment shapes:
+
+- Another generic detector threshold sweep with `recall_50=0.0`.
+- A SoccerMaster score promotion before official-runtime parity.
+- Any idea that requires a scheduler, database, dashboard, state machine, or
+  owner-review gate to decide what Codex can decide from markdown.
+
+## Compute Rule
+
+Use the cheapest option that actually works, always. Use local sanity checks
+and CPU jobs for setup/package/data checks. Use `t4-small` for tiny CUDA smokes.
+Escalate only when the cheaper option fails, times out, OOMs, or is plainly too
+slow for the bounded experiment. Do not add money ledgers or approval gates;
+the owner handles that outside this repo.
+
+## Council
+
+Use `scripts/ask_council.py` sparingly: when stuck, after a meaningful new
+baseline, or every 2-3 days during serious autonomous work.
+
+Do not ask the council to mine leaked submissions or post-deadline solution
+writeups. It can review official materials, our ledger, our ideas, and our logs.

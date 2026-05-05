@@ -5,48 +5,32 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 MODEL="${CODEX_RESEARCH_MODEL:-gpt-5.5}"
-EFFORT="${CODEX_RESEARCH_EFFORT:-xhigh}"
+EFFORT="${CODEX_RESEARCH_EFFORT:-low}"
 ALLOW_DIRTY=0
-ALLOW_ACTIVE_JOB=0
 PRINT_PROMPT=0
 DRY_RUN=0
 
 usage() {
   cat <<'EOF'
-Usage: scripts/codex_research_tick.sh [--print-prompt] [--dry-run] [--allow-dirty] [--allow-active-job]
+Usage: scripts/codex_research_tick.sh [--print-prompt] [--dry-run] [--allow-dirty]
 
-Runs one local Codex research tick. Research and code edits happen on this
-machine with Codex; Hugging Face Jobs remain CUDA execution substrate only.
+Runs one local Codex research pass. Codex reads program.md, chooses one
+bounded SynLoc experiment, edits the smallest needed surface, verifies, and
+records the next action. Hugging Face Jobs remain CUDA execution only.
 
 Environment overrides:
   CODEX_RESEARCH_MODEL   default: gpt-5.5
-  CODEX_RESEARCH_EFFORT  default: xhigh
+  CODEX_RESEARCH_EFFORT  default: low
 EOF
 }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --print-prompt)
-      PRINT_PROMPT=1
-      ;;
-    --dry-run)
-      DRY_RUN=1
-      ;;
-    --allow-dirty)
-      ALLOW_DIRTY=1
-      ;;
-    --allow-active-job)
-      ALLOW_ACTIVE_JOB=1
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Unknown argument: $1" >&2
-      usage >&2
-      exit 2
-      ;;
+    --print-prompt) PRINT_PROMPT=1 ;;
+    --dry-run) DRY_RUN=1 ;;
+    --allow-dirty) ALLOW_DIRTY=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown argument: $1" >&2; usage >&2; exit 2 ;;
   esac
   shift
 done
@@ -67,43 +51,44 @@ if [ "$ALLOW_DIRTY" -ne 1 ] && [ -n "$(git status --short)" ]; then
   exit 1
 fi
 
-if [ "$ALLOW_ACTIVE_JOB" -ne 1 ]; then
-  python3 - <<'PY'
-import json
-from pathlib import Path
-
-state = json.loads(Path("autonomy/state.json").read_text(encoding="utf-8"))
-active = state.get("active_job")
-if active:
-    label = active.get("label") or active.get("id") or "unknown"
-    raise SystemExit(f"Active HF job is still running ({label}); do not start a new research tick.")
-PY
-fi
-
-prompt_file="$(mktemp "${TMPDIR:-/tmp}/codex-research-prompt.XXXXXX")"
-last_message="autonomy/codex_last_message.md"
+prompt_file="$(mktemp "${TMPDIR:-/tmp}/auto-research-2-codex-prompt.XXXXXX")"
 trap 'rm -f "$prompt_file"' EXIT
 
-python3 scripts/codex_research_prompt.py > "$prompt_file"
+cat > "$prompt_file" <<'EOF'
+You are the local Codex researcher for /Users/davidmontgomery/auto-research-2.
+
+Read these first:
+
+1. AGENTS.md
+2. program.md
+3. CURRENT.md
+4. LEDGER.md
+5. IDEAS.md
+
+You are one iteration of the outer research loop. Finish one bounded experiment
+or one concrete blocker update, then leave the repo ready for the next loop
+iteration. Do not treat a successful single pass as the end of autonomy.
+
+- Preserve the Karpathy-style shape: markdown brain, train.py as the central
+  editable research surface, fixed helpers only for mechanics.
+- Choose one concrete SynLoc track/pose/keypoint or direct ground-point
+  experiment with expected movement in official SSKit mAP-LocSim.
+- If implementation is warranted, edit the smallest needed surface.
+- Use Hugging Face Jobs only for bounded CUDA execution, not reasoning.
+- If you launch a cloud job, follow it to an official score or an explicit
+  blocker before ending; do not leave a live job ambiguous.
+- Record keep/discard facts in LEDGER.md and update CURRENT.md.
+- When running from a clean branch/worktree, commit kept code/state changes or
+  revert discarded experiment code while preserving the ledger/current facts.
+- Before ending a mutating turn, run scripts/verify.sh plus any narrower check.
+EOF
 
 if [ "$PRINT_PROMPT" -eq 1 ]; then
   cat "$prompt_file"
   exit 0
 fi
 
-echo "Starting local Codex research tick with model=${MODEL}, reasoning=${EFFORT}" >&2
-cmd=(
-  codex
-  -m "$MODEL" \
-  -c "model_reasoning_effort=\"$EFFORT\"" \
-  -a never \
-  -s danger-full-access \
-  --search \
-  -C "$ROOT" \
-  exec \
-  -o "$last_message" \
-  -
-)
+cmd=(codex -m "$MODEL" -c "model_reasoning_effort=\"$EFFORT\"" -a never -s danger-full-access --search -C "$ROOT" exec -)
 
 if [ "$DRY_RUN" -eq 1 ]; then
   printf '%q ' "${cmd[@]}"
@@ -111,4 +96,5 @@ if [ "$DRY_RUN" -eq 1 ]; then
   exit 0
 fi
 
+echo "Starting local Codex research tick with model=${MODEL}, reasoning=${EFFORT}" >&2
 "${cmd[@]}" < "$prompt_file"

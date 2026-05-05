@@ -1,154 +1,63 @@
 # auto-research-2
 
-Autonomous research harness for the 2026 Spiideo SoccerNet SynLoc challenge.
+Markdown-first autonomous research harness for the 2026 Spiideo SoccerNet
+SynLoc challenge.
 
-The goal is simple: beat the best tracked SynLoc score by June 30, 2026, without turning the repo into a platform. This project borrows the spirit of Karpathy's `autoresearch`: one clear loop, markdown as the control plane, small scripts only where they remove friction.
+Goal: beat the best tracked SynLoc score by June 30, 2026.
 
-## Target
+Metric: official SSKit `mAP-LocSim`, higher is better.
 
-SynLoc asks for single-frame world-coordinate athlete detection and localization. A submission is a zip containing:
+## Shape
 
-- `results.json` with one detection record per predicted player.
-- `metadata.json` with the validation-selected `score_threshold`.
+This repo is intentionally small:
 
-The primary metric is `mAP-LocSim`. Higher is better.
-
-## Files
-
-- `program.md` - the operating instructions for the autonomous agent.
-- `GOAL.md` - canonical Codex app thread Goal for local worktree experiment sessions.
+- `program.md` - main operating loop for local Codex.
+- `train.py` - one editable experiment/training payload.
+- `scripts/download_synloc.py` - official data download mechanics.
+- `cloud/synloc_cache.py` - fixed cloud data-cache helper.
+- `scripts/evaluate_synloc.py` - official SSKit metric wrapper.
+- `scripts/run_hf_train.sh` - fixed Hugging Face Jobs launcher for `train.py`.
 - `CURRENT.md` - live state and next action.
-- `LEDGER.md` - experiment history and score tracking.
-- `JOURNAL.md` - human-readable autonomy narrative for submissions, completions, and blockers.
-- `IDEAS.md` - backlog of candidate experiments.
-- `BUDGET.md` - weekly compute budget ledger.
-- `COUNCIL.md` - how to use the sibling challenge council.
-- `scripts/ask_council.py` - drop a markdown request into the council automation queue.
-- `scripts/download_synloc.py` - official SoccerNet download wrapper for cloud job payloads.
-- `scripts/evaluate_synloc.py` - official SSKit metric wrapper for cloud job payloads.
-- `scripts/codex_research_tick.sh` - local Codex `gpt-5.5`/`xhigh` research tick; never run it from HF or GitHub Actions.
-- `scripts/codex_research_loop.sh` - local 300-second research loop that runs Codex ticks and wakes the execution heartbeat when state is actionable.
-- `scripts/codex_research_prompt.py` - compact prompt builder for the local research tick.
-- `scripts/autonomy_tick.py` - one bounded autonomous controller tick.
-- `scripts/verify.sh` - narrow repo sanity check.
-- `train.py` - YOLO-family baseline and fine-tune script; baseline mode must pass before training mode runs.
-- `cloud/synloc_devkit_oracle.py` - SSKit oracle checks for exact GT positions, official keypoint projection, and bbox bottom-center behavior before more model work.
-- `cloud/synloc_pose_smoke.py` - cheap non-promotable pose/keypoint training smoke that follows the high-score SSKit keypoint route before spending on full train data.
-- `.github/workflows/autonomy.yml` - scheduled heartbeat every two hours.
+- `LEDGER.md` - concise result log.
+- `IDEAS.md` - experiment backlog.
+- `COUNCIL.md` and `scripts/ask_council.py` - sibling council queue.
 
-Local upstream clones live in ignored `refs/`:
+Ignored local/heavy directories include `refs/`, `data/`, `runs/`, `outputs/`,
+`models/`, and `worktrees/`.
 
-- `refs/karpathy-autoresearch`
-- `refs/sskit`
+## Runtime
 
-They are references, not vendored source.
+Local Codex is the researcher: `gpt-5.5`, `low`, this repo, markdown state,
+small code edits, commits, and next-experiment choice.
 
-## Runtime Model
+Hugging Face Jobs are CUDA execution substrate only: data setup, training,
+inference, official evaluation, and artifact upload.
 
-This laptop is the control plane. It is not a validation target.
-
-Research happens in local Codex with `gpt-5.5` and `xhigh` reasoning:
+Run one local research pass:
 
 ```bash
 scripts/codex_research_tick.sh
 ```
 
-That local tick is where source inspection, web research, hypothesis choice, code edits, controller changes, markdown updates, commits, pushes, and GitHub issue comments happen. Use `scripts/codex_research_tick.sh --print-prompt` to inspect the compact state prompt first.
-
-For AK-style cadence, run the local loop instead of a single tick:
+Run repeated local research passes every 300 seconds:
 
 ```bash
 scripts/codex_research_loop.sh
 ```
 
-The loop runs once every `300` seconds, giving 12 local research chances per hour. It pulls fresh state, skips local Codex thinking while an HF job is active, runs one local Codex tick when reasoning is needed, and wakes `.github/workflows/autonomy.yml` only when `autonomy/state.json` is actionable. Use `scripts/codex_research_loop.sh --iterations 12` for a bounded one-hour run.
+Submit the central training/eval payload:
 
-Hugging Face Jobs execute CUDA work. They should download data, train, infer, evaluate, select thresholds, and upload artifacts, but they are not the research brain.
+```bash
+TRAIN_MODE=baseline scripts/run_hf_train.sh
+```
 
-Local ML runs are not comparable to the real environment because local execution is MLX/Mac-shaped while challenge training and inference must run on cloud CUDA GPUs. Do not use local model scores to make keep/discard decisions.
+## Current Facts
 
-Use local commands only for:
+- Active direction: track/pose/keypoint or direct ground-point prediction.
+- Best structural signal: SSKit projected GT keypoint scored `0.9809895759`.
+- Generic detector and YOLO fine-tune paths are not the frontier.
+- `first-yolo-train` is discarded: `mAP-LocSim=3.572767401302389e-06`,
+  `recall_50=0.0`, worse than pose smoke `0.000825082508250825`.
+- Compute rule: use the cheapest option that actually works, always.
 
-- repo sanity checks,
-- packaging checks,
-- queueing council requests,
-- preparing small job scripts,
-- reading logs and ledgers.
-
-Use Hugging Face Jobs or another cloud CUDA GPU runtime for:
-
-- dataset download,
-- baseline inference,
-- training,
-- validation evaluation,
-- threshold selection,
-- challenge-style prediction generation.
-
-Dataset storage rule: the owner has signed the SoccerNet NDA and has an official SoccerNet password, so SynLoc data is cleared for this project. Use private Hugging Face storage as the working cloud cache:
-
-- Dataset/cache repo: `dmontgomery40/auto-research-2-synloc-data`
-- Model/checkpoint repo: `dmontgomery40/auto-research-2-synloc-models`
-
-Keep these repos private. Checkpoints, logs, metrics, and predictions can live there or in job artifacts.
-
-## First Run
-
-1. Read `AGENTS.md`, `program.md`, `GOAL.md`, `CURRENT.md`, `LEDGER.md`, `IDEAS.md`, and `BUDGET.md`.
-2. Verify the control plane without printing secrets:
-
-   ```bash
-   scripts/verify.sh
-   ```
-
-3. Run dataset download and baseline on a cloud CUDA GPU job.
-4. Persist datasets, predictions, checkpoints, and metrics to Hugging Face storage or job artifacts, not this repo.
-5. Only then start creating isolated experiment worktrees under `worktrees/`.
-
-## Autonomy
-
-The repo has a persistent heartbeat:
-
-- GitHub Actions runs `scripts/autonomy_tick.py` every two hours and on manual dispatch.
-- The local 300-second research loop is `scripts/codex_research_loop.sh`; this is the path that gives AK-style 12/hour thinking cadence.
-- Comments or changes on autonomy-labeled GitHub issues wake the same controller immediately.
-- The tick submits or checks exactly one Hugging Face Job.
-- State lives in `autonomy/state.json`.
-- Events live in `autonomy/events.jsonl`.
-- If a secret, budget, or cloud job blocks progress, the controller opens a GitHub issue instead of going silent.
-- If the owner fixes the blocker and replies on that issue, the issue event wakes the heartbeat without waiting for the next two-hour schedule.
-
-Research turns into action through this chain:
-
-1. Local Codex tick researches, edits, verifies, commits, and pushes.
-2. The local loop dispatches `autonomy.yml` when the pushed state is actionable.
-3. `scripts/autonomy_tick.py` submits or checks exactly one bounded HF job.
-4. The heartbeat records result/state in markdown plus `autonomy/state.json`.
-5. The next local Codex tick reads that state and picks the next smallest move.
-
-Initial phases:
-
-1. `cloud_smoke_pending` - verify HF Jobs, GPU visibility, imports, and private repo write access.
-2. `dataset_cache_valid_pending` - cache the fullhd validation split in the private HF dataset repo.
-3. `baseline_probe_pending` - run a small YOLO baseline probe on cloud CUDA.
-4. `baseline_full_pending` - run the validation baseline on cloud CUDA.
-5. `soccermaster_wiring_probe_pending` - current SoccerMaster state after the role-label bug was found: rerun the tiny T4 probe with official SoccerMaster role labels.
-6. `soccermaster_synloc_conversion_probe_pending` - convert corrected SoccerMaster player/goalkeeper/referee outputs into SynLoc `results.json`, run official `mAP-LocSim` on a 64-image validation slice, and only then decide the first `train.py`/fine-tune experiment.
-7. `pretrained_yolo_baseline_pending` - run `train.py` with `TRAIN_MODE=baseline` to evaluate the active pretrained football YOLO26 path before training. Soccana is retired from active defaults and remains only as historical evidence.
-8. `devkit_oracle_pending` - run SSKit oracle checks when detector outputs exist but official localization is effectively zero.
-9. `devkit_oracle_review` - review oracle gates and decide whether a local official/dev-kit-first worktree experiment is needed.
-10. `devkit_detector_diagnostic_pending` - run the active football YOLO26 path with image-space IoU diagnostics beside official `mAP-LocSim`; no training.
-11. `devkit_detector_diagnostic_review` - auto-discard detector-only YOLO if image-space recall is near zero and queue the pose/keypoint smoke.
-12. `synloc_pose_smoke_pending` - train a tiny YOLO pose/keypoint smoke on cached validation slices and evaluate a later validation slice through `position_from_keypoint_index=1`; this is a pipeline test, not a promotable score.
-13. `pose_smoke_review` - auto-queue train/valid cache if the smoke proves the pose/keypoint path is runnable.
-14. `train_dataset_cache_pending` - cache `train,valid` for real source-specific pose/keypoint experiments, subject to budget.
-15. `first_train_experiment_pending` - legacy YOLO fine-tune phase; do not use as the next frontier while pose/keypoint work is active.
-
-Codex thread Goals are first-class for local Codex worktree sessions. Set the thread Goal from `GOAL.md` before starting an experiment. Goals are not the durable control plane; keep `CURRENT.md`, `LEDGER.md`, `BUDGET.md`, `autonomy/state.json`, `autonomy/events.jsonl`, and GitHub issues current because the heartbeat and HF jobs cannot read a Codex app thread Goal.
-
-## Ground Rules
-
-- Keep the control plane markdown-first.
-- Keep experiments isolated.
-- Commit only source, scripts, and concise docs.
-- Never commit credentials, datasets, checkpoints, generated predictions, or local upstream clones.
-- Spend at most `$25/week` on compute unless a GitHub issue asks the owner for more and the owner approves.
+Read `program.md` first for the loop contract.

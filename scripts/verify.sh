@@ -6,152 +6,66 @@ cd "$(dirname "$0")/.."
 test -f README.md
 test -f AGENTS.md
 test -f program.md
-test -f GOAL.md
 test -f CURRENT.md
 test -f LEDGER.md
-test -f JOURNAL.md
 test -f IDEAS.md
-test -f BUDGET.md
 test -f COUNCIL.md
 test -f .gitignore
+test -f train.py
+test -f scripts/run_hf_train.sh
 
-if git ls-files --error-unmatch .env >/dev/null 2>&1; then
-  echo ".env is tracked; remove it from git" >&2
-  exit 1
-fi
+for removed in GOAL.md JOURNAL.md COUNCIL_DOSSIER.md RESEARCH_PRIORS.md BUDGET.md scripts/autonomy_tick.py scripts/codex_research_prompt.py .github/workflows/autonomy.yml autonomy/state.json autonomy/events.jsonl; do
+  if [ -e "$removed" ]; then
+    echo "$removed should not exist in the collapsed Karpathy-style harness" >&2
+    exit 1
+  fi
+done
 
-if [ -d refs ] && git status --short --ignored refs | grep -v '^!! refs/' >/dev/null; then
-  echo "refs/ should stay ignored" >&2
-  exit 1
-fi
+if git ls-files --error-unmatch .env >/dev/null 2>&1; then echo ".env is tracked; remove it from git" >&2; exit 1; fi
+if [ -d refs ] && git status --short --ignored refs | grep -v '^!! refs/' >/dev/null; then echo "refs/ should stay ignored" >&2; exit 1; fi
 
 python3 -m py_compile scripts/ask_council.py
 python3 -m py_compile scripts/download_synloc.py
 python3 -m py_compile scripts/evaluate_synloc.py
-python3 -m py_compile scripts/autonomy_tick.py
-python3 -m py_compile scripts/codex_research_prompt.py
+python3 -m py_compile train.py
+python3 -m py_compile cloud/synloc_cache.py
+
 bash -n scripts/codex_research_tick.sh
 bash -n scripts/codex_research_loop.sh
-scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-research-dry-run.txt
-scripts/codex_research_loop.sh --allow-dirty --dry-run --no-dispatch --iterations 1 >/tmp/auto-research-2-codex-research-loop-dry-run.txt
-python3 -m py_compile train.py
-python3 -m py_compile cloud/synloc_smoke.py
-python3 -m py_compile cloud/synloc_cache.py
-python3 -m py_compile cloud/synloc_baseline_yolo.py
-python3 -m py_compile cloud/soccermaster_wiring_probe.py
-python3 -m py_compile cloud/soccermaster_synloc_eval_probe.py
-python3 -m py_compile cloud/synloc_devkit_oracle.py
-python3 -m py_compile cloud/synloc_pose_smoke.py
+bash -n scripts/run_hf_train.sh
 
-if rg -n "Adit-jain/soccana|soccana-yolo" train.py scripts/autonomy_tick.py; then
-  echo "Soccana must not be an active code default. Historical docs/state may mention it, but active scripts must not." >&2
-  exit 1
-fi
+scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-tick.txt
+scripts/codex_research_loop.sh --allow-dirty --dry-run --iterations 2 >/tmp/auto-research-2-codex-loop.txt 2>&1
+scripts/run_hf_train.sh --dry-run >/tmp/auto-research-2-hf-train.txt
 
-python3 - <<'PY'
+python3 - <<'PYCHECK'
 from pathlib import Path
-
-goal = Path("GOAL.md").read_text(encoding="utf-8")
-if "<!-- codex-goal:start -->" not in goal or "<!-- codex-goal:end -->" not in goal:
-    raise SystemExit("GOAL.md must contain codex-goal start/end markers")
-required = [
-    "Beat the 2026 Spiideo SoccerNet SynLoc challenge",
-    "Research happens in local Codex",
-    "Hugging Face Jobs are CUDA execution only",
-    "SSKit oracle passed",
-    "Do not train from the near-zero detector path",
-    "Soccana is retired from active defaults",
-    "one isolated experiment worktree",
-    "CURRENT.md",
-    "autonomy/state.json",
-]
-missing = [item for item in required if item not in goal]
-if missing:
-    raise SystemExit(f"GOAL.md missing required goal clauses: {missing}")
-PY
-
-python3 - <<'PY'
-from pathlib import Path
-
 required_docs = {
-    "AGENTS.md": [
-        "Research happens in local Codex",
-        "Hugging Face Jobs are CUDA execution substrate only",
-        "scripts/codex_research_loop.sh",
-        "gpt-5.5",
-        "xhigh",
-    ],
-    "program.md": [
-        "Research happens in local Codex",
-        "scripts/codex_research_tick.sh",
-        "scripts/codex_research_loop.sh",
-        "gpt-5.5",
-        "xhigh",
-    ],
-    "README.md": [
-        "scripts/codex_research_tick.sh",
-        "scripts/codex_research_loop.sh",
-        "Research happens in local Codex",
-        "Hugging Face Jobs execute CUDA work",
-    ],
+    "program.md": ["gpt-5.5", "low", "train.py", "mAP-LocSim", "0.9809895759", "first-yolo-train", "scripts/run_hf_train.sh", "cheapest option that actually works", "outer shell loop is the loop"],
+    "README.md": ["program.md", "train.py", "scripts/run_hf_train.sh", "Hugging Face Jobs are CUDA execution substrate only", "cheapest option that actually works"],
+    "AGENTS.md": ["program.md", "train.py", "Hugging Face Jobs are CUDA execution substrate only", "0.9809895759", "cheapest option that actually works"],
+    "CURRENT.md": ["0.9809895759040843", "3.572767401302389e-06", "track/pose/keypoint", "cheapest option that actually works"],
+    "LEDGER.md": ["first-yolo-train", "discard", "0.000825082508250825"],
 }
 for filename, needles in required_docs.items():
     text = Path(filename).read_text(encoding="utf-8")
     missing = [needle for needle in needles if needle not in text]
-    if missing:
-        raise SystemExit(f"{filename} missing local Codex research contract clauses: {missing}")
-
-tick = Path("scripts/codex_research_tick.sh").read_text(encoding="utf-8")
-if "gpt-5.5" not in tick or "xhigh" not in tick:
-    raise SystemExit("codex_research_tick.sh must default to gpt-5.5/xhigh")
-dry_run = Path("/tmp/auto-research-2-codex-research-dry-run.txt").read_text(encoding="utf-8")
-missing = [needle for needle in ["codex", "gpt-5.5", "model_reasoning_effort", "xhigh", "-a", "never", "--search", "exec"] if needle not in dry_run]
-if missing:
-    raise SystemExit(f"codex_research_tick.sh dry run missing expected Codex invocation clauses: {missing}")
-loop = Path("scripts/codex_research_loop.sh").read_text(encoding="utf-8")
-if "300" not in loop or "gh workflow run autonomy.yml" not in loop:
-    raise SystemExit("codex_research_loop.sh must encode the 300s loop and heartbeat dispatch")
-loop_dry_run = Path("/tmp/auto-research-2-codex-research-loop-dry-run.txt").read_text(encoding="utf-8")
-if "codex" not in loop_dry_run or "exec" not in loop_dry_run:
-    raise SystemExit("codex_research_loop.sh dry run did not reach the Codex research tick")
-PY
-
-python3 - <<'PY'
-from pathlib import Path
-
-for path in [Path("train.py"), *sorted(Path("cloud").glob("*.py"))]:
-    in_pep723 = False
-    deps = []
-    for line_no, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        line = raw.strip()
-        if line == "# /// script":
-            in_pep723 = True
-            continue
-        if line == "# ///":
-            in_pep723 = False
-            continue
-        if in_pep723 and "\"git+" in line:
-            raise SystemExit(
-                f"{path}:{line_no}: PEP 723 URL dependency must use 'package @ git+...'"
-            )
-        if in_pep723 and line.startswith("#   \"") and line.rstrip(",").endswith("\""):
-            deps.append(line.split("\"", 2)[1])
-    if "xtcocotools" in deps and not any(dep.startswith("numpy<2") for dep in deps):
-        raise SystemExit(f"{path}: xtcocotools cloud jobs must pin numpy<2")
-    if any(dep.startswith("sskit @ git+") for dep in deps) and "scipy" not in deps:
-        raise SystemExit(f"{path}: GitHub SSKit cloud jobs must include scipy")
-    if any(dep.startswith("sskit @ git+") for dep in deps) and "torchvision" not in deps:
-        raise SystemExit(f"{path}: GitHub SSKit cloud jobs must include torchvision")
-PY
-
-python3 - <<'PY'
-import json
-from pathlib import Path
-
-state = json.loads(Path("autonomy/state.json").read_text())
-assert state["phase"], "autonomy phase missing"
-assert state["hf_dataset_repo"], "HF dataset repo missing"
-assert state["hf_model_repo"], "HF model repo missing"
-PY
+    if missing: raise SystemExit(f"{filename} missing required collapsed-loop clauses: {missing}")
+for filename in ["program.md", "README.md", "AGENTS.md", "CURRENT.md", "IDEAS.md"]:
+    text = Path(filename).read_text(encoding="utf-8")
+    forbidden = ["autonomy/state.json", "autonomy/events.jsonl", "scripts/autonomy_tick.py", ".github/workflows/autonomy.yml", "devkit_oracle_review", "train_result_review", "BUDGET.md", "$50", "$28"]
+    bad = [item for item in forbidden if item in text]
+    if bad: raise SystemExit(f"{filename} still references removed controller machinery: {bad}")
+tick = Path("/tmp/auto-research-2-codex-tick.txt").read_text(encoding="utf-8")
+for needle in ["codex", "gpt-5.5", "model_reasoning_effort", "low", "--search", "exec"]:
+    if needle not in tick: raise SystemExit(f"codex tick dry-run missing {needle}")
+loop = Path("/tmp/auto-research-2-codex-loop.txt").read_text(encoding="utf-8")
+if "codex" not in loop or "exec" not in loop: raise SystemExit("codex loop dry-run did not reach the Codex tick")
+if "local Codex research pass 1" not in loop or "local Codex research pass 2" not in loop: raise SystemExit("codex loop dry-run did not prove more than one pass")
+if "default local-first loop" not in loop: raise SystemExit("codex loop dry-run did not prove local-first default")
+hf = Path("/tmp/auto-research-2-hf-train.txt").read_text(encoding="utf-8")
+for needle in ["hf", "jobs", "uv", "run", "--detach", "--secrets", "HF_TOKEN", "train.py"]:
+    if needle not in hf: raise SystemExit(f"HF train dry-run missing {needle}")
+PYCHECK
 
 echo "verify ok"

@@ -46,6 +46,18 @@ def env_float(name: str, default: float) -> float:
     return float(value) if value not in (None, "") else default
 
 
+def json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    if isinstance(value, np.ndarray):
+        return json_safe(value.tolist())
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
 def parse_int_set(raw: str) -> set[int]:
     return {int(item.strip()) for item in raw.split(",") if item.strip()}
 
@@ -194,10 +206,51 @@ def load_synloc_data(version: str, patterns: list[str]) -> Path:
 
 
 def evaluate(gt_path: Path, pred_path: Path) -> dict[str, float]:
+    predictions = json.loads(pred_path.read_text(encoding="utf-8"))
+    if not predictions:
+        return {
+            "map_locsim": 0.0,
+            "precision_50": 0.0,
+            "recall_50": 0.0,
+            "f1_50": 0.0,
+            "score_threshold": 0.0,
+            "frame_accuracy": 0.0,
+        }
+
     coco = COCO(str(gt_path))
     coco_det = coco.loadRes(str(pred_path))
     coco_eval = LocSimCOCOeval(coco, coco_det, "bbox")
     coco_eval.params.useSegm = None
+    coco_eval.evaluate()
+    coco_eval.accumulate()
+    coco_eval.summarize()
+    return {
+        "map_locsim": float(coco_eval.stats[0]),
+        "precision_50": float(coco_eval.stats[12]),
+        "recall_50": float(coco_eval.stats[13]),
+        "f1_50": float(coco_eval.stats[14]),
+        "score_threshold": float(coco_eval.stats[15]),
+        "frame_accuracy": float(coco_eval.stats[16]),
+    }
+
+
+def evaluate_keypoints(gt_path: Path, pred_path: Path, keypoint_index: int) -> dict[str, float]:
+    predictions = json.loads(pred_path.read_text(encoding="utf-8"))
+    if not predictions:
+        return {
+            "map_locsim": 0.0,
+            "precision_50": 0.0,
+            "recall_50": 0.0,
+            "f1_50": 0.0,
+            "score_threshold": 0.0,
+            "frame_accuracy": 0.0,
+        }
+
+    coco = COCO(str(gt_path))
+    coco_det = coco.loadRes(str(pred_path))
+    coco_eval = LocSimCOCOeval(coco, coco_det, "bbox")
+    coco_eval.params.useSegm = None
+    coco_eval.params.position_from_keypoint_index = keypoint_index
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
@@ -338,6 +391,420 @@ def predictions_for_model(
     return {"summary": summary, "out_dir": out_dir}
 
 
+def annotation_keypoint(ann: dict[str, Any], index: int) -> tuple[float, float, float] | None:
+    keypoints = ann.get("keypoints")
+    if not keypoints:
+        return None
+    if all(isinstance(item, list) for item in keypoints):
+        if len(keypoints) <= index or len(keypoints[index]) < 2:
+            return None
+        point = keypoints[index]
+        visibility = float(point[2]) if len(point) > 2 else 1.0
+        return float(point[0]), float(point[1]), visibility
+    flat = [float(item) for item in keypoints]
+    start = index * 3
+    if len(flat) < start + 2:
+        return None
+    visibility = flat[start + 2] if len(flat) > start + 2 else 1.0
+    return flat[start], flat[start + 1], visibility
+
+
+def target_keypoint(
+    ann: dict[str, Any],
+    *,
+    target: str,
+    source_keypoint_index: int,
+) -> tuple[float, float, float] | None:
+    if target == "annotation":
+        return annotation_keypoint(ann, source_keypoint_index)
+    if target == "bbox_bottom_center":
+        x, y, w, h = [float(v) for v in ann.get("bbox", [0, 0, 0, 0])]
+        if w <= 0 or h <= 0:
+            return None
+        return x + w / 2.0, y + h, 2.0
+    raise RuntimeError(
+        "SYNLOC_KEYPOINT_TARGET must be one of: annotation, bbox_bottom_center"
+    )
+
+
+def keypoint_diagnostics(
+    gt_points_by_image: dict[int, list[tuple[float, float]]],
+    pred_points_by_image: dict[int, list[tuple[float, float]]],
+) -> dict[str, float | int]:
+    gt_best: list[float] = []
+    pred_best: list[float] = []
+    for image_id, gt_points in gt_points_by_image.items():
+        pred_points = pred_points_by_image.get(image_id, [])
+        for gx, gy in gt_points:
+            gt_best.append(
+                min((((gx - px) ** 2 + (gy - py) ** 2) ** 0.5 for px, py in pred_points), default=float("inf"))
+            )
+        for px, py in pred_points:
+            pred_best.append(
+                min((((px - gx) ** 2 + (py - gy) ** 2) ** 0.5 for gx, gy in gt_points), default=float("inf"))
+            )
+
+    finite_gt = [value for value in gt_best if np.isfinite(value)]
+    finite_pred = [value for value in pred_best if np.isfinite(value)]
+
+    def rate(values: list[float], threshold: float) -> float:
+        return float(sum(value <= threshold for value in values) / len(values)) if values else 0.0
+
+    diagnostics: dict[str, float | int] = {
+        "gt_keypoints": sum(len(points) for points in gt_points_by_image.values()),
+        "pred_keypoints": sum(len(points) for points in pred_points_by_image.values()),
+        "mean_best_px_gt_to_pred": float(np.mean(finite_gt)) if finite_gt else 0.0,
+        "mean_best_px_pred_to_gt": float(np.mean(finite_pred)) if finite_pred else 0.0,
+    }
+    for threshold in (5.0, 10.0, 25.0, 50.0):
+        suffix = str(int(threshold))
+        diagnostics[f"gt_recall_px_{suffix}"] = rate(gt_best, threshold)
+        diagnostics[f"pred_precision_px_{suffix}"] = rate(pred_best, threshold)
+    return diagnostics
+
+
+def nearest_point_distance(point: tuple[float, float], others: list[tuple[float, float]]) -> float | None:
+    if not others:
+        return None
+    px, py = point
+    return float(min(((px - ox) ** 2 + (py - oy) ** 2) ** 0.5 for ox, oy in others))
+
+
+def keypoint_candidate_score(mode: str, box_score: float, keypoint_score: float) -> float:
+    if mode == "combined":
+        return box_score * keypoint_score
+    if mode == "box":
+        return box_score
+    if mode == "keypoint":
+        return keypoint_score
+    raise RuntimeError(
+        "YOLO_KEYPOINT_SCORE_MODE must be one of: combined, box, keypoint"
+    )
+
+
+def keypoint_score_modes(raw: str) -> list[str]:
+    aliases = {
+        "all": ["combined", "box", "keypoint"],
+        "matrix": ["combined", "box", "keypoint"],
+    }
+    mode = raw.strip().lower()
+    modes = aliases.get(mode, [item.strip().lower() for item in mode.split(",") if item.strip()])
+    if not modes:
+        modes = ["combined"]
+    allowed = {"combined", "box", "keypoint"}
+    unknown = sorted(set(modes) - allowed)
+    if unknown:
+        raise RuntimeError(
+            "YOLO_KEYPOINT_SCORE_MODE must be combined, box, keypoint, "
+            f"all, matrix, or a comma list of those modes; got {unknown}"
+        )
+    return list(dict.fromkeys(modes))
+
+
+def make_yolo_keypoint_dataset(
+    data_root: Path,
+    train_gt: Path,
+    val_gt: Path,
+    *,
+    train_max: int,
+    val_max: int,
+    source_keypoint_index: int,
+    keypoint_target: str,
+) -> tuple[Path, dict[str, Any]]:
+    dataset = Path("/tmp/synloc-yolo-keypoint-dataset")
+    if dataset.exists():
+        shutil.rmtree(dataset)
+    for split in ("train", "val"):
+        (dataset / "images" / split).mkdir(parents=True, exist_ok=True)
+        (dataset / "labels" / split).mkdir(parents=True, exist_ok=True)
+
+    def convert(gt_path: Path, split: str, max_images: int) -> dict[str, int]:
+        gt = json.loads(gt_path.read_text(encoding="utf-8"))
+        annotations_by_image: dict[int, list[dict[str, Any]]] = {}
+        for ann in gt.get("annotations", []):
+            annotations_by_image.setdefault(int(ann["image_id"]), []).append(ann)
+        stats = {"images": 0, "annotations": 0, "labels": 0, "skipped_keypoints": 0}
+        for image in gt["images"][: max_images or None]:
+            src = image_path(data_root, image["file_name"])
+            stem = f"{int(image['id']):08d}_{Path(image['file_name']).stem}"
+            image_target = dataset / "images" / split / f"{stem}{src.suffix.lower() or '.jpg'}"
+            label_target = dataset / "labels" / split / f"{stem}.txt"
+            try:
+                image_target.symlink_to(src)
+            except OSError:
+                shutil.copy2(src, image_target)
+            width = float(image["width"])
+            height = float(image["height"])
+            lines: list[str] = []
+            for ann in annotations_by_image.get(int(image["id"]), []):
+                stats["annotations"] += 1
+                x, y, w, h = [float(v) for v in ann.get("bbox", [0, 0, 0, 0])]
+                point = target_keypoint(
+                    ann,
+                    target=keypoint_target,
+                    source_keypoint_index=source_keypoint_index,
+                )
+                if w <= 0 or h <= 0 or point is None:
+                    stats["skipped_keypoints"] += 1
+                    continue
+                px, py, visibility = point
+                if visibility <= 0 or not np.isfinite([px, py]).all() or not (0 <= px < width and 0 <= py < height):
+                    stats["skipped_keypoints"] += 1
+                    continue
+                cx = (x + w / 2.0) / width
+                cy = (y + h / 2.0) / height
+                line = (
+                    f"0 {cx:.8f} {cy:.8f} {w / width:.8f} {h / height:.8f} "
+                    f"{px / width:.8f} {py / height:.8f} 2"
+                )
+                lines.append(line)
+                stats["labels"] += 1
+            label_target.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+            stats["images"] += 1
+        return stats
+
+    train_stats = convert(train_gt, "train", train_max)
+    val_stats = convert(val_gt, "val", val_max)
+    data_yaml = {
+        "path": str(dataset),
+        "train": "images/train",
+        "val": "images/val",
+        "nc": 1,
+        "names": {0: "athlete"},
+        "kpt_shape": [1, 3],
+        "flip_idx": [0],
+    }
+    (dataset / "data.yaml").write_text(yaml.safe_dump(data_yaml, sort_keys=False), encoding="utf-8")
+    manifest = {
+        "keypoint_target": keypoint_target,
+        "source_keypoint_index": source_keypoint_index,
+        "output_keypoint_index": 0,
+        "train": train_stats,
+        "val": val_stats,
+    }
+    (dataset / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    return dataset, manifest
+
+
+def predictions_for_keypoint_model(
+    *,
+    model_path: Path,
+    data_root: Path,
+    gt_path: Path,
+    split: str,
+    max_images: int,
+    imgsz: int,
+    conf: float,
+    iou: float,
+    source_keypoint_index: int,
+    keypoint_target: str,
+    max_detections_per_image: int,
+    audit_sample_images: int,
+    score_mode: str,
+) -> dict[str, Any]:
+    gt = json.loads(gt_path.read_text(encoding="utf-8"))
+    images = gt["images"][: max_images or None]
+    selected_image_ids = {int(image["id"]) for image in images}
+    gt_annotations_by_image: dict[int, list[dict[str, Any]]] = {
+        image_id: [] for image_id in selected_image_ids
+    }
+    gt_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    gt_points_by_image: dict[int, list[tuple[float, float]]] = {image_id: [] for image_id in selected_image_ids}
+    for ann in gt.get("annotations", []):
+        image_id = int(ann["image_id"])
+        if image_id not in selected_image_ids:
+            continue
+        gt_annotations_by_image.setdefault(image_id, []).append(ann)
+        bbox = ann.get("bbox", [0, 0, 0, 0])
+        if len(bbox) == 4 and float(bbox[2]) > 0 and float(bbox[3]) > 0:
+            gt_boxes_by_image.setdefault(image_id, []).append(xywh_to_xyxy(bbox))
+        point = target_keypoint(
+            ann,
+            target=keypoint_target,
+            source_keypoint_index=source_keypoint_index,
+        )
+        if point is not None and point[2] > 0 and np.isfinite([point[0], point[1]]).all():
+            gt_points_by_image.setdefault(image_id, []).append((float(point[0]), float(point[1])))
+
+    det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    pred_points_by_image: dict[int, list[tuple[float, float]]] = {image_id: [] for image_id in selected_image_ids}
+    model = YOLO(str(model_path))
+
+    results: list[dict[str, Any]] = []
+    audit_examples: list[dict[str, Any]] = []
+    det_id = 1
+    for image in images:
+        image_id = int(image["id"])
+        path = image_path(data_root, image["file_name"])
+        preds = model.predict(
+            source=str(path),
+            imgsz=imgsz,
+            conf=conf,
+            iou=iou,
+            verbose=False,
+            device=0,
+        )
+        if not preds:
+            continue
+        boxes = preds[0].boxes
+        keypoints = preds[0].keypoints
+        if boxes is None or keypoints is None:
+            continue
+        xyxy = boxes.xyxy.detach().cpu().numpy()
+        scores = boxes.conf.detach().cpu().numpy()
+        classes = boxes.cls.detach().cpu().numpy().astype(int)
+        kxy = keypoints.xy.detach().cpu().numpy()
+        keypoint_conf = getattr(keypoints, "conf", None)
+        kconf = None if keypoint_conf is None else keypoint_conf.detach().cpu().numpy()
+        candidates: list[dict[str, Any]] = []
+        raw_class_counts: dict[int, int] = {}
+        for det_index, (box, score, class_id) in enumerate(zip(xyxy, scores, classes)):
+            raw_class_counts[int(class_id)] = raw_class_counts.get(int(class_id), 0) + 1
+            if int(class_id) != 0 or det_index >= len(kxy) or len(kxy[det_index]) < 1:
+                continue
+            kx, ky = [float(v) for v in kxy[det_index][0]]
+            if not np.isfinite([kx, ky]).all():
+                continue
+            x1, y1, x2, y2 = [float(v) for v in box]
+            keypoint_score = 1.0
+            if kconf is not None and det_index < len(kconf) and len(kconf[det_index]) > 0:
+                keypoint_score = max(float(kconf[det_index][0]), 1e-6)
+            box_score = float(score)
+            candidate_score = keypoint_candidate_score(score_mode, box_score, keypoint_score)
+            candidates.append(
+                {
+                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "keypoints": [kx, ky, 2.0],
+                    "score": candidate_score,
+                    "xyxy": [x1, y1, x2, y2],
+                    "point": (kx, ky),
+                    "box_score": box_score,
+                    "keypoint_score": keypoint_score,
+                    "class_id": int(class_id),
+                }
+            )
+        if max_detections_per_image > 0:
+            candidates = sorted(candidates, key=lambda item: item["score"], reverse=True)[:max_detections_per_image]
+        if audit_sample_images > 0 and len(audit_examples) < audit_sample_images:
+            gt_points = gt_points_by_image.get(image_id, [])
+            gt_rows = []
+            for ann in gt_annotations_by_image.get(image_id, []):
+                source_point = annotation_keypoint(ann, source_keypoint_index)
+                target_point = target_keypoint(
+                    ann,
+                    target=keypoint_target,
+                    source_keypoint_index=source_keypoint_index,
+                )
+                gt_rows.append(
+                    {
+                        "annotation_id": ann.get("id"),
+                        "bbox_xywh": ann.get("bbox"),
+                        "source_keypoint": None
+                        if source_point is None
+                        else {"x": source_point[0], "y": source_point[1], "visibility": source_point[2]},
+                        "target_keypoint": None
+                        if target_point is None
+                        else {"x": target_point[0], "y": target_point[1], "visibility": target_point[2]},
+                        "category_id": ann.get("category_id"),
+                    }
+                )
+            pred_rows = []
+            for candidate in sorted(candidates, key=lambda item: item["score"], reverse=True)[:10]:
+                point = candidate["point"]
+                pred_rows.append(
+                    {
+                        "bbox_xywh": candidate["bbox"],
+                        "keypoints": candidate["keypoints"],
+                        "score": candidate["score"],
+                        "box_score": candidate["box_score"],
+                        "keypoint_score": candidate["keypoint_score"],
+                        "class_id": candidate["class_id"],
+                        "nearest_gt_point_px": nearest_point_distance(point, gt_points),
+                    }
+                )
+            audit_examples.append(
+                {
+                    "image_id": image_id,
+                    "file_name": image["file_name"],
+                    "width": image.get("width"),
+                    "height": image.get("height"),
+                    "raw_class_counts": raw_class_counts,
+                    "gt": gt_rows,
+                    "predictions_top10_after_filter": pred_rows,
+                }
+            )
+        for candidate in candidates:
+            det_boxes_by_image.setdefault(image_id, []).append(candidate["xyxy"])
+            pred_points_by_image.setdefault(image_id, []).append(candidate["point"])
+            results.append(
+                {
+                    "area": 0,
+                    "bbox": candidate["bbox"],
+                    "category_id": 1,
+                    "id": det_id,
+                    "image_id": image_id,
+                    "keypoints": candidate["keypoints"],
+                    "score": candidate["score"],
+                }
+            )
+            det_id += 1
+
+    run_id = f"synloc-keypoint-eval-{utc_now().replace(':', '-')}"
+    out_dir = Path("/tmp") / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pred_path = out_dir / "results.json"
+    pred_path.write_text(json.dumps(results), encoding="utf-8")
+    metrics = evaluate_keypoints(gt_path, pred_path, 0)
+    diagnostics = {
+        "boxes": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
+        "keypoints": keypoint_diagnostics(gt_points_by_image, pred_points_by_image),
+    }
+    class_names = json_safe(getattr(model, "names", {}))
+    metadata = {
+        "score_threshold": metrics["score_threshold"],
+        "position_from_keypoint_index": 0,
+        "split": split,
+        "max_images": max_images,
+        "imgsz": imgsz,
+        "iou": iou,
+        "source_keypoint_index": source_keypoint_index,
+        "keypoint_target": keypoint_target,
+        "max_detections_per_image": max_detections_per_image,
+        "audit_sample_images": audit_sample_images,
+        "score_mode": score_mode,
+        "model_class_names": class_names,
+        "diagnostics": diagnostics,
+        "audit_examples": audit_examples,
+    }
+    (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "run_id": run_id,
+        "mode": "keypoint",
+        "split": split,
+        "version": os.getenv("SYNLOC_VERSION", "fullhd"),
+        "max_images": max_images,
+        "imgsz": imgsz,
+        "conf": conf,
+        "iou": iou,
+        "max_detections_per_image": max_detections_per_image,
+        "num_images": len(images),
+        "num_detections": len(results),
+        "position_from_keypoint_index": 0,
+        "source_keypoint_index": source_keypoint_index,
+        "keypoint_target": keypoint_target,
+        "audit_sample_images": audit_sample_images,
+        "score_mode": score_mode,
+        "model_class_names": class_names,
+        "metrics": metrics,
+        "diagnostics": diagnostics,
+        "audit_examples": audit_examples,
+    }
+    (out_dir / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    return {"summary": summary, "out_dir": out_dir}
+
+
 def make_yolo_dataset(data_root: Path, train_gt: Path, val_gt: Path, *, train_max: int, val_max: int) -> Path:
     dataset = Path("/tmp/synloc-yolo-dataset")
     if dataset.exists():
@@ -391,15 +858,24 @@ def make_yolo_dataset(data_root: Path, train_gt: Path, val_gt: Path, *, train_ma
     return dataset
 
 
-def upload_result(run_id: str, folder: Path) -> None:
+def upload_result(run_id: str, folder: Path) -> bool:
     api = HfApi(token=os.environ["HF_TOKEN"])
-    api.upload_folder(
-        repo_id=os.environ["HF_MODEL_REPO"],
-        repo_type="model",
-        folder_path=folder,
-        path_in_repo=f"runs/{run_id}",
-        commit_message=f"Record {run_id}",
-    )
+    try:
+        api.upload_folder(
+            repo_id=os.environ["HF_MODEL_REPO"],
+            repo_type="model",
+            folder_path=folder,
+            path_in_repo=f"runs/{run_id}",
+            commit_message=f"Record {run_id}",
+        )
+    except Exception as exc:
+        print(
+            "UPLOAD_RESULT_FAILED "
+            + json.dumps({"run_id": run_id, "error": repr(exc)}, sort_keys=True),
+            flush=True,
+        )
+        return False
+    return True
 
 
 def run_baseline() -> dict[str, Any]:
@@ -546,12 +1022,129 @@ def run_finetune() -> dict[str, Any]:
     return summary
 
 
+def run_keypoint() -> dict[str, Any]:
+    required = ["HF_TOKEN", "HF_DATASET_REPO", "HF_MODEL_REPO"]
+    missing = [key for key in required if not os.getenv(key)]
+    if missing:
+        raise RuntimeError(f"Missing required environment variables: {missing}")
+
+    version = os.getenv("SYNLOC_VERSION", "fullhd")
+    train_max = env_int("TRAIN_MAX_IMAGES", 512)
+    val_max = env_int("VAL_MAX_IMAGES", 128)
+    imgsz = env_int("YOLO_IMGSZ", 960)
+    epochs = env_int("YOLO_EPOCHS", 2)
+    batch = env_int("YOLO_BATCH", 4)
+    conf = env_float("YOLO_CONF", 0.01)
+    iou = env_float("YOLO_IOU", 0.7)
+    source_keypoint_index = env_int("SYNLOC_SOURCE_KEYPOINT_INDEX", 1)
+    keypoint_target = os.getenv("SYNLOC_KEYPOINT_TARGET", "annotation").strip().lower()
+    max_detections_per_image = env_int("YOLO_MAX_DETECTIONS_PER_IMAGE", 25)
+    audit_sample_images = env_int("SYNLOC_AUDIT_SAMPLE_IMAGES", 5)
+    score_modes = keypoint_score_modes(os.getenv("YOLO_KEYPOINT_SCORE_MODE", "combined"))
+    pose_model = os.getenv("YOLO_POSE_MODEL", "yolo11n-pose.pt")
+
+    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    train_gt = find_annotation(data_root, "train")
+    val_gt = find_annotation(data_root, "valid")
+    dataset, dataset_manifest = make_yolo_keypoint_dataset(
+        data_root,
+        train_gt,
+        val_gt,
+        train_max=train_max,
+        val_max=val_max,
+        source_keypoint_index=source_keypoint_index,
+        keypoint_target=keypoint_target,
+    )
+
+    project = Path("/tmp/yolo-keypoint-train")
+    model = YOLO(pose_model)
+    train_result = model.train(
+        data=str(dataset / "data.yaml"),
+        epochs=epochs,
+        imgsz=imgsz,
+        batch=batch,
+        device=0,
+        workers=2,
+        project=str(project),
+        name="synloc-keypoint",
+        exist_ok=True,
+        pretrained=True,
+        verbose=False,
+    )
+    save_dir = Path(getattr(train_result, "save_dir", project / "synloc-keypoint"))
+    best_pt = save_dir / "weights" / "best.pt"
+    if not best_pt.exists():
+        raise RuntimeError(f"Training completed but best.pt was not found at {best_pt}")
+
+    validations: dict[str, dict[str, Any]] = {}
+    best_validation: dict[str, Any] | None = None
+    for score_mode in score_modes:
+        item = predictions_for_keypoint_model(
+            model_path=best_pt,
+            data_root=data_root,
+            gt_path=val_gt,
+            split="valid",
+            max_images=val_max,
+            imgsz=imgsz,
+            conf=conf,
+            iou=iou,
+            source_keypoint_index=source_keypoint_index,
+            keypoint_target=keypoint_target,
+            max_detections_per_image=max_detections_per_image,
+            audit_sample_images=audit_sample_images,
+            score_mode=score_mode,
+        )
+        validation = item["summary"]
+        validation["out_dir"] = str(item["out_dir"])
+        validations[score_mode] = validation
+        if (
+            best_validation is None
+            or validation["metrics"]["map_locsim"] > best_validation["metrics"]["map_locsim"]
+        ):
+            best_validation = validation
+    assert best_validation is not None
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "mode": "keypoint",
+        "run_id": f"synloc-keypoint-smoke-{utc_now().replace(':', '-')}",
+        "pose_model": pose_model,
+        "keypoint_target": keypoint_target,
+        "best_checkpoint": str(best_pt),
+        "train_images": train_max,
+        "val_images": val_max,
+        "epochs": epochs,
+        "batch": batch,
+        "imgsz": imgsz,
+        "max_detections_per_image": max_detections_per_image,
+        "audit_sample_images": audit_sample_images,
+        "score_modes": score_modes,
+        "best_score_mode": best_validation["score_mode"],
+        "dataset": dataset_manifest,
+        "validation": best_validation,
+        "validations": validations,
+    }
+    upload_root = Path("/tmp") / summary["run_id"]
+    if upload_root.exists():
+        shutil.rmtree(upload_root)
+    shutil.copytree(save_dir, upload_root / "ultralytics_train")
+    shutil.copytree(Path(best_validation["out_dir"]), upload_root / "validation")
+    for score_mode, validation in validations.items():
+        shutil.copytree(Path(validation["out_dir"]), upload_root / f"validation_{score_mode}")
+        del validation["out_dir"]
+    (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    upload_result(summary["run_id"], upload_root)
+    return summary
+
+
 def main() -> None:
     mode = os.getenv("TRAIN_MODE", "baseline").strip().lower()
     if mode == "baseline":
         summary = run_baseline()
     elif mode in {"train", "finetune"}:
         summary = run_finetune()
+    elif mode in {"keypoint", "pose", "footpoint"}:
+        summary = run_keypoint()
     else:
         raise RuntimeError(f"Unsupported TRAIN_MODE={mode!r}")
     print("AUTONOMY_RESULT " + json.dumps(summary, sort_keys=True))
