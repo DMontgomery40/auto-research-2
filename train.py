@@ -6,7 +6,7 @@
 #   "torch",
 #   "torchvision",
 #   "transformers",
-#   "rfdetr",
+#   "rfdetr==1.2.1",
 #   "sskit @ git+https://github.com/Spiideo/sskit.git",
 #   "scipy",
 #   "numpy<2",
@@ -1748,7 +1748,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
     version = os.getenv("SYNLOC_VERSION", "fullhd")
     max_images = env_int("TRAIN_MAX_IMAGES", 32)
     threshold = env_float("RFDETR_CONF", 0.5)
-    model_class_name = os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge").strip()
+    model_class_name = os.getenv("RFDETR_MODEL_CLASS", "RFDETRBase").strip()
     raw_specs = os.getenv("RFDETR_BASELINES", ";".join(DEFAULT_RFDETR_BASELINES))
     specs = parse_rfdetr_baselines(raw_specs)
 
