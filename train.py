@@ -573,8 +573,9 @@ def predictions_for_rfdetr_model(
     split: str,
     max_images: int,
     threshold: float,
+    model_class_name: str,
 ) -> dict[str, Any]:
-    from rfdetr import RFDETRBase
+    import rfdetr
 
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
     images = gt["images"][: max_images or None]
@@ -601,7 +602,12 @@ def predictions_for_rfdetr_model(
         raise FileNotFoundError(f"RF-DETR checkpoint not found: {checkpoint_path}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = RFDETRBase()
+    model_class = getattr(rfdetr, model_class_name)
+    print(
+        f"Loading {spec.repo}:{spec.filename} with {model_class_name} on {device}",
+        flush=True,
+    )
+    model = model_class()
     model.model.model.reinitialize_detection_head(4)
     checkpoint = torch.load(str(checkpoint_path), map_location=device, weights_only=False)
     if "model" in checkpoint:
@@ -660,6 +666,7 @@ def predictions_for_rfdetr_model(
         "model": spec.name,
         "repo": spec.repo,
         "checkpoint": spec.filename,
+        "rfdetr_model_class": model_class_name,
         "athlete_class_ids": sorted(spec.athlete_class_ids),
         "model_class_names": model_class_names,
         "split": split,
@@ -678,6 +685,7 @@ def predictions_for_rfdetr_model(
         "model": spec.name,
         "repo": spec.repo,
         "checkpoint": spec.filename,
+        "rfdetr_model_class": model_class_name,
         "athlete_class_ids": sorted(spec.athlete_class_ids),
         "model_class_names": model_class_names,
         "max_images": max_images,
@@ -1740,6 +1748,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
     version = os.getenv("SYNLOC_VERSION", "fullhd")
     max_images = env_int("TRAIN_MAX_IMAGES", 32)
     threshold = env_float("RFDETR_CONF", 0.5)
+    model_class_name = os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge").strip()
     raw_specs = os.getenv("RFDETR_BASELINES", ";".join(DEFAULT_RFDETR_BASELINES))
     specs = parse_rfdetr_baselines(raw_specs)
 
@@ -1760,6 +1769,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
             split=split,
             max_images=max_images,
             threshold=threshold,
+            model_class_name=model_class_name,
         )
         summary = item["summary"]
         evaluated.append(summary)
@@ -1780,6 +1790,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
         "version": version,
         "max_images": max_images,
         "threshold": threshold,
+        "rfdetr_model_class": model_class_name,
         "note": "SoccerNet-Tracking RF-DETR candidate source; bottom-center projection only.",
     }
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
