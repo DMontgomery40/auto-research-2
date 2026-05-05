@@ -26,8 +26,7 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   soccer-football YOLO detectors also had zero IoU-0.5 GT recall on the same
   frames. The useful next unit is official SSKit/SoccerNet-format candidates,
   SoccerMaster runtime parity that proves real athlete boxes on the same
-  frames, RF-DETR SoccerNet exact architecture/runtime parity, or a track/pose
-  candidate source with saved recall diagnostics.
+  frames, or a track/pose candidate source with saved recall diagnostics.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A
@@ -128,14 +127,18 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   boxes. Discard this public football YOLO source as the next candidate source
   for the point regressor.
 - `rfdetr-soccernet-runtime-parity` added a reusable
-  `TRAIN_MODE=rfdetr_baseline` lane for `julianzu9612/RFDETR-Soccernet`, but
-  no official SynLoc score exists yet. Current `rfdetr` and pinned
-  `rfdetr==1.2.1` both fail before evaluation because the checkpoint tensors
-  are `192/384` wide while `RFDETRBase` builds `128/256`-wide tensors; the
-  `rfdetr==1.2.1` attempt also required `transformers==4.50.0` to get past a
-  removed `transformers.pytorch_utils` import. The next RF-DETR attempt should
-  find the exact architecture/class or `rfdetr_plus`/legacy runtime first, not
-  launch another scoring smoke against the same mismatch.
+  `TRAIN_MODE=rfdetr_baseline` lane for `julianzu9612/RFDETR-Soccernet`.
+  Current `rfdetr` and pinned `rfdetr==1.2.1` both failed before evaluation
+  when `RFDETRBase` was used because the checkpoint tensors were `192/384` wide
+  while base builds `128/256`-wide tensors.
+- `rfdetr-soccernet-large-parity-smoke` resolved that shape blocker by loading
+  the checkpoint with `RFDETRLarge`, but the scored 16-frame smoke stayed
+  officially useless: `mAP-LocSim=0.0`, `precision_50=0.0`, `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.0`, and
+  `mean_best_iou_gt_to_det=0.0012578130198192673` from 156 detections for 301
+  GT boxes. Keep the large-model loader mechanics; do not spend another
+  RF-DETR SoccerNet scoring pass without a new preprocessing/coordinate-parity
+  hypothesis.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -179,8 +182,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Pairing the direct point regressor with public Uisikdag football YOLOv8
   detections; the corrected athlete-class audit produced many boxes but still
   had zero IoU-0.5 GT recall on the SynLoc validation slice.
-- Running another RF-DETR SoccerNet scoring job before resolving the checkpoint
-  architecture/runtime mismatch (`192/384` expected versus `128/256` built).
+- Running another RF-DETR SoccerNet scoring job just because the architecture
+  mismatch is fixed. The large-model smoke scored zero with near-zero image-space
+  overlap, so it needs a new preprocessing/coordinate-parity hypothesis first.
 - Treating zero or near-zero official scores from soccer/football-pretrained
   models as model underperformance before auditing runtime/plumbing.
 - Another confidence-only candidate filter or score-mode job on the same

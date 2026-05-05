@@ -607,16 +607,7 @@ def predictions_for_rfdetr_model(
         f"Loading {spec.repo}:{spec.filename} with {model_class_name} on {device}",
         flush=True,
     )
-    model = model_class()
-    model.model.model.reinitialize_detection_head(4)
-    checkpoint = torch.load(str(checkpoint_path), map_location=device, weights_only=False)
-    if "model" in checkpoint:
-        state = checkpoint["model"]
-    elif "model_state_dict" in checkpoint:
-        state = checkpoint["model_state_dict"]
-    else:
-        state = checkpoint
-    model.model.model.load_state_dict(state)
+    model = model_class(pretrain_weights=str(checkpoint_path))
     model.model.model.to(device)
     model.model.model.eval()
     model_class_names = {"0": "ball", "1": "player", "2": "referee", "3": "goalkeeper"}
@@ -1748,7 +1739,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
     version = os.getenv("SYNLOC_VERSION", "fullhd")
     max_images = env_int("TRAIN_MAX_IMAGES", 32)
     threshold = env_float("RFDETR_CONF", 0.5)
-    model_class_name = os.getenv("RFDETR_MODEL_CLASS", "RFDETRBase").strip()
+    model_class_name = os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge").strip()
     raw_specs = os.getenv("RFDETR_BASELINES", ";".join(DEFAULT_RFDETR_BASELINES))
     specs = parse_rfdetr_baselines(raw_specs)
 

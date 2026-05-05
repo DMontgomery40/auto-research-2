@@ -36,7 +36,8 @@ from pathlib import Path
 
 import numpy as np
 
-tree = ast.parse(Path("train.py").read_text(encoding="utf-8"))
+train_text = Path("train.py").read_text(encoding="utf-8")
+tree = ast.parse(train_text)
 function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "crop_bounds")
 module = ast.Module(body=[function], type_ignores=[])
 ast.fix_missing_locations(module)
@@ -57,6 +58,13 @@ for bbox, width, height, padding in cases:
         raise SystemExit(f"invalid horizontal crop for {bbox}: {(left, top, right, bottom)}")
     if not (0 <= top < bottom <= height):
         raise SystemExit(f"invalid vertical crop for {bbox}: {(left, top, right, bottom)}")
+
+if 'os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge")' not in train_text:
+    raise SystemExit("RF-DETR SoccerNet lane must default to RFDETRLarge; the checkpoint is not base-width")
+if "model_class(pretrain_weights=str(checkpoint_path))" not in train_text:
+    raise SystemExit("RF-DETR SoccerNet lane should load checkpoints through the RF-DETR public constructor")
+if "model.model.model.load_state_dict(state)" in train_text:
+    raise SystemExit("RF-DETR SoccerNet lane should not manually strict-load unknown architecture state")
 PYCHECK
 
 bash -n scripts/codex_research_tick.sh
