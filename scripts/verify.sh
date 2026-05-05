@@ -30,6 +30,35 @@ python3 -m py_compile scripts/evaluate_synloc.py
 python3 -m py_compile train.py
 python3 -m py_compile cloud/synloc_cache.py
 
+python3 - <<'PYCHECK'
+import ast
+from pathlib import Path
+
+import numpy as np
+
+tree = ast.parse(Path("train.py").read_text(encoding="utf-8"))
+function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "crop_bounds")
+module = ast.Module(body=[function], type_ignores=[])
+ast.fix_missing_locations(module)
+namespace = {"np": np}
+exec(compile(module, "train.py:crop_bounds", "exec"), namespace)
+crop_bounds = namespace["crop_bounds"]
+
+cases = [
+    ((10.0, 20.0, 30.0, 40.0), 100, 100, 0.15),
+    ((150.0, 20.0, 30.0, 40.0), 100, 100, 0.15),
+    ((-80.0, -40.0, 20.0, 20.0), 100, 100, 0.15),
+    ((30.0, 140.0, 20.0, 20.0), 100, 100, 0.15),
+    ((99.8, 99.8, 0.2, 0.2), 100, 100, 0.15),
+]
+for bbox, width, height, padding in cases:
+    left, top, right, bottom = crop_bounds(bbox, width, height, padding)
+    if not (0 <= left < right <= width):
+        raise SystemExit(f"invalid horizontal crop for {bbox}: {(left, top, right, bottom)}")
+    if not (0 <= top < bottom <= height):
+        raise SystemExit(f"invalid vertical crop for {bbox}: {(left, top, right, bottom)}")
+PYCHECK
+
 bash -n scripts/codex_research_tick.sh
 bash -n scripts/codex_research_loop.sh
 bash -n scripts/run_hf_train.sh

@@ -542,17 +542,17 @@ def crop_bounds(
     height: int,
     padding: float,
 ) -> tuple[int, int, int, int]:
+    if width <= 0 or height <= 0:
+        raise ValueError(f"Image dimensions must be positive, got width={width} height={height}")
     x, y, w, h = bbox_xywh
     pad_x = w * padding
     pad_y = h * padding
-    left = max(0, int(np.floor(x - pad_x)))
-    top = max(0, int(np.floor(y - pad_y)))
+    left = min(max(0, int(np.floor(x - pad_x))), width - 1)
+    top = min(max(0, int(np.floor(y - pad_y))), height - 1)
     right = min(width, int(np.ceil(x + w + pad_x)))
     bottom = min(height, int(np.ceil(y + h + pad_y)))
-    if right <= left:
-        right = min(width, left + 1)
-    if bottom <= top:
-        bottom = min(height, top + 1)
+    right = min(width, max(left + 1, right))
+    bottom = min(height, max(top + 1, bottom))
     return left, top, right, bottom
 
 
