@@ -153,6 +153,17 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   1,004 GT boxes. This older public football YOLO source does not unblock
   direct point regression. Artifact upload still failed with HF model-repo
   `403`.
+- `rfdetr-soccernet-runtime-parity` is integration-blocked, not scored:
+  `train.py` now has a reusable `TRAIN_MODE=rfdetr_baseline` lane for
+  `julianzu9612/RFDETR-Soccernet`, a SoccerNet-Tracking RF-DETR checkpoint with
+  `ball/player/referee/goalkeeper` labels. Jobs `69fa7566b745af80fb373571`
+  and `69fa76dbb745af80fb373583` failed with checkpoint shape mismatches under
+  current `rfdetr`; job `69fa794bf2f4addb7839c074` pinned `rfdetr==1.2.1` and
+  `transformers==4.50.0`, fixed the import break, but still failed before
+  official scoring because the checkpoint expects `192/384`-wide backbone and
+  head tensors while `RFDETRBase` builds `128/256`-wide tensors. The next
+  RF-DETR step is exact architecture/runtime parity, possibly `rfdetr_plus` or
+  another legacy class, before another scoring run.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -189,22 +200,26 @@ failed as useful candidate sources despite producing many boxes. Do not spend
 another pass pairing the point regressor with generic COCO person boxes, COCO
 transformer detector boxes, or these public soccer/football YOLO detectors.
 The next blocker is an official SSKit/SoccerNet-format candidate source,
-SoccerMaster official-runtime parity, or a track/pose source with real
-athlete-box recall on the same frames.
+SoccerMaster official-runtime parity, RF-DETR SoccerNet exact architecture
+parity, or a track/pose source with real athlete-box recall on the same frames.
 
-SoccerMaster remains a possible lead only after official-runtime parity. Copied
-adapter scores are not valid SoccerMaster verdicts.
+SoccerMaster and RF-DETR SoccerNet remain possible leads only after
+official-runtime parity. Copied adapter scores are not valid SoccerMaster
+verdicts, and the RF-DETR SoccerNet checkpoint has not produced a SynLoc score
+until the exact architecture/runtime mismatch is resolved.
 
 ## Next Action
 
 Choose one genuinely different candidate-generation experiment before
 revisiting direct point regression at scale: official SSKit/SoccerNet-format
 candidates, SoccerMaster official-runtime parity that proves real athlete boxes
-on the same validation frames, or a track/pose source with saved box-recall
-diagnostics. Do not spend the next pass on football YOLO26 image-size/confidence
-tuning, generic COCO person detectors, COCO RT-DETR detector boxes, or the
-public EasyChamp/MartijnJolif/Uisikdag soccer-football YOLO detectors. Keep
-treating GT-box oracle point-regressor runs as diagnostics only. Also fix or
-work around HF model-repo write permission before relying on uploaded
-artifacts; job logs are currently the only durable result source for these
-smokes.
+on the same validation frames, RF-DETR SoccerNet exact architecture/runtime
+parity, or a track/pose source with saved box-recall diagnostics. Do not spend
+the next pass on football YOLO26 image-size/confidence tuning, generic COCO
+person detectors, COCO RT-DETR detector boxes, the public
+EasyChamp/MartijnJolif/Uisikdag soccer-football YOLO detectors, or another
+RF-DETR SoccerNet scoring job before resolving the `192/384` versus `128/256`
+checkpoint/model mismatch. Keep treating GT-box oracle point-regressor runs as
+diagnostics only. Also fix or work around HF model-repo write permission before
+relying on uploaded artifacts; job logs are currently the only durable result
+source for these smokes.
