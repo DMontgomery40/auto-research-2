@@ -17,10 +17,11 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `yolo11n-pose.pt` COCO pose priors. It uses GT boxes as oracle validation
   candidates to isolate point quality, so treat positive results as direction
   signal rather than challenge-submittable scores.
-- Pair the direct point regressor with real candidate boxes on a tiny validation
-  slice. The oracle-candidate smoke beat pose smoke, so the next question is
-  whether a real detector/track candidate source plus the crop point head can
-  recover any official `mAP-LocSim` without GT boxes.
+- Find a better real candidate source before scaling the direct point regressor:
+  the first YOLO26 detector-box bridge scored zero because candidate recall was
+  essentially absent, so the useful next unit is source-specific detector/track
+  candidates, official SSKit/SoccerNet-format candidates, or SoccerMaster
+  runtime parity that proves real athlete boxes on the same frames.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A
@@ -78,6 +79,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   (`gt_recall_iou_0_5=1.0`) and `gt_recall_px_50=0.39272030651340994`, so this
   is a point-head signal and a candidate-generation blocker, not a valid
   submission path.
+- `point-regressor-yolo-candidates` scored `0.0` official `mAP-LocSim` on the
+  same 64 train / 32 valid / 2 epoch direct point regressor when evaluated with
+  `mobadam/football-player-detection` YOLO26 boxes. Candidate diagnostics were
+  the failure: `gt_recall_iou_0_5=0.0`, `gt_recall_iou_0_3=0.0019011406844106464`,
+  and `gt_recall_px_50=0.0019011406844106464`, so discard this exact
+  detector-to-point bridge.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -103,6 +110,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   candidate generation or point recall.
 - More target-only tweaks on the same YOLO11n-pose keypoint lane; both the
   annotation and bbox-bottom-center targets stayed far below pose smoke.
+- Pairing the direct point regressor with the same `mobadam/football-player-detection`
+  YOLO26 candidate boxes; the real-candidate smoke already scored zero because
+  image-space candidate recall was essentially absent.
 - Treating zero or near-zero official scores from soccer/football-pretrained
   models as model underperformance before auditing runtime/plumbing.
 - Another confidence-only candidate filter or score-mode job on the same

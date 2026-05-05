@@ -89,6 +89,15 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   next experiment only if paired with real candidates. The job also confirmed a
   persistent artifact blocker: model-repo LFS upload still fails with HF `403`
   because the injected token has read but not write permission.
+- `point-regressor-yolo-candidates` is a discard-result: job
+  `69fa5f40f2f4addb7839bfd9` trained the same tiny direct point regressor and
+  evaluated it on real `mobadam/football-player-detection` YOLO26 candidate
+  boxes with top-25 per image. Official `mAP-LocSim=0.0`,
+  `precision_50=0.0`, `recall_50=0.0`; diagnostics show the candidate source
+  failed before point quality mattered: `gt_recall_iou_0_5=0.0`,
+  `gt_recall_iou_0_3=0.0019011406844106464`,
+  `gt_recall_px_50=0.0019011406844106464`, 508 predictions for 526 GT boxes.
+  Artifact upload again failed with HF model-repo LFS `403`.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -115,18 +124,21 @@ nearest GT point, which points to a point-quality/model-family problem more than
 an SSKit ingestion problem.
 
 `TRAIN_MODE=point_regressor` beat the pose smoke while given GT boxes, so the
-direct crop-regressor point head is not dead. The next blocker is candidate
-generation: pair the point head with a real detector/track candidate source, or
-use GT-box/oracle diagnostics only as an upper-bound point-quality probe.
+direct crop-regressor point head is not dead. Pairing it with the existing
+football YOLO26 candidate source scored zero because image-space candidate
+recall was essentially absent, so do not spend another pass on that exact
+detector-to-point bridge. The next blocker is a better source-specific
+candidate generator or track/pose source before the point head can matter.
 
 SoccerMaster remains a possible lead only after official-runtime parity. Copied
 adapter scores are not valid SoccerMaster verdicts.
 
 ## Next Action
 
-Run one bounded real-candidate follow-up for the point regressor, preferably the
-smallest bridge that applies the trained/direct point head to detector boxes and
-evaluates official `mAP-LocSim` on 32-64 validation images. Keep treating GT-box
-oracle runs as diagnostics only. Also fix or work around HF model-repo write
-permission before relying on uploaded artifacts; job logs are currently the only
-durable result source for this smoke.
+Choose one better candidate-generation experiment before revisiting direct point
+regression at scale: source-specific detector/track candidates, an official
+SSKit/SoccerNet-format candidate source, or a SoccerMaster parity probe that
+proves real athlete boxes on the same validation frames. Keep treating GT-box
+oracle point-regressor runs as diagnostics only. Also fix or work around HF
+model-repo write permission before relying on uploaded artifacts; job logs are
+currently the only durable result source for these smokes.
