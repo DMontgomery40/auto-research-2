@@ -6,6 +6,7 @@
 #   "torch",
 #   "torchvision",
 #   "transformers",
+#   "rfdetr",
 #   "sskit @ git+https://github.com/Spiideo/sskit.git",
 #   "scipy",
 #   "numpy<2",
@@ -141,6 +142,10 @@ DEFAULT_TRANSFORMER_BASELINES = [
     "rtdetr-r18-coco-person|PekingU/rtdetr_r18vd|0",
 ]
 
+DEFAULT_RFDETR_BASELINES = [
+    "rfdetr-soccernet|julianzu9612/RFDETR-Soccernet|weights/checkpoint_best_regular.pth|1,2,3",
+]
+
 
 def parse_baselines(raw: str) -> list[BaselineSpec]:
     specs: list[BaselineSpec] = []
@@ -175,6 +180,25 @@ def parse_transformer_baselines(raw: str) -> list[BaselineSpec]:
                 repo=parts[1],
                 filename=parts[1],
                 athlete_class_ids=parse_int_set(parts[2]),
+            )
+        )
+    return specs
+
+
+def parse_rfdetr_baselines(raw: str) -> list[BaselineSpec]:
+    specs: list[BaselineSpec] = []
+    for entry in [item.strip() for item in raw.split(";") if item.strip()]:
+        parts = entry.split("|")
+        if len(parts) != 4:
+            raise RuntimeError(
+                "Each RFDETR_BASELINES entry must be name|repo|checkpoint_path|class_ids"
+            )
+        specs.append(
+            BaselineSpec(
+                name=parts[0],
+                repo=parts[1],
+                filename=parts[2],
+                athlete_class_ids=parse_int_set(parts[3]),
             )
         )
     return specs
@@ -528,6 +552,132 @@ def predictions_for_transformer_model(
         "version": os.getenv("SYNLOC_VERSION", "fullhd"),
         "model": spec.name,
         "repo": spec.repo,
+        "athlete_class_ids": sorted(spec.athlete_class_ids),
+        "model_class_names": model_class_names,
+        "max_images": max_images,
+        "threshold": threshold,
+        "num_images": len(images),
+        "num_detections": len(results),
+        "metrics": metrics,
+        "diagnostics": metadata["diagnostics"],
+    }
+    (out_dir / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    return {"summary": summary, "out_dir": out_dir}
+
+
+def predictions_for_rfdetr_model(
+    *,
+    spec: BaselineSpec,
+    data_root: Path,
+    gt_path: Path,
+    split: str,
+    max_images: int,
+    threshold: float,
+) -> dict[str, Any]:
+    from rfdetr import RFDETRBase
+
+    gt = json.loads(gt_path.read_text(encoding="utf-8"))
+    images = gt["images"][: max_images or None]
+    selected_image_ids = {int(image["id"]) for image in images}
+    gt_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    for ann in gt.get("annotations", []):
+        image_id = int(ann["image_id"])
+        if image_id not in selected_image_ids:
+            continue
+        bbox = ann.get("bbox", [0, 0, 0, 0])
+        if len(bbox) != 4 or float(bbox[2]) <= 0 or float(bbox[3]) <= 0:
+            continue
+        gt_boxes_by_image.setdefault(image_id, []).append(xywh_to_xyxy(bbox))
+
+    det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    snapshot_dir = Path(
+        snapshot_download(
+            repo_id=spec.repo,
+            allow_patterns=[spec.filename, "config.json", "model_metadata.json"],
+        )
+    )
+    checkpoint_path = snapshot_dir / spec.filename
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f"RF-DETR checkpoint not found: {checkpoint_path}")
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = RFDETRBase()
+    model.model.model.reinitialize_detection_head(4)
+    checkpoint = torch.load(str(checkpoint_path), map_location=device, weights_only=False)
+    if "model" in checkpoint:
+        state = checkpoint["model"]
+    elif "model_state_dict" in checkpoint:
+        state = checkpoint["model_state_dict"]
+    else:
+        state = checkpoint
+    model.model.model.load_state_dict(state)
+    model.model.model.to(device)
+    model.model.model.eval()
+    model_class_names = {"0": "ball", "1": "player", "2": "referee", "3": "goalkeeper"}
+
+    results: list[dict[str, Any]] = []
+    det_id = 1
+    for image in images:
+        image_id = int(image["id"])
+        path = image_path(data_root, image["file_name"])
+        width = float(image["width"])
+        height = float(image["height"])
+        pil_image = Image.open(path).convert("RGB")
+        with torch.no_grad():
+            detections = model.predict(pil_image, threshold=threshold)
+        if detections is None or len(detections) == 0:
+            continue
+        for box, score, class_id in zip(detections.xyxy, detections.confidence, detections.class_id):
+            class_id = int(class_id)
+            if class_id not in spec.athlete_class_ids:
+                continue
+            x1, y1, x2, y2 = [float(v) for v in box.tolist()]
+            det_boxes_by_image.setdefault(image_id, []).append([x1, y1, x2, y2])
+            point = np.array([[(x1 + x2) / 2.0, y2]], dtype=np.float32)
+            center = np.array([[(width - 1) / 2.0, (height - 1) / 2.0]], dtype=np.float32)
+            normalized = ((point - center) / width).astype(np.float32)
+            bev = image_to_ground(image["camera_matrix"], image["undist_poly"], normalized)[0]
+            results.append(
+                {
+                    "area": 0,
+                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "category_id": 1,
+                    "id": det_id,
+                    "image_id": image_id,
+                    "position_on_pitch": [float(bev[0]), float(bev[1]), 0.0],
+                    "score": float(score),
+                }
+            )
+            det_id += 1
+
+    run_id = f"{spec.name}-rfdetr-baseline-{utc_now().replace(':', '-')}"
+    out_dir = Path("/tmp") / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pred_path = out_dir / "results.json"
+    pred_path.write_text(json.dumps(results), encoding="utf-8")
+    metadata = {
+        "score_threshold": threshold,
+        "model": spec.name,
+        "repo": spec.repo,
+        "checkpoint": spec.filename,
+        "athlete_class_ids": sorted(spec.athlete_class_ids),
+        "model_class_names": model_class_names,
+        "split": split,
+        "max_images": max_images,
+        "diagnostics": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
+    }
+    (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
+    metrics = evaluate(gt_path, pred_path)
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "run_id": run_id,
+        "mode": "rfdetr_baseline",
+        "split": split,
+        "version": os.getenv("SYNLOC_VERSION", "fullhd"),
+        "model": spec.name,
+        "repo": spec.repo,
+        "checkpoint": spec.filename,
         "athlete_class_ids": sorted(spec.athlete_class_ids),
         "model_class_names": model_class_names,
         "max_images": max_images,
@@ -1580,6 +1730,63 @@ def run_transformer_baseline() -> dict[str, Any]:
     return summary
 
 
+def run_rfdetr_baseline() -> dict[str, Any]:
+    required = ["HF_TOKEN", "HF_DATASET_REPO", "HF_MODEL_REPO"]
+    missing = [key for key in required if not os.getenv(key)]
+    if missing:
+        raise RuntimeError(f"Missing required environment variables: {missing}")
+
+    split = os.getenv("SYNLOC_SPLIT", "valid")
+    version = os.getenv("SYNLOC_VERSION", "fullhd")
+    max_images = env_int("TRAIN_MAX_IMAGES", 32)
+    threshold = env_float("RFDETR_CONF", 0.5)
+    raw_specs = os.getenv("RFDETR_BASELINES", ";".join(DEFAULT_RFDETR_BASELINES))
+    specs = parse_rfdetr_baselines(raw_specs)
+
+    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    gt_path = find_annotation(data_root, split)
+    upload_root = Path("/tmp/rfdetr-baseline-results")
+    if upload_root.exists():
+        shutil.rmtree(upload_root)
+    upload_root.mkdir(parents=True, exist_ok=True)
+
+    evaluated: list[dict[str, Any]] = []
+    best: dict[str, Any] | None = None
+    for spec in specs:
+        item = predictions_for_rfdetr_model(
+            spec=spec,
+            data_root=data_root,
+            gt_path=gt_path,
+            split=split,
+            max_images=max_images,
+            threshold=threshold,
+        )
+        summary = item["summary"]
+        evaluated.append(summary)
+        shutil.copytree(item["out_dir"], upload_root / summary["run_id"])
+        if best is None or summary["metrics"]["map_locsim"] > best["metrics"]["map_locsim"]:
+            best = summary
+
+    assert best is not None
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "mode": "rfdetr_baseline",
+        "run_id": f"rfdetr-soccernet-candidate-baseline-{utc_now().replace(':', '-')}",
+        "evaluated": evaluated,
+        "best": best,
+        "metric": "mAP-LocSim",
+        "split": split,
+        "version": version,
+        "max_images": max_images,
+        "threshold": threshold,
+        "note": "SoccerNet-Tracking RF-DETR candidate source; bottom-center projection only.",
+    }
+    (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    upload_result(summary["run_id"], upload_root)
+    return summary
+
+
 def run_finetune() -> dict[str, Any]:
     required = ["HF_TOKEN", "HF_DATASET_REPO", "HF_MODEL_REPO"]
     missing = [key for key in required if not os.getenv(key)]
@@ -1931,6 +2138,8 @@ def main() -> None:
         summary = run_baseline()
     elif mode in {"transformer_baseline", "rtdetr_baseline", "detr_baseline"}:
         summary = run_transformer_baseline()
+    elif mode in {"rfdetr_baseline", "rfdetr", "soccernet_rfdetr"}:
+        summary = run_rfdetr_baseline()
     elif mode in {"train", "finetune"}:
         summary = run_finetune()
     elif mode in {"keypoint", "pose", "footpoint"}:
