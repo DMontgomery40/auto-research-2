@@ -19,8 +19,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   signal rather than challenge-submittable scores.
 - Find a better real candidate source before scaling the direct point regressor:
   the first YOLO26 detector-box bridge scored zero because candidate recall was
-  essentially absent, and public COCO `yolo11n.pt` person boxes also stayed far
-  below the pose smoke. The useful next unit is source-specific detector/track
+  essentially absent, the larger-image/lower-threshold YOLO26 audit did not
+  fix it, and public COCO `yolo11n.pt` person boxes also stayed far below the
+  pose smoke. The useful next unit is source-specific detector/track
   candidates, official SSKit/SoccerNet-format candidates, or SoccerMaster
   runtime parity that proves real athlete boxes on the same frames.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
@@ -92,6 +93,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `gt_recall_iou_0_5=0.00099601593625498`, and 4,014 detections for 1,004 GT
   boxes. Discard generic COCO person boxes as the next candidate source for the
   point regressor.
+- `football-yolo26-imgsz1600-candidate-audit` scored
+  `4.877335024142809e-06` official `mAP-LocSim` on 64 validation frames with
+  `YOLO_IMGSZ=1600`, `YOLO_CONF=0.001`, `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.0`, and 2,125 detections for 1,004 GT boxes. Discard
+  image-size/confidence tuning as a rescue for this football YOLO26 candidate
+  source.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -120,6 +127,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Pairing the direct point regressor with the same `mobadam/football-player-detection`
   YOLO26 candidate boxes; the real-candidate smoke already scored zero because
   image-space candidate recall was essentially absent.
+- More image-size or confidence-threshold rescue attempts for
+  `mobadam/football-player-detection` YOLO26; `imgsz=1600` and `conf=0.001`
+  still had zero IoU-0.5 GT recall.
 - Pairing the direct point regressor with generic COCO `yolo11n.pt` person
   candidate boxes; the candidate audit stayed far below the pose smoke and had
   near-zero image-space GT recall despite many detections.
