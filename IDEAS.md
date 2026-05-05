@@ -21,11 +21,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   the first YOLO26 detector-box bridge scored zero because candidate recall was
   essentially absent, the larger-image/lower-threshold YOLO26 audit did not
   fix it, public COCO `yolo11n.pt` person boxes stayed far below the pose
-  smoke, and public EasyChamp/MartijnJolif soccer YOLO detectors also had
-  zero IoU-0.5 GT recall on the same frames. The useful next unit is official
-  SSKit/SoccerNet-format candidates, SoccerMaster runtime parity that proves
-  real athlete boxes on the same frames, or a non-YOLO track/pose candidate
-  source with saved recall diagnostics.
+  smoke, public COCO RT-DETR stayed far below the pose smoke despite slightly
+  better IoU diagnostics, and public EasyChamp/MartijnJolif soccer YOLO
+  detectors also had zero IoU-0.5 GT recall on the same frames. The useful next
+  unit is official SSKit/SoccerNet-format candidates, SoccerMaster runtime
+  parity that proves real athlete boxes on the same frames, or a track/pose
+  candidate source with saved recall diagnostics.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A
@@ -108,6 +109,14 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `gt_recall_iou_0_5=0.0`, and only `gt_recall_iou_0_3=0.00099601593625498`,
   so discard these public soccer YOLO detectors as the next candidate source
   for the point regressor.
+- `rtdetr-r18-coco-person-candidate-audit` scored
+  `7.549363399931301e-06` official `mAP-LocSim` on 64 validation frames with
+  public `PekingU/rtdetr_r18vd` COCO person detections. It produced 10,006
+  detections for 1,004 GT boxes and had better candidate diagnostics than prior
+  public-detector audits (`gt_recall_iou_0_5=0.0069721115537848604`), but
+  official `recall_50=0.0` and score stayed far below the pose smoke. Keep
+  `TRAIN_MODE=transformer_baseline` as reusable mechanics; discard COCO RT-DETR
+  person boxes as the next candidate source for the point regressor.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -142,6 +151,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Pairing the direct point regressor with generic COCO `yolo11n.pt` person
   candidate boxes; the candidate audit stayed far below the pose smoke and had
   near-zero image-space GT recall despite many detections.
+- Pairing the direct point regressor with public COCO RT-DETR person candidate
+  boxes; the candidate audit stayed far below the pose smoke despite 10,006
+  detections and slightly better IoU diagnostics.
 - Pairing the direct point regressor with public EasyChamp or MartijnJolif
   soccer YOLO detectors; both produced many boxes but had zero IoU-0.5 GT
   recall on the SynLoc validation slice.
