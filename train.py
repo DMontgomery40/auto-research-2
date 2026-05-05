@@ -5,7 +5,7 @@
 #   "ultralytics-opencv-headless>=8.4.29",
 #   "torch",
 #   "torchvision",
-#   "transformers",
+#   "transformers==4.50.0",
 #   "rfdetr==1.2.1",
 #   "sskit @ git+https://github.com/Spiideo/sskit.git",
 #   "scipy",
