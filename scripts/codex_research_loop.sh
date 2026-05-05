@@ -185,7 +185,11 @@ run_research_tick() {
   if [ "$DRY_RUN" -eq 1 ]; then
     args+=(--dry-run)
   fi
-  scripts/codex_research_tick.sh "${args[@]}"
+  if [ "${#args[@]}" -gt 0 ]; then
+    scripts/codex_research_tick.sh "${args[@]}"
+  else
+    scripts/codex_research_tick.sh
+  fi
 }
 
 dispatch_heartbeat_if_actionable() {
