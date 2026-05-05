@@ -79,6 +79,16 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   challenge-submittable setup. A tiny `t4-small` smoke command was prepared for
   64 train / 32 valid / 2 epochs, but no HF job was created because this shell
   is not logged into Hugging Face.
+- `direct-point-regressor-oracle-smoke` is a keep-signal but not a valid
+  submission path: job `69fa5b70f2f4addb7839bfba` trained on 64 train / 32
+  valid images for 2 epochs using GT boxes as oracle candidates and scored
+  official `mAP-LocSim=0.0027874657923080423`, beating pose smoke
+  `0.000825082508250825`. Candidate boxes were oracle-perfect
+  (`gt_recall_iou_0_5=1.0`) and point diagnostics improved over YOLO11n-pose
+  (`gt_recall_px_50=0.39272030651340994`), so direct point quality is worth a
+  next experiment only if paired with real candidates. The job also confirmed a
+  persistent artifact blocker: model-repo LFS upload still fails with HF `403`
+  because the injected token has read but not write permission.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -104,24 +114,19 @@ saved audit examples show candidate points often hundreds of pixels from the
 nearest GT point, which points to a point-quality/model-family problem more than
 an SSKit ingestion problem.
 
-`TRAIN_MODE=point_regressor` is the next bounded point-quality probe. Its first
-cloud run should be interpreted as an oracle-candidate experiment: if it cannot
-beat the pose smoke while given GT boxes, the direct crop-regressor idea is weak;
-if it scores well, the next blocker is pairing a learned point head with a real
-candidate generator.
+`TRAIN_MODE=point_regressor` beat the pose smoke while given GT boxes, so the
+direct crop-regressor point head is not dead. The next blocker is candidate
+generation: pair the point head with a real detector/track candidate source, or
+use GT-box/oracle diagnostics only as an upper-bound point-quality probe.
 
 SoccerMaster remains a possible lead only after official-runtime parity. Copied
 adapter scores are not valid SoccerMaster verdicts.
 
 ## Next Action
 
-Run the prepared tiny cloud smoke once HF auth is available:
-
-```bash
-TRAIN_MODE=point_regressor HF_FLAVOR=t4-small HF_TIMEOUT=2h scripts/run_hf_train.sh -- --env TRAIN_MAX_IMAGES=64 --env VAL_MAX_IMAGES=32 --env POINT_EPOCHS=2 --env POINT_BATCH=16
-```
-
-Follow it to official `mAP-LocSim`, record keep/discard in `LEDGER.md`, and
-compare against pose smoke `0.000825082508250825`. Treat any positive result as
-a point-head/candidate-generator split, not as a valid submission path, because
-the validation candidates are GT boxes.
+Run one bounded real-candidate follow-up for the point regressor, preferably the
+smallest bridge that applies the trained/direct point head to detector boxes and
+evaluates official `mAP-LocSim` on 32-64 validation images. Keep treating GT-box
+oracle runs as diagnostics only. Also fix or work around HF model-repo write
+permission before relying on uploaded artifacts; job logs are currently the only
+durable result source for this smoke.

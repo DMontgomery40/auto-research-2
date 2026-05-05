@@ -15,8 +15,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `TRAIN_MODE=point_regressor` keeps the official
   `position_from_keypoint_index=0` evaluator path but does not start from
   `yolo11n-pose.pt` COCO pose priors. It uses GT boxes as oracle validation
-  candidates to isolate point quality, so treat the result as a direction
-  signal rather than a challenge-submittable score.
+  candidates to isolate point quality, so treat positive results as direction
+  signal rather than challenge-submittable scores.
+- Pair the direct point regressor with real candidate boxes on a tiny validation
+  slice. The oracle-candidate smoke beat pose smoke, so the next question is
+  whether a real detector/track candidate source plus the crop point head can
+  recover any official `mAP-LocSim` without GT boxes.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A
@@ -65,9 +69,19 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `gt_recall_iou_0_5=0.0019011406844106464`. Discard target switching alone as
   a rescue for this exact YOLO11n-pose keypoint setup.
 - `direct-point-regressor-oracle-candidates` added
-  `TRAIN_MODE=point_regressor` to `train.py`; no HF score exists yet because
-  local `hf auth whoami` returned `Not logged in`. The prepared smoke is 64
-  train / 32 valid / 2 epochs on `t4-small`.
+  `TRAIN_MODE=point_regressor` to `train.py`; initial local `hf auth whoami`
+  returned `Not logged in`, but the later connector job ran the smoke.
+- `direct-point-regressor-oracle-smoke` scored
+  `0.0027874657923080423` official `mAP-LocSim` on 64 train / 32 valid /
+  2 epochs with GT-box oracle candidates, beating pose smoke
+  `0.000825082508250825`. Candidate boxes were perfect by construction
+  (`gt_recall_iou_0_5=1.0`) and `gt_recall_px_50=0.39272030651340994`, so this
+  is a point-head signal and a candidate-generation blocker, not a valid
+  submission path.
+- HF model artifact upload still fails with LFS `403` read-only token in
+  connector jobs; do not assume artifacts landed in
+  `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
+  a different upload path is proven.
 
 ## Maybe Later
 
@@ -76,6 +90,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   against the copied adapter on deterministic frames.
 - Detector confidence calibration only after the representation has useful
   official recall.
+- Make HF result persistence robust after the next meaningful score: fix the
+  write-token path or persist tiny JSON summaries somewhere other than model
+  repo LFS.
 - Ensemble only if two independently useful models have complementary errors.
 
 ## Avoid
