@@ -130,6 +130,9 @@ class BaselineSpec:
 DEFAULT_BASELINES = [
     # Current April 2026 football-specific YOLO26 lead.
     "football-yolo26l|mobadam/football-player-detection|player_detector.pt|1,3",
+    # Public COCO person detector candidate source. Ultralytics resolves the
+    # built-in weight file at runtime, so this does not require Hub storage.
+    "yolo11n-coco-person|ultralytics|yolo11n.pt|0",
 ]
 
 
@@ -270,6 +273,8 @@ def evaluate_keypoints(gt_path: Path, pred_path: Path, keypoint_index: int) -> d
 
 
 def download_model(spec: BaselineSpec, target_dir: Path) -> Path:
+    if spec.repo in {"ultralytics", "__ultralytics__", "builtin"}:
+        return Path(spec.filename)
     target_dir.mkdir(parents=True, exist_ok=True)
     return Path(
         hf_hub_download(

@@ -19,7 +19,8 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   signal rather than challenge-submittable scores.
 - Find a better real candidate source before scaling the direct point regressor:
   the first YOLO26 detector-box bridge scored zero because candidate recall was
-  essentially absent, so the useful next unit is source-specific detector/track
+  essentially absent, and public COCO `yolo11n.pt` person boxes also stayed far
+  below the pose smoke. The useful next unit is source-specific detector/track
   candidates, official SSKit/SoccerNet-format candidates, or SoccerMaster
   runtime parity that proves real athlete boxes on the same frames.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
@@ -85,6 +86,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   the failure: `gt_recall_iou_0_5=0.0`, `gt_recall_iou_0_3=0.0019011406844106464`,
   and `gt_recall_px_50=0.0019011406844106464`, so discard this exact
   detector-to-point bridge.
+- `yolo11n-coco-person-candidate-audit` scored
+  `4.0550130098334066e-05` official `mAP-LocSim` on 64 validation frames with
+  public Ultralytics `yolo11n.pt` COCO person detections, `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.00099601593625498`, and 4,014 detections for 1,004 GT
+  boxes. Discard generic COCO person boxes as the next candidate source for the
+  point regressor.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -113,6 +120,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Pairing the direct point regressor with the same `mobadam/football-player-detection`
   YOLO26 candidate boxes; the real-candidate smoke already scored zero because
   image-space candidate recall was essentially absent.
+- Pairing the direct point regressor with generic COCO `yolo11n.pt` person
+  candidate boxes; the candidate audit stayed far below the pose smoke and had
+  near-zero image-space GT recall despite many detections.
 - Treating zero or near-zero official scores from soccer/football-pretrained
   models as model underperformance before auditing runtime/plumbing.
 - Another confidence-only candidate filter or score-mode job on the same
