@@ -66,6 +66,17 @@ def json_safe(value: Any) -> Any:
     return value
 
 
+_AUTONOMY_RESULT_PRINTED = False
+
+
+def emit_autonomy_result(summary: dict[str, Any]) -> None:
+    global _AUTONOMY_RESULT_PRINTED
+    if _AUTONOMY_RESULT_PRINTED:
+        return
+    print("AUTONOMY_RESULT " + json.dumps(json_safe(summary), sort_keys=True), flush=True)
+    _AUTONOMY_RESULT_PRINTED = True
+
+
 def parse_int_set(raw: str) -> set[int]:
     return {int(item.strip()) for item in raw.split(",") if item.strip()}
 
@@ -850,6 +861,35 @@ def crop_bounds(
     return left, top, right, bottom
 
 
+def jitter_bbox_xywh(
+    bbox_xywh: tuple[float, float, float, float],
+    *,
+    image_width: int,
+    image_height: int,
+    center_frac: float,
+    scale_frac: float,
+    rng: np.random.Generator,
+) -> tuple[float, float, float, float]:
+    if image_width <= 0 or image_height <= 0:
+        raise ValueError(
+            f"Image dimensions must be positive, got width={image_width} height={image_height}"
+        )
+    x, y, w, h = bbox_xywh
+    if w <= 0 or h <= 0:
+        raise ValueError(f"Box dimensions must be positive, got bbox={bbox_xywh}")
+    cx = x + w / 2.0 + float(rng.normal(0.0, max(0.0, center_frac))) * w
+    cy = y + h / 2.0 + float(rng.normal(0.0, max(0.0, center_frac))) * h
+    scale_w = float(np.exp(rng.normal(0.0, max(0.0, scale_frac))))
+    scale_h = float(np.exp(rng.normal(0.0, max(0.0, scale_frac))))
+    new_w = min(float(image_width), max(1.0, w * scale_w))
+    new_h = min(float(image_height), max(1.0, h * scale_h))
+    left = min(max(0.0, cx - new_w / 2.0), float(image_width) - 1.0)
+    top = min(max(0.0, cy - new_h / 2.0), float(image_height) - 1.0)
+    right = min(float(image_width), max(left + 1.0, cx + new_w / 2.0))
+    bottom = min(float(image_height), max(top + 1.0, cy + new_h / 2.0))
+    return left, top, right - left, bottom - top
+
+
 class PointCropDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
     def __init__(self, samples: list[PointSample], *, image_size: int, crop_padding: float) -> None:
         self.samples = samples
@@ -997,6 +1037,118 @@ def evaluate_point_regressor(
         "oracle_candidate_boxes": True,
         "position_from_keypoint_index": 0,
         "num_predictions": len(results),
+        "metrics": metrics,
+        "diagnostics": diagnostics,
+        "audit_examples": audit_examples,
+    }
+    (out_dir / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    return {"summary": summary, "out_dir": out_dir}
+
+
+def evaluate_point_regressor_on_jittered_candidates(
+    *,
+    model: nn.Module,
+    samples: list[PointSample],
+    gt_path: Path,
+    image_size: int,
+    crop_padding: float,
+    device: torch.device,
+    audit_sample_images: int,
+    center_frac: float,
+    scale_frac: float,
+    seed: int,
+) -> dict[str, Any]:
+    model.eval()
+    rng = np.random.default_rng(seed)
+    results: list[dict[str, Any]] = []
+    gt_boxes_by_image: dict[int, list[list[float]]] = {}
+    det_boxes_by_image: dict[int, list[list[float]]] = {}
+    gt_points_by_image: dict[int, list[tuple[float, float]]] = {}
+    pred_points_by_image: dict[int, list[tuple[float, float]]] = {}
+    audit_examples: list[dict[str, Any]] = []
+    det_id = 1
+    for sample in samples:
+        with Image.open(sample.image_path) as image:
+            width = image.width
+            height = image.height
+        x, y, w, h = sample.bbox_xywh
+        jx, jy, jw, jh = jitter_bbox_xywh(
+            sample.bbox_xywh,
+            image_width=width,
+            image_height=height,
+            center_frac=center_frac,
+            scale_frac=scale_frac,
+            rng=rng,
+        )
+        jittered_sample = PointSample(
+            image_path=sample.image_path,
+            image_id=sample.image_id,
+            annotation_id=sample.annotation_id,
+            bbox_xywh=(jx, jy, jw, jh),
+            point_xy=sample.point_xy,
+        )
+        px, py = predict_point_from_crop(
+            model,
+            jittered_sample,
+            image_size=image_size,
+            crop_padding=crop_padding,
+            device=device,
+        )
+        gt_box = xywh_to_xyxy([x, y, w, h])
+        det_box = xywh_to_xyxy([jx, jy, jw, jh])
+        gt_point = sample.point_xy
+        gt_boxes_by_image.setdefault(sample.image_id, []).append(gt_box)
+        det_boxes_by_image.setdefault(sample.image_id, []).append(det_box)
+        gt_points_by_image.setdefault(sample.image_id, []).append(gt_point)
+        pred_points_by_image.setdefault(sample.image_id, []).append((px, py))
+        if audit_sample_images > 0 and len(audit_examples) < audit_sample_images:
+            audit_examples.append(
+                {
+                    "image_id": sample.image_id,
+                    "annotation_id": sample.annotation_id,
+                    "gt_bbox_xywh": [x, y, w, h],
+                    "jittered_bbox_xywh": [jx, jy, jw, jh],
+                    "candidate_iou": box_iou_xyxy(gt_box, det_box),
+                    "target_keypoint": [gt_point[0], gt_point[1], 2.0],
+                    "predicted_keypoint": [px, py, 2.0],
+                    "point_error_px": nearest_point_distance((px, py), [gt_point]),
+                }
+            )
+        results.append(
+            {
+                "area": 0,
+                "bbox": [jx, jy, jw, jh],
+                "category_id": 1,
+                "id": det_id,
+                "image_id": sample.image_id,
+                "keypoints": [px, py, 2.0],
+                "score": 1.0,
+            }
+        )
+        det_id += 1
+
+    run_id = f"synloc-point-regressor-jittered-eval-{utc_now().replace(':', '-')}"
+    out_dir = Path("/tmp") / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pred_path = out_dir / "results.json"
+    pred_path.write_text(json.dumps(results), encoding="utf-8")
+    metrics = evaluate_keypoints(gt_path, pred_path, 0)
+    diagnostics = {
+        "boxes": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
+        "keypoints": keypoint_diagnostics(gt_points_by_image, pred_points_by_image),
+    }
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "run_id": run_id,
+        "mode": "point_regressor_jittered_candidate_eval",
+        "oracle_candidate_boxes": False,
+        "jittered_gt_candidate_boxes": True,
+        "position_from_keypoint_index": 0,
+        "num_predictions": len(results),
+        "center_frac": center_frac,
+        "scale_frac": scale_frac,
+        "seed": seed,
         "metrics": metrics,
         "diagnostics": diagnostics,
         "audit_examples": audit_examples,
@@ -1667,6 +1819,7 @@ def run_baseline() -> dict[str, Any]:
         "max_images": max_images,
     }
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    emit_autonomy_result(summary)
     upload_result(summary["run_id"], upload_root)
     return summary
 
@@ -1724,6 +1877,7 @@ def run_transformer_baseline() -> dict[str, Any]:
         "note": "Non-YOLO COCO transformer detector candidate source; bottom-center projection only.",
     }
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    emit_autonomy_result(summary)
     upload_result(summary["run_id"], upload_root)
     return summary
 
@@ -1784,6 +1938,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
         "note": "SoccerNet-Tracking RF-DETR candidate source; bottom-center projection only.",
     }
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    emit_autonomy_result(summary)
     upload_result(summary["run_id"], upload_root)
     return summary
 
@@ -1865,6 +2020,7 @@ def run_finetune() -> dict[str, Any]:
     shutil.copytree(save_dir, upload_root / "ultralytics_train")
     shutil.copytree(item["out_dir"], upload_root / "validation")
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    emit_autonomy_result(summary)
     upload_result(summary["run_id"], upload_root)
     return summary
 
@@ -1980,6 +2136,7 @@ def run_keypoint() -> dict[str, Any]:
         shutil.copytree(Path(validation["out_dir"]), upload_root / f"validation_{score_mode}")
         del validation["out_dir"]
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    emit_autonomy_result(summary)
     upload_result(summary["run_id"], upload_root)
     return summary
 
@@ -2002,12 +2159,15 @@ def run_point_regressor() -> dict[str, Any]:
     keypoint_target = os.getenv("SYNLOC_KEYPOINT_TARGET", "annotation").strip().lower()
     audit_sample_images = env_int("SYNLOC_AUDIT_SAMPLE_IMAGES", 8)
     candidate_mode = os.getenv("POINT_CANDIDATE_MODE", "oracle").strip().lower()
-    if candidate_mode not in {"oracle", "yolo"}:
-        raise RuntimeError("POINT_CANDIDATE_MODE must be one of: oracle, yolo")
+    if candidate_mode not in {"oracle", "jittered", "yolo"}:
+        raise RuntimeError("POINT_CANDIDATE_MODE must be one of: oracle, jittered, yolo")
     detector_imgsz = env_int("POINT_DETECTOR_IMGSZ", env_int("YOLO_IMGSZ", 960))
     detector_conf = env_float("POINT_DETECTOR_CONF", env_float("YOLO_CONF", 0.01))
     detector_iou = env_float("POINT_DETECTOR_IOU", env_float("YOLO_IOU", 0.7))
     max_detections_per_image = env_int("POINT_MAX_DETECTIONS_PER_IMAGE", 25)
+    jitter_center_frac = env_float("POINT_JITTER_CENTER_FRAC", 0.10)
+    jitter_scale_frac = env_float("POINT_JITTER_SCALE_FRAC", 0.15)
+    jitter_seed = env_int("POINT_JITTER_SEED", 20260505)
 
     data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
     train_gt = find_annotation(data_root, "train")
@@ -2063,6 +2223,19 @@ def run_point_regressor() -> dict[str, Any]:
             device=device,
             audit_sample_images=audit_sample_images,
         )
+    elif candidate_mode == "jittered":
+        item = evaluate_point_regressor_on_jittered_candidates(
+            model=model,
+            samples=val_samples,
+            gt_path=val_gt,
+            image_size=image_size,
+            crop_padding=crop_padding,
+            device=device,
+            audit_sample_images=audit_sample_images,
+            center_frac=jitter_center_frac,
+            scale_frac=jitter_scale_frac,
+            seed=jitter_seed,
+        )
     else:
         detector_spec = parse_baselines(os.getenv("POINT_DETECTOR_BASELINE", DEFAULT_BASELINES[0]))[0]
         detector_path = download_model(detector_spec, Path("/tmp/synloc-point-detectors"))
@@ -2113,13 +2286,20 @@ def run_point_regressor() -> dict[str, Any]:
         "detector_conf": detector_conf if candidate_mode == "yolo" else None,
         "detector_iou": detector_iou if candidate_mode == "yolo" else None,
         "max_detections_per_image": max_detections_per_image if candidate_mode == "yolo" else None,
+        "jitter_center_frac": jitter_center_frac if candidate_mode == "jittered" else None,
+        "jitter_scale_frac": jitter_scale_frac if candidate_mode == "jittered" else None,
+        "jitter_seed": jitter_seed if candidate_mode == "jittered" else None,
         "epoch_losses": epoch_losses,
         "validation": validation,
         "metric": "mAP-LocSim",
         "note": (
             "Uses GT boxes as oracle candidates to isolate direct point quality; not challenge-submittable."
             if candidate_mode == "oracle"
-            else "Uses YOLO detector boxes as real candidates for the direct crop point regressor."
+            else (
+                "Uses deterministically jittered GT boxes to measure direct point tolerance to candidate-box noise; not challenge-submittable."
+                if candidate_mode == "jittered"
+                else "Uses YOLO detector boxes as real candidates for the direct crop point regressor."
+            )
         ),
     }
     upload_root = Path("/tmp") / summary["run_id"]
@@ -2129,6 +2309,7 @@ def run_point_regressor() -> dict[str, Any]:
     torch.save(model.state_dict(), upload_root / "point_regressor.pt")
     shutil.copytree(Path(item["out_dir"]), upload_root / "validation")
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    emit_autonomy_result(summary)
     upload_result(summary["run_id"], upload_root)
     return summary
 
@@ -2149,7 +2330,7 @@ def main() -> None:
         summary = run_point_regressor()
     else:
         raise RuntimeError(f"Unsupported TRAIN_MODE={mode!r}")
-    print("AUTONOMY_RESULT " + json.dumps(summary, sort_keys=True))
+    emit_autonomy_result(summary)
 
 
 if __name__ == "__main__":

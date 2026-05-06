@@ -38,12 +38,17 @@ import numpy as np
 
 train_text = Path("train.py").read_text(encoding="utf-8")
 tree = ast.parse(train_text)
-function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "crop_bounds")
-module = ast.Module(body=[function], type_ignores=[])
+functions = [
+    node
+    for node in tree.body
+    if isinstance(node, ast.FunctionDef) and node.name in {"crop_bounds", "jitter_bbox_xywh"}
+]
+module = ast.Module(body=functions, type_ignores=[])
 ast.fix_missing_locations(module)
 namespace = {"np": np}
-exec(compile(module, "train.py:crop_bounds", "exec"), namespace)
+exec(compile(module, "train.py:point_box_helpers", "exec"), namespace)
 crop_bounds = namespace["crop_bounds"]
+jitter_bbox_xywh = namespace["jitter_bbox_xywh"]
 
 cases = [
     ((10.0, 20.0, 30.0, 40.0), 100, 100, 0.15),
@@ -59,6 +64,22 @@ for bbox, width, height, padding in cases:
     if not (0 <= top < bottom <= height):
         raise SystemExit(f"invalid vertical crop for {bbox}: {(left, top, right, bottom)}")
 
+rng = np.random.default_rng(20260505)
+for bbox, width, height, padding in cases:
+    for _ in range(20):
+        x, y, w, h = jitter_bbox_xywh(
+            bbox,
+            image_width=width,
+            image_height=height,
+            center_frac=0.20,
+            scale_frac=0.30,
+            rng=rng,
+        )
+        if not (0 <= x < width and 0 < w <= width and x + w <= width):
+            raise SystemExit(f"invalid jittered horizontal box for {bbox}: {(x, y, w, h)}")
+        if not (0 <= y < height and 0 < h <= height and y + h <= height):
+            raise SystemExit(f"invalid jittered vertical box for {bbox}: {(x, y, w, h)}")
+
 if 'os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge")' not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane must default to RFDETRLarge; the checkpoint is not base-width")
 if "model_class(pretrain_weights=str(checkpoint_path))" not in train_text:
@@ -67,6 +88,12 @@ if "model.model.model.load_state_dict(state)" in train_text:
     raise SystemExit("RF-DETR SoccerNet lane should not manually strict-load unknown architecture state")
 if 'raise RuntimeError(f"Result upload failed for {run_id}") from exc' not in train_text:
     raise SystemExit("train.py must fail the run when result upload fails")
+if 'def emit_autonomy_result(summary: dict[str, Any]) -> None:' not in train_text:
+    raise SystemExit("train.py must emit AUTONOMY_RESULT through a shared helper")
+if "emit_autonomy_result(summary)\n    upload_result(summary[\"run_id\"], upload_root)" not in train_text:
+    raise SystemExit("train.py must print AUTONOMY_RESULT before strict artifact upload")
+if "print(\"AUTONOMY_RESULT \" + json.dumps(summary, sort_keys=True))" in train_text:
+    raise SystemExit("train.py must not print AUTONOMY_RESULT only after run_* returns")
 PYCHECK
 
 bash -n scripts/codex_research_tick.sh
@@ -75,6 +102,14 @@ bash -n scripts/run_hf_train.sh
 
 if ! rg -q 'Refusing to run from ~/Documents' scripts/codex_research_tick.sh scripts/codex_research_loop.sh; then
   echo "Codex loop scripts must refuse the damaged ~/Documents checkout path" >&2
+  exit 1
+fi
+if ! rg -q '/Users/\.\.\. paths, ~/Documents paths, or ad hoc gists' scripts/codex_research_tick.sh; then
+  echo "Codex tick prompt must ban machine-specific cloud job paths" >&2
+  exit 1
+fi
+if ! rg -q 'AUTONOMY_RESULT score and the upload blocker' scripts/codex_research_tick.sh; then
+  echo "Codex tick prompt must record scores even when artifact upload is blocked" >&2
   exit 1
 fi
 

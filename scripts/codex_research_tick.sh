@@ -82,8 +82,14 @@ iteration. Do not treat a successful single pass as the end of autonomy.
   experiment with expected movement in official SSKit mAP-LocSim.
 - If implementation is warranted, edit the smallest needed surface.
 - Use Hugging Face Jobs only for bounded CUDA execution, not reasoning.
+- Submit cloud work through repo-local helpers such as scripts/run_hf_train.sh
+  or commands that clone the repo and apply repo-relative patches. Do not pass
+  /Users/... paths, ~/Documents paths, or ad hoc gists into cloud jobs.
 - If you launch a cloud job, follow it to an official score or an explicit
   blocker before ending; do not leave a live job ambiguous.
+- If a job reaches official evaluation and then artifact upload fails, record
+  the printed AUTONOMY_RESULT score and the upload blocker; do not rerun only to
+  bypass strict upload unless the experiment score itself was not printed.
 - Record keep/discard facts in LEDGER.md and update CURRENT.md.
 - When running from a clean branch/worktree, commit kept code/state changes or
   revert discarded experiment code while preserving the ledger/current facts.
