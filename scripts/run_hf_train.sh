@@ -4,6 +4,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+ENV_FILE="${HF_ENV_FILE:-$ROOT/.env}"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
 FLAVOR="${HF_FLAVOR:-t4-small}"
 TIMEOUT="${HF_TIMEOUT:-2h}"
 MODE="${TRAIN_MODE:-baseline}"

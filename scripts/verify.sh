@@ -183,6 +183,14 @@ if ! rg -q 'Not logged in' scripts/run_hf_train.sh; then
   echo "HF train helper must detect hf CLI's Not logged in output before submission" >&2
   exit 1
 fi
+if ! rg -q 'HF_ENV_FILE' scripts/run_hf_train.sh; then
+  echo "HF train helper must load repo-local .env before checking HF_TOKEN" >&2
+  exit 1
+fi
+if ! rg -q 'set -a' scripts/run_hf_train.sh; then
+  echo "HF train helper must export .env variables for hf jobs secret lookup" >&2
+  exit 1
+fi
 if ! rg -q -- '--preflight' scripts/run_hf_train.sh; then
   echo "HF train helper must provide a non-submitting credential preflight" >&2
   exit 1
@@ -195,6 +203,16 @@ fi
 scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-tick.txt
 scripts/codex_research_loop.sh --allow-dirty --dry-run --iterations 2 >/tmp/auto-research-2-codex-loop.txt 2>&1
 scripts/run_hf_train.sh --dry-run >/tmp/auto-research-2-hf-train.txt
+cat >/tmp/auto-research-2-hf-env-test.env <<'EOF'
+HF_TOKEN=dummy-secret-for-verify
+HF_FLAVOR=cpu-basic
+TRAIN_MODE=transformer_baseline
+HF_DATASET_REPO=example/synloc-data
+HF_MODEL_REPO=example/synloc-models
+EOF
+env -u HF_TOKEN -u HF_FLAVOR -u TRAIN_MODE -u HF_DATASET_REPO -u HF_MODEL_REPO \
+  HF_ENV_FILE=/tmp/auto-research-2-hf-env-test.env \
+  scripts/run_hf_train.sh --dry-run >/tmp/auto-research-2-hf-env-train.txt
 
 python3 - <<'PYCHECK'
 from pathlib import Path
@@ -229,6 +247,11 @@ if "https://raw.githubusercontent.com/" not in hf:
 for forbidden in ["/Users/", "~/Documents", "/Documents/", " file://"]:
     if forbidden in hf:
         raise SystemExit(f"HF train dry-run leaked a local path: {forbidden}")
+hf_env = Path("/tmp/auto-research-2-hf-env-train.txt").read_text(encoding="utf-8")
+for needle in ["--flavor cpu-basic", "--env TRAIN_MODE=transformer_baseline", "--env HF_DATASET_REPO=example/synloc-data", "--env HF_MODEL_REPO=example/synloc-models"]:
+    if needle not in hf_env: raise SystemExit(f"HF train .env dry-run did not load {needle}")
+if "dummy-secret-for-verify" in hf_env:
+    raise SystemExit("HF train dry-run leaked HF_TOKEN from .env")
 PYCHECK
 
 echo "verify ok"
