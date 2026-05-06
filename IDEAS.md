@@ -4,17 +4,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Re-audit one real candidate source through the coordinate-scale adapter before
-  trusting any earlier detector-source discard. The jittered-GT point-regressor
-  smoke recovered when `SYNLOC_COORD_SCALE_MODE=actual_image` mapped 3840x2160
-  annotation coordinates to the cached 1920x1080 images and back to annotation
-  coordinates for SSKit. Next run:
-  `TRAIN_MODE=point_regressor SYNLOC_COORD_SCALE_MODE=actual_image
-  POINT_CANDIDATE_MODE=yolo TRAIN_MAX_IMAGES=64 VAL_MAX_IMAGES=32
-  POINT_EPOCHS=2 POINT_BATCH=16`. Start with the existing default YOLO26 bridge
-  or one previously best public soccer/SoccerNet-labeled source, and decide
-  from candidate IoU diagnostics whether prior detector failures were mostly
-  scale contamination or still true candidate-source failures.
+- Find an official SSKit/SoccerNet-format candidate source, SoccerMaster
+  official-runtime candidate parity, or a track/pose source with real
+  image-space athlete-box recall on the same SynLoc frames. The direct point
+  regressor has signal when candidates are GT-like, but the default YOLO26
+  bridge stayed far below the pose smoke even after
+  `SYNLOC_COORD_SCALE_MODE=actual_image`.
 - Later, decide whether to rebuild the private data cache with true
   annotation-size images or keep the explicit `actual_image` coordinate adapter
   for cached fullHD jobs. Strict image-size matching should remain the default
@@ -197,6 +192,15 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   smoke, pose smoke, and oracle-box direct point smoke, but it is not
   challenge-submittable because candidate boxes are jittered GT. Artifact
   upload still fails with HF model-repo LFS `403`.
+- `actual-image-scale-yolo26-point-smoke` scored only
+  `7.984669434685405e-06` official `mAP-LocSim` when the direct point
+  regressor used the repaired `actual_image` coordinate adapter with real
+  default `mobadam/football-player-detection` YOLO26 candidate boxes. Candidate
+  recall remained the blocker: `gt_recall_iou_0_5=0.0019011406844106464`,
+  `gt_recall_iou_0_3=0.009505703422053232`,
+  `mean_best_iou_gt_to_det=0.0072488041644957375`, and
+  `gt_recall_px_50=0.039923954372623575`. Discard this candidate bridge even
+  after coordinate repair.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or

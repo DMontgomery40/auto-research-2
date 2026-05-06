@@ -233,6 +233,19 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   result. First connector launch `69fac28cf2f4addb7839c1a5` failed before
   running because the raw GitHub URL had a bad SHA and returned `404: Not
   Found`.
+- `actual-image-scale-yolo26-point-smoke` is a discard-result: job
+  `69fac472b745af80fb37390f` reran the direct point regressor with
+  `SYNLOC_COORD_SCALE_MODE=actual_image` and real default
+  `mobadam/football-player-detection` YOLO26 candidates. Official
+  `mAP-LocSim=7.984669434685405e-06`, `precision_50=0.002688172043010753`,
+  `recall_50=0.0`, and 508 predictions for 526 GT boxes. The coordinate
+  adapter improved the pre-adapter YOLO bridge diagnostics but did not make the
+  candidate source useful: `gt_recall_iou_0_5=0.0019011406844106464`,
+  `gt_recall_iou_0_3=0.009505703422053232`,
+  `mean_best_iou_gt_to_det=0.0072488041644957375`, and
+  `gt_recall_px_50=0.039923954372623575`. Artifact upload still failed with HF
+  model-repo LFS `403`; the printed `AUTONOMY_RESULT` log is the durable
+  result.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -270,10 +283,11 @@ an SSKit ingestion problem.
 
 `TRAIN_MODE=point_regressor` beat the pose smoke while given GT boxes, so the
 direct crop-regressor point head is not dead. Pairing it with the existing
-football YOLO26 candidate source scored zero because image-space candidate
-recall was essentially absent, and a larger-image/lower-threshold YOLO26 audit
-did not fix it. Public COCO `yolo11n` person detections, public COCO RT-DETR
-person detections, and four public soccer/football YOLO detectors
+football YOLO26 candidate source through the repaired `actual_image` coordinate
+adapter still scored far below the pose smoke because candidate recall remains
+essentially absent. A larger-image/lower-threshold YOLO26 audit also did not
+fix it. Public COCO `yolo11n` person detections, public COCO RT-DETR person
+detections, and four public soccer/football YOLO detectors
 (`easychamp-yolov8`, `martinjolif-yolo11m`, `uisikdag-yolov8-football`,
 `Adit-jain/soccana`) all failed as useful candidate sources despite producing
 many boxes. Do not spend another pass pairing the point regressor with generic
@@ -289,15 +303,11 @@ near-zero image-space overlap on SynLoc validation frames.
 
 ## Next Action
 
-Run one cheap real-candidate audit through the same scale adapter before
-trusting any earlier detector-source discard:
-`TRAIN_MODE=point_regressor SYNLOC_COORD_SCALE_MODE=actual_image
-POINT_CANDIDATE_MODE=yolo TRAIN_MAX_IMAGES=64 VAL_MAX_IMAGES=32 POINT_EPOCHS=2
-POINT_BATCH=16`.
-Start with the existing default YOLO26 candidate bridge or one previously best
-public soccer/SoccerNet-labeled source, and inspect candidate IoU diagnostics
-before scaling. Expected movement is positive candidate overlap if prior
-detector audits were mostly scale-contaminated, or a cleaner discard if real
-candidate boxes still miss after coordinate repair. Also fix or work around HF
-model-repo write permission before relying on uploaded artifacts; job logs are
-currently the only durable result source for these smokes.
+Do not rerun the default YOLO26 candidate bridge just because the coordinate
+adapter exists; job `69fac472b745af80fb37390f` already gave a cleaner discard.
+The next useful unit is either an official SSKit/SoccerNet-format candidate
+source, SoccerMaster official-runtime parity that proves real athlete boxes on
+the same SynLoc frames, or a track/pose source with saved image-space recall
+diagnostics. Also fix or work around HF model-repo write permission before
+relying on uploaded artifacts; job logs are currently the only durable result
+source for these smokes.
