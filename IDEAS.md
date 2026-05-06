@@ -4,14 +4,15 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Audit image/annotation scale parity on the exact SynLoc frames before any
-  new detector-source search. The jittered-GT point-regressor audit produced
-  GT boxes with x coordinates beyond `2900`, but the opened image width forced
-  jittered boxes to clamp at `1919`. Compare COCO image dimensions, actual PIL
-  dimensions from `image_path()`, bbox/keypoint ranges, and detector output
-  coordinate scale. If the repo is mixing fullhd annotations with resized
-  images, fix file selection or add a coordinate-scale adapter, then rerun one
-  cheap official SSKit smoke.
+- Rerun a cheap official SSKit smoke through the new dimension-aware image
+  lookup before any new detector-source search. `image-path-dimension-guard`
+  now requires actual PIL dimensions to match COCO annotation dimensions, so
+  the next jittered-GT point-regressor smoke should either recover candidate
+  IoU if the prior run used resized images or fail early with exact mismatched
+  candidate sizes. Use the same bounded settings as the blocker run:
+  `TRAIN_MODE=point_regressor POINT_CANDIDATE_MODE=jittered
+  POINT_JITTER_CENTER_FRAC=0.10 POINT_JITTER_SCALE_FRAC=0.15 TRAIN_MAX_IMAGES=64
+  VAL_MAX_IMAGES=32 POINT_EPOCHS=2 POINT_BATCH=16`.
 - Audit the pretrained-model/evaluator path before adding another model idea:
   verify model class names, selected class ids, preprocessing/image scale, bbox
   format, score thresholds, camera projection, category ids, and SSKit ingestion
@@ -168,6 +169,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   coordinate-scale evidence: audit examples show GT boxes extending beyond
   x=`2900` while opened images clamp candidates at x=`1919`. Treat image file
   choice / coordinate scale as the next blocker.
+- `image-path-dimension-guard` added no score yet, but `train.py` now resolves
+  image paths with expected COCO `width`/`height` when a full image record is
+  available and fails loudly if same-basename candidates do not match. Local
+  `scripts/verify.sh` covers duplicate-basename resized/fullhd selection.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -214,10 +219,11 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Pairing the direct point regressor with public `Adit-jain/soccana`
   detections; the SoccerNet-labeled YOLO11 audit produced many boxes but still
   had zero IoU-0.5 GT recall on the SynLoc validation slice.
-- Another public detector-source audit before resolving image/annotation scale
-  parity. The jittered-GT run showed GT-derived candidate boxes can be clamped
-  to the apparent image width, so prior near-zero detector overlap may be
-  contaminated by file-selection or coordinate-scale mismatch.
+- Another public detector-source audit before rerunning one official smoke
+  through the dimension-aware image lookup. The jittered-GT run showed
+  GT-derived candidate boxes can be clamped to the apparent image width, so
+  prior near-zero detector overlap may be contaminated by file-selection or
+  coordinate-scale mismatch.
 - Running another RF-DETR SoccerNet scoring job just because the architecture
   mismatch is fixed. The large-model smoke scored zero with near-zero image-space
   overlap, so it needs a new preprocessing/coordinate-parity hypothesis first.

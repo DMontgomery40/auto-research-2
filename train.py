@@ -241,17 +241,46 @@ def find_annotation(root: Path, split: str) -> Path:
     raise RuntimeError(f"Could not find annotation for split={split} under {root}")
 
 
-def image_path(root: Path, file_name: str) -> Path:
+def image_path(
+    root: Path,
+    file_name: str,
+    *,
+    expected_width: int | float | None = None,
+    expected_height: int | float | None = None,
+) -> Path:
     candidates = [
         root / file_name,
         root / "SpiideoSynLoc" / file_name,
         root / "images" / file_name,
     ]
     candidates.extend(root.rglob(Path(file_name).name))
+    candidates = [candidate for candidate in candidates if candidate.exists() and candidate.is_file()]
+    if expected_width is not None and expected_height is not None:
+        expected_size = (int(round(float(expected_width))), int(round(float(expected_height))))
+        mismatches: list[str] = []
+        for candidate in candidates:
+            with Image.open(candidate) as image:
+                actual_size = (int(image.width), int(image.height))
+            if actual_size == expected_size:
+                return candidate
+            mismatches.append(f"{candidate}={actual_size[0]}x{actual_size[1]}")
+        if candidates:
+            raise RuntimeError(
+                f"No image candidate for {file_name!r} matched annotation size "
+                f"{expected_size[0]}x{expected_size[1]}; candidates: {', '.join(mismatches)}"
+            )
     for candidate in candidates:
-        if candidate.exists() and candidate.is_file():
-            return candidate
+        return candidate
     raise FileNotFoundError(file_name)
+
+
+def image_path_for_record(root: Path, image: dict[str, Any]) -> Path:
+    return image_path(
+        root,
+        image["file_name"],
+        expected_width=image.get("width"),
+        expected_height=image.get("height"),
+    )
 
 
 def load_synloc_data(version: str, patterns: list[str]) -> Path:
@@ -378,7 +407,7 @@ def predictions_for_model(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path(data_root, image["file_name"])
+        path = image_path_for_record(data_root, image)
         width = float(image["width"])
         height = float(image["height"])
         preds = model.predict(
@@ -498,7 +527,7 @@ def predictions_for_transformer_model(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path(data_root, image["file_name"])
+        path = image_path_for_record(data_root, image)
         width = float(image["width"])
         height = float(image["height"])
         pil_image = Image.open(path).convert("RGB")
@@ -627,7 +656,7 @@ def predictions_for_rfdetr_model(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path(data_root, image["file_name"])
+        path = image_path_for_record(data_root, image)
         width = float(image["width"])
         height = float(image["height"])
         pil_image = Image.open(path).convert("RGB")
@@ -809,7 +838,7 @@ def build_point_samples(
     samples: list[PointSample] = []
     skipped: list[dict[str, Any]] = []
     for image_id, image in images_by_id.items():
-        path = image_path(data_root, image["file_name"])
+        path = image_path_for_record(data_root, image)
         width = float(image["width"])
         height = float(image["height"])
         for ann in annotations_by_image.get(image_id, []):
@@ -1211,7 +1240,7 @@ def evaluate_point_regressor_on_yolo_candidates(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path(data_root, image["file_name"])
+        path = image_path_for_record(data_root, image)
         preds = detector.predict(
             source=str(path),
             imgsz=detector_imgsz,
@@ -1408,7 +1437,7 @@ def make_yolo_keypoint_dataset(
             annotations_by_image.setdefault(int(ann["image_id"]), []).append(ann)
         stats = {"images": 0, "annotations": 0, "labels": 0, "skipped_keypoints": 0}
         for image in gt["images"][: max_images or None]:
-            src = image_path(data_root, image["file_name"])
+            src = image_path_for_record(data_root, image)
             stem = f"{int(image['id']):08d}_{Path(image['file_name']).stem}"
             image_target = dataset / "images" / split / f"{stem}{src.suffix.lower() or '.jpg'}"
             label_target = dataset / "labels" / split / f"{stem}.txt"
@@ -1518,7 +1547,7 @@ def predictions_for_keypoint_model(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path(data_root, image["file_name"])
+        path = image_path_for_record(data_root, image)
         preds = model.predict(
             source=str(path),
             imgsz=imgsz,
@@ -1703,7 +1732,7 @@ def make_yolo_dataset(data_root: Path, train_gt: Path, val_gt: Path, *, train_ma
             annotations_by_image.setdefault(int(ann["image_id"]), []).append(ann)
         count = 0
         for image in gt["images"][: max_images or None]:
-            src = image_path(data_root, image["file_name"])
+            src = image_path_for_record(data_root, image)
             stem = f"{int(image['id']):08d}_{Path(image['file_name']).stem}"
             image_target = dataset / "images" / split / f"{stem}{src.suffix.lower() or '.jpg'}"
             label_target = dataset / "labels" / split / f"{stem}.txt"

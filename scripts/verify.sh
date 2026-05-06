@@ -32,23 +32,28 @@ python3 -m py_compile cloud/synloc_cache.py
 
 python3 - <<'PYCHECK'
 import ast
+import tempfile
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 
 train_text = Path("train.py").read_text(encoding="utf-8")
 tree = ast.parse(train_text)
 functions = [
     node
     for node in tree.body
-    if isinstance(node, ast.FunctionDef) and node.name in {"crop_bounds", "jitter_bbox_xywh"}
+    if isinstance(node, ast.FunctionDef)
+    and node.name in {"crop_bounds", "jitter_bbox_xywh", "image_path", "image_path_for_record"}
 ]
 module = ast.Module(body=functions, type_ignores=[])
 ast.fix_missing_locations(module)
-namespace = {"np": np}
+namespace = {"np": np, "Path": Path, "Image": Image, "Any": object}
 exec(compile(module, "train.py:point_box_helpers", "exec"), namespace)
 crop_bounds = namespace["crop_bounds"]
 jitter_bbox_xywh = namespace["jitter_bbox_xywh"]
+image_path = namespace["image_path"]
+image_path_for_record = namespace["image_path_for_record"]
 
 cases = [
     ((10.0, 20.0, 30.0, 40.0), 100, 100, 0.15),
@@ -79,6 +84,26 @@ for bbox, width, height, padding in cases:
             raise SystemExit(f"invalid jittered horizontal box for {bbox}: {(x, y, w, h)}")
         if not (0 <= y < height and 0 < h <= height and y + h <= height):
             raise SystemExit(f"invalid jittered vertical box for {bbox}: {(x, y, w, h)}")
+
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp)
+    (root / "resized").mkdir()
+    (root / "fullhd" / "nested").mkdir(parents=True)
+    wrong = root / "resized" / "frame001.jpg"
+    right = root / "fullhd" / "nested" / "frame001.jpg"
+    Image.new("RGB", (1920, 1080)).save(wrong)
+    Image.new("RGB", (3840, 2160)).save(right)
+    image = {"file_name": "frames/frame001.jpg", "width": 3840, "height": 2160}
+    resolved = image_path_for_record(root, image)
+    if resolved != right:
+        raise SystemExit(f"dimension-aware image lookup picked {resolved}, expected {right}")
+    try:
+        image_path(root, "frames/frame001.jpg", expected_width=4096, expected_height=2160)
+    except RuntimeError as exc:
+        if "matched annotation size 4096x2160" not in str(exc):
+            raise
+    else:
+        raise SystemExit("dimension-aware image lookup should fail when no candidate matches annotation size")
 
 if 'os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge")' not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane must default to RFDETRLarge; the checkpoint is not base-width")

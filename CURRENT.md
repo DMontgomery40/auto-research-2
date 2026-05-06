@@ -195,6 +195,15 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   the actual image files, and whether all detector/keypoint/point lanes need a
   coordinate-scale adapter. Artifact upload again failed with HF model-repo LFS
   `403`; the job log `AUTONOMY_RESULT` recap is the durable result source.
+- `image-path-dimension-guard` added no new score yet but closes the concrete
+  file-selection blocker exposed by the jittered-GT audit. `train.py` now
+  resolves SynLoc image paths with the COCO image record when available and
+  requires the actual PIL image size to match annotation `width`/`height`.
+  If only resized same-basename files are found for fullhd annotations, the
+  run now fails with the candidate sizes instead of silently clamping boxes to
+  the wrong image width. Local `python3 -m py_compile train.py` and
+  `scripts/verify.sh` passed, including a duplicate-basename resized/fullhd
+  regression check.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -204,13 +213,14 @@ Active direction remains track/pose/keypoint or direct ground-point prediction.
 The official data, camera calibration, evaluator, and SSKit projection path are
 not globally broken. The failure is on the prediction side.
 
-The latest jittered-GT candidate run strongly suggests part of the prediction
-side failure is a coordinate-scale or file-selection problem. GT annotations in
+The latest jittered-GT candidate run strongly suggested part of the prediction
+side failure was a coordinate-scale or file-selection problem. GT annotations in
 the audit can extend past x=2900, but `train.py` opened an image whose width
-made candidate boxes clamp at x=1919. This could explain why many public
-detector sources looked like they had near-zero image-space overlap even while
-producing many boxes. Treat image/annotation scale parity as the next blocker
-before another public detector candidate audit.
+made candidate boxes clamp at x=1919. `image-path-dimension-guard` now makes
+that failure mode explicit by requiring actual image dimensions to match COCO
+annotation dimensions when resolving images. The next cloud smoke should prove
+whether the cached data contains matching fullhd files or fails early with a
+clear file-selection blocker.
 
 Zero or near-zero official scores from a soccer/football-pretrained model on
 SoccerNet data should be treated as runtime, class mapping, coordinate,
@@ -249,16 +259,17 @@ near-zero image-space overlap on SynLoc validation frames.
 
 ## Next Action
 
-Audit image/annotation scale parity before another candidate-source search.
-Use a tiny cloud or local package-only script to compare COCO `image["width"]`
-and `image["height"]`, actual PIL image size from `image_path()`, representative
-GT bbox/keypoint ranges, and detector output scale on the same saved frames.
-If `image_path()` is selecting resized images for fullhd annotations, fix that
-mechanic or add an explicit coordinate-scale adapter in `train.py`, then rerun
-one cheap official SSKit smoke. Do not spend the next pass on football YOLO26
-image-size/confidence tuning, generic COCO person detectors, COCO RT-DETR
-detector boxes, the public EasyChamp/MartijnJolif/Uisikdag/Adit-jain
-soccer-football YOLO detectors, or another RF-DETR SoccerNet scoring job until
-image/annotation scale is resolved. Also fix or work around HF model-repo write
-permission before relying on uploaded artifacts; job logs are currently the only
-durable result source for these smokes.
+Rerun one cheap official SSKit smoke through the new dimension-aware image path,
+preferably the jittered-GT candidate audit:
+`TRAIN_MODE=point_regressor POINT_CANDIDATE_MODE=jittered
+POINT_JITTER_CENTER_FRAC=0.10 POINT_JITTER_SCALE_FRAC=0.15 TRAIN_MAX_IMAGES=64
+VAL_MAX_IMAGES=32 POINT_EPOCHS=2 POINT_BATCH=16`.
+Expected movement is either positive candidate IoU recovery if the prior run
+used resized images, or an explicit early blocker naming mismatched image
+candidate sizes. Do not spend the next pass on football YOLO26 image-size/
+confidence tuning, generic COCO person detectors, COCO RT-DETR detector boxes,
+the public EasyChamp/MartijnJolif/Uisikdag/Adit-jain soccer-football YOLO
+detectors, or another RF-DETR SoccerNet scoring job until image/annotation scale
+is resolved. Also fix or work around HF model-repo write permission before
+relying on uploaded artifacts; job logs are currently the only durable result
+source for these smokes.
