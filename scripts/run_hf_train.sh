@@ -115,6 +115,13 @@ if [ "${#EXTRA_ARGS[@]}" -gt 0 ]; then
   cmd=("${cmd[@]:0:${#cmd[@]}-1}" "${EXTRA_ARGS[@]}" "$SCRIPT_URL")
 fi
 
+if [ -z "${HF_TRAIN_SCRIPT_URL:-}" ]; then
+  if ! git ls-remote "$GIT_REMOTE" | awk -v ref="$GIT_REF" '$1 == ref { found = 1 } END { exit found ? 0 : 1 }'; then
+    echo "Git ref ${GIT_REF} is not present on remote ${GIT_REMOTE}; push it before submitting to HF Jobs." >&2
+    exit 1
+  fi
+fi
+
 if [ "$DRY_RUN" -eq 1 ]; then
   printf '%q ' "${cmd[@]}"
   printf '\n'
@@ -135,13 +142,6 @@ if [ -z "${HF_TOKEN:-}" ]; then
   hf_whoami="$(hf auth whoami 2>&1 || true)"
   if [ -z "$hf_whoami" ] || printf '%s\n' "$hf_whoami" | grep -qi '^Not logged in'; then
     echo "HF_TOKEN is not visible and hf CLI is not logged in; export HF_TOKEN before submitting." >&2
-    exit 1
-  fi
-fi
-
-if [ -z "${HF_TRAIN_SCRIPT_URL:-}" ]; then
-  if ! git ls-remote "$GIT_REMOTE" | awk -v ref="$GIT_REF" '$1 == ref { found = 1 } END { exit found ? 0 : 1 }'; then
-    echo "Git ref ${GIT_REF} is not present on remote ${GIT_REMOTE}; push it before submitting to HF Jobs." >&2
     exit 1
   fi
 fi

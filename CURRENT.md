@@ -291,6 +291,13 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   session, but it reports a different HF identity than the repo owner, so do
   not use it for private `dmontgomery40/...` SynLoc data/model jobs unless the
   owner explicitly authorizes that identity and access path.
+- `hf-dry-run-reachability-guard` added no score but closes the bad-SHA HF
+  packaging blocker family. `scripts/run_hf_train.sh --dry-run` now checks
+  that the selected `HF_GIT_REF` exists on the configured remote before
+  printing the raw GitHub `train.py` URL, so a copied dry-run command should
+  not launch a `404: Not Found` job for a local-only commit. The cloud blocker
+  remains credentials/scope: local `hf auth whoami` still returns
+  `Not logged in`, and no private SynLoc score was attempted.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -360,5 +367,5 @@ write permission before relying on uploaded artifacts; job logs are currently
 the only durable result source for these smokes. Before the next cloud
 experiment from this checkout, restore a repo-local Hugging Face token/login
 with read access to `dmontgomery40/auto-research-2-synloc-data` and the
-intended model-result write path, or explicitly document a safe alternate
-connector identity.
+intended model-result write path, push any local commit that `HF_GIT_REF`
+points at, or explicitly document a safe alternate connector identity.
