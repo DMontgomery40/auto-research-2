@@ -204,6 +204,16 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   the wrong image width. Local `python3 -m py_compile train.py` and
   `scripts/verify.sh` passed, including a duplicate-basename resized/fullhd
   regression check.
+- `image-cache-scale-blocker-cloud` added no new score, but proved the cloud
+  data path is currently mismatched: job `69fac036f2f4addb7839c18b` reran the
+  jittered-GT point-regressor smoke through the dimension guard and failed
+  before training/evaluation because annotation image `000000.jpg` expected
+  `3840x2160`, while the available train and validation image candidates were
+  both `1920x1080`. This confirms the prior zero-IoU jittered candidates were
+  contaminated by image/annotation scale mismatch. First connector job
+  `69fabfe7f2f4addb7839c185` failed before running on Python 3.12 from the
+  known `xtcocotools`/`numpy` build-isolation issue; Python 3.10 remains the
+  working HF Jobs recipe.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -213,14 +223,14 @@ Active direction remains track/pose/keypoint or direct ground-point prediction.
 The official data, camera calibration, evaluator, and SSKit projection path are
 not globally broken. The failure is on the prediction side.
 
-The latest jittered-GT candidate run strongly suggested part of the prediction
-side failure was a coordinate-scale or file-selection problem. GT annotations in
-the audit can extend past x=2900, but `train.py` opened an image whose width
-made candidate boxes clamp at x=1919. `image-path-dimension-guard` now makes
-that failure mode explicit by requiring actual image dimensions to match COCO
-annotation dimensions when resolving images. The next cloud smoke should prove
-whether the cached data contains matching fullhd files or fails early with a
-clear file-selection blocker.
+The latest cloud smoke proved part of the prediction side failure is a concrete
+coordinate-scale or file-selection problem, not just model weakness. GT
+annotations in the audit can extend past x=2900, while the cloud cache currently
+serves `1920x1080` images for COCO records declaring `3840x2160`. Before more
+model-source searches, fix the data/cache extraction to provide matching
+fullHD files or add an explicit, tested coordinate-scale adapter that maps
+annotations, boxes, keypoints, detector outputs, and SSKit projection inputs
+consistently.
 
 Zero or near-zero official scores from a soccer/football-pretrained model on
 SoccerNet data should be treated as runtime, class mapping, coordinate,
