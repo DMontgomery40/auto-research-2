@@ -241,6 +241,15 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   augmentation as a standalone point-head robustness fix. The temporary
   `POINT_TRAIN_JITTER_*` code was reverted; do not add it back without a new
   architecture or candidate-noise hypothesis.
+- `pericles-player-detector-candidate-audit` scored
+  `8.406501027461238e-05` official `mAP-LocSim` when public
+  `PericlesRodrigues01/player-detector` was evaluated on 64 validation frames
+  through `SYNLOC_COORD_SCALE_MODE=actual_image`. The model's player class was
+  clear (`0=Person`) and it produced 7,726 detections for 1,004 GT boxes, but
+  `recall_50=0.0`, `gt_recall_iou_0_5=0.00298804780876494`, and
+  `mean_best_iou_gt_to_det=0.023235810243179132`. Discard this detector as a
+  direct point-regressor candidate source and avoid more generic public sports
+  YOLO audits unless there is a source-specific runtime/preprocess hypothesis.
 - HF model artifact upload has failed with direct-commit `403` in connector
   jobs. `train.py` now retries result upload as a Hub PR and treats upload
   failure as nonfatal after `AUTONOMY_RESULT` unless `HF_STRICT_UPLOAD=1`, but
@@ -301,6 +310,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `HamzaAliKhan/football-players-detection` boxes; even after the actual-image
   detector-audit repair, it had near-zero IoU-0.5 GT recall on the same SynLoc
   validation slice.
+- Pairing the direct point regressor with public
+  `PericlesRodrigues01/player-detector` boxes; it produced many `Person`
+  detections but still had near-zero IoU-0.5 GT recall and stayed below the
+  pose smoke.
 - Another public detector-source audit without `SYNLOC_COORD_SCALE_MODE=actual_image`
   while using the current cached fullHD images. Prior near-zero detector overlap
   may be contaminated by coordinate scale, so real-candidate reruns must use the

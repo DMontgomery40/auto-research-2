@@ -329,6 +329,20 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   px. The temporary train-jitter code was reverted because the score did not
   justify widening `train.py`. Artifact upload again failed after
   `AUTONOMY_RESULT` with HF model-repo LFS `403`.
+- `pericles-player-detector-candidate-audit` is a discard-result: job
+  `69fbd098aff1cd33e8f2eb52` evaluated public
+  `PericlesRodrigues01/player-detector` through the repaired
+  `SYNLOC_COORD_SCALE_MODE=actual_image` YOLO detector-audit path on 64
+  validation frames. The model labels matched its README
+  (`0=Person`, `1=Ball`, `2=Equipment`) and it produced 7,726 detections for
+  1,004 GT boxes, but official `mAP-LocSim=8.406501027461238e-05`,
+  `precision_50=0.009433962264150943`, `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.00298804780876494`,
+  `gt_recall_iou_0_3=0.013944223107569721`, and
+  `mean_best_iou_gt_to_det=0.023235810243179132`. This is below pose smoke and
+  does not unblock the direct point regressor. Artifact upload again failed
+  after `AUTONOMY_RESULT` with HF model-repo `403`; the printed log is the
+  durable score.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -370,12 +384,13 @@ football YOLO26 candidate source through the repaired `actual_image` coordinate
 adapter still scored far below the pose smoke because candidate recall remains
 essentially absent. A larger-image/lower-threshold YOLO26 audit also did not
 fix it. Public COCO `yolo11n` person detections, public COCO RT-DETR person
-detections, and four public soccer/football YOLO detectors
+detections, and five public soccer/football YOLO detectors
 (`easychamp-yolov8`, `martinjolif-yolo11m`, `uisikdag-yolov8-football`,
-`Adit-jain/soccana`) all failed as useful candidate sources despite producing
-many boxes. Do not spend another pass pairing the point regressor with generic
-COCO person boxes, COCO transformer detector boxes, or these public
-soccer/football YOLO detectors. The next blocker is an official
+`Adit-jain/soccana`, `PericlesRodrigues01/player-detector`) all failed as
+useful candidate sources despite producing many boxes. Do not spend another
+pass pairing the point regressor with generic COCO person boxes, COCO
+transformer detector boxes, or these public soccer/football YOLO detectors.
+The next blocker is an official
 SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
 or a track/pose source with real athlete-box recall on the same frames.
 Training the same tiny point regressor on deterministic jittered GT crops did
@@ -392,11 +407,14 @@ parity hypothesis.
 
 ## Next Action
 
-Next loop should move past RF-DETR SoccerNet Large and look for an official
-SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
-or a track/pose source with real athlete-box recall on the same SynLoc frames.
-Do not rerun the point-regressor train-jitter variant; it underperformed the
-existing no-train-jitter actual-image jittered smoke and its code was reverted.
+Next loop should move past public generic detector hunting and look for an
+official SSKit/SoccerNet-format candidate source, SoccerMaster
+official-runtime parity, or a track/pose source with real athlete-box recall on
+the same SynLoc frames. Do not rerun the point-regressor train-jitter variant;
+it underperformed the existing no-train-jitter actual-image jittered smoke and
+its code was reverted. Do not rerun `PericlesRodrigues01/player-detector`; it
+produced many boxes but stayed below pose smoke with near-zero image-space
+overlap.
 For job submission, use `scripts/run_hf_train.sh --preflight` before the local
 CLI path; if it reports missing `job.write`, launch through the Hugging Face
 Jobs connector/app with the same raw GitHub `train.py` URL and env, or record a
