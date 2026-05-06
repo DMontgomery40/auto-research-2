@@ -270,6 +270,17 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   result. First connector launch `69fac6f1f2f4addb7839c1af` failed before
   running because the raw GitHub URL used a mistyped SHA and returned
   `404: Not Found`.
+- `actual-image-rtdetr-coco-person-candidate-audit` is a discard-result: job
+  `69fac8c4b745af80fb373937` reran `PekingU/rtdetr_r18vd` COCO person boxes
+  through the repaired `SYNLOC_COORD_SCALE_MODE=actual_image`
+  transformer-audit path on 64 validation frames. Official
+  `mAP-LocSim=7.543611504007545e-06`, `precision_50=0.0013333333333333333`,
+  `recall_50=0.0`, `gt_recall_iou_0_5=0.0069721115537848604`, and
+  `mean_best_iou_gt_to_det=0.02903191841477167` from 10,000 detections for
+  1,004 GT boxes. This is effectively unchanged from the pre-adapter RT-DETR
+  audit, so the actual-image adapter does not rescue generic RT-DETR person
+  candidates. Artifact upload again failed with HF model-repo `403`; the
+  printed `AUTONOMY_RESULT` log is the durable score.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation

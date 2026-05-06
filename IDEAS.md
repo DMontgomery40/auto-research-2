@@ -219,6 +219,16 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `mean_best_iou_gt_to_det=0.00950942234585973`. Discard this detector source
   for the direct point regressor and avoid more generic public football YOLO
   audits unless there is a new runtime/preprocess hypothesis.
+- `actual-image-rtdetr-coco-person-candidate-audit` scored
+  `7.543611504007545e-06` official `mAP-LocSim` when the repaired
+  `SYNLOC_COORD_SCALE_MODE=actual_image` transformer-audit path reran public
+  `PekingU/rtdetr_r18vd` COCO person boxes on 64 validation frames. Candidate
+  diagnostics were effectively unchanged from the earlier RT-DETR audit:
+  `gt_recall_iou_0_5=0.0069721115537848604`,
+  `gt_recall_iou_0_3=0.0348605577689243`,
+  `mean_best_iou_gt_to_det=0.02903191841477167`, and 10,000 detections for
+  1,004 GT boxes. Discard generic RT-DETR person candidates even after the
+  coordinate-scale repair.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -255,7 +265,8 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   near-zero image-space GT recall despite many detections.
 - Pairing the direct point regressor with public COCO RT-DETR person candidate
   boxes; the candidate audit stayed far below the pose smoke despite 10,006
-  detections and slightly better IoU diagnostics.
+  detections and slightly better IoU diagnostics, and the actual-image rerun
+  confirmed coordinate backscaling does not rescue this source.
 - Pairing the direct point regressor with public EasyChamp or MartijnJolif
   soccer YOLO detectors; both produced many boxes but had zero IoU-0.5 GT
   recall on the SynLoc validation slice.
