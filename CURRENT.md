@@ -305,6 +305,13 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   TRAIN_MAX_IMAGES=32 RFDETR_MODEL_CLASS=RFDETRLarge RFDETR_CONF=0.1` against
   committed ref `489ea13187588166f6d410cf526d36981197b3fc`. This is a cloud
   permission blocker, not a model verdict.
+- `hf-job-write-permission-recheck` added no score: the same bounded RF-DETR
+  Large actual-image audit was retried from pushed ref
+  `092a50188d92eb6ebb1000e0e89ff929d84b5972`. Helper preflight again produced
+  a reachable repo-relative raw GitHub `train.py` command, but actual HF Jobs
+  creation failed before any job id or official score with the same HF `403`:
+  missing `job.write` for namespace `dmontgomery40`. No model code changed and
+  no cloud experiment ran.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -363,7 +370,8 @@ near-zero image-space overlap on SynLoc validation frames.
 ## Next Action
 
 First unblock repo-local Hugging Face Jobs write permission: the token in
-`.env` authenticates but cannot create jobs in `dmontgomery40` because it lacks
+`.env` is visible to `scripts/run_hf_train.sh` and passes helper preflight, but
+actual job creation in `dmontgomery40` still fails because it lacks
 `job.write`. After that permission is fixed, rerun the already-selected bounded
 RF-DETR experiment:
 `TRAIN_MODE=rfdetr_baseline HF_FLAVOR=t4-small HF_TIMEOUT=2h
