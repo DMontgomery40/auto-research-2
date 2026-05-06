@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-05-05
+Updated: 2026-05-06
 
 ## Mission
 
@@ -214,6 +214,25 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   `69fabfe7f2f4addb7839c185` failed before running on Python 3.12 from the
   known `xtcocotools`/`numpy` build-isolation issue; Python 3.10 remains the
   working HF Jobs recipe.
+- `actual-image-scale-jittered-point-smoke` is a keep-signal but not a valid
+  submission path: job `69fac2a1b745af80fb3738f9` used
+  `SYNLOC_COORD_SCALE_MODE=actual_image` to train/crop on the actual
+  `1920x1080` cached images while emitting predictions back in `3840x2160`
+  annotation coordinates for SSKit. Official
+  `mAP-LocSim=0.0032123790168145185`, above the prior jittered-GT smoke
+  `0.0006912422136296282`, pose smoke `0.000825082508250825`, and oracle-box
+  direct point smoke `0.0027874657923080423`. Candidate diagnostics recovered:
+  `gt_recall_iou_0_5=0.9578544061302682`,
+  `mean_best_iou_gt_to_det=0.6846319161542074`,
+  `gt_recall_px_50=0.9980842911877394`, and
+  `mean_best_px_gt_to_pred=12.602958457397472`. This proves the scale adapter
+  is the correct immediate mechanics fix for cached fullHD annotations paired
+  with half-size images, but the score is not challenge-submittable because the
+  candidates are jittered GT boxes. Artifact upload still failed with HF
+  model-repo LFS `403`; the printed `AUTONOMY_RESULT` log is the durable
+  result. First connector launch `69fac28cf2f4addb7839c1a5` failed before
+  running because the raw GitHub URL had a bad SHA and returned `404: Not
+  Found`.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -223,14 +242,15 @@ Active direction remains track/pose/keypoint or direct ground-point prediction.
 The official data, camera calibration, evaluator, and SSKit projection path are
 not globally broken. The failure is on the prediction side.
 
-The latest cloud smoke proved part of the prediction side failure is a concrete
-coordinate-scale or file-selection problem, not just model weakness. GT
-annotations in the audit can extend past x=2900, while the cloud cache currently
-serves `1920x1080` images for COCO records declaring `3840x2160`. Before more
-model-source searches, fix the data/cache extraction to provide matching
-fullHD files or add an explicit, tested coordinate-scale adapter that maps
-annotations, boxes, keypoints, detector outputs, and SSKit projection inputs
-consistently.
+The latest cloud smoke proved part of the prediction side failure was a
+concrete coordinate-scale problem, not just model weakness. GT annotations in
+the audit can extend past x=2900, while the cloud cache currently serves
+`1920x1080` images for COCO records declaring `3840x2160`.
+`SYNLOC_COORD_SCALE_MODE=actual_image` now maps annotations into actual-image
+coordinates for crop training/inference and maps emitted prediction boxes and
+keypoints back to annotation coordinates for SSKit. Use strict mode by default
+when matching full-size files exist; use `actual_image` for the current cached
+fullHD jobs until the cache is rebuilt with true annotation-size images.
 
 Zero or near-zero official scores from a soccer/football-pretrained model on
 SoccerNet data should be treated as runtime, class mapping, coordinate,
@@ -269,17 +289,15 @@ near-zero image-space overlap on SynLoc validation frames.
 
 ## Next Action
 
-Rerun one cheap official SSKit smoke through the new dimension-aware image path,
-preferably the jittered-GT candidate audit:
-`TRAIN_MODE=point_regressor POINT_CANDIDATE_MODE=jittered
-POINT_JITTER_CENTER_FRAC=0.10 POINT_JITTER_SCALE_FRAC=0.15 TRAIN_MAX_IMAGES=64
-VAL_MAX_IMAGES=32 POINT_EPOCHS=2 POINT_BATCH=16`.
-Expected movement is either positive candidate IoU recovery if the prior run
-used resized images, or an explicit early blocker naming mismatched image
-candidate sizes. Do not spend the next pass on football YOLO26 image-size/
-confidence tuning, generic COCO person detectors, COCO RT-DETR detector boxes,
-the public EasyChamp/MartijnJolif/Uisikdag/Adit-jain soccer-football YOLO
-detectors, or another RF-DETR SoccerNet scoring job until image/annotation scale
-is resolved. Also fix or work around HF model-repo write permission before
-relying on uploaded artifacts; job logs are currently the only durable result
-source for these smokes.
+Run one cheap real-candidate audit through the same scale adapter before
+trusting any earlier detector-source discard:
+`TRAIN_MODE=point_regressor SYNLOC_COORD_SCALE_MODE=actual_image
+POINT_CANDIDATE_MODE=yolo TRAIN_MAX_IMAGES=64 VAL_MAX_IMAGES=32 POINT_EPOCHS=2
+POINT_BATCH=16`.
+Start with the existing default YOLO26 candidate bridge or one previously best
+public soccer/SoccerNet-labeled source, and inspect candidate IoU diagnostics
+before scaling. Expected movement is positive candidate overlap if prior
+detector audits were mostly scale-contaminated, or a cleaner discard if real
+candidate boxes still miss after coordinate repair. Also fix or work around HF
+model-repo write permission before relying on uploaded artifacts; job logs are
+currently the only durable result source for these smokes.

@@ -4,17 +4,21 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Fix the image/annotation scale blocker before any new detector-source search.
-  The dimension-guard cloud smoke proved cached COCO records can declare
-  `3840x2160` while the available image files are `1920x1080`. First inspect
-  the private cache/extraction mechanics and decide whether the correct fix is
-  to cache true fullHD images or to add an explicit coordinate-scale adapter
-  that consistently rescales annotations, candidate boxes, keypoints, detector
-  outputs, and SSKit projection inputs. After that fix, rerun the same bounded
-  jittered-GT smoke:
-  `TRAIN_MODE=point_regressor POINT_CANDIDATE_MODE=jittered
-  POINT_JITTER_CENTER_FRAC=0.10 POINT_JITTER_SCALE_FRAC=0.15 TRAIN_MAX_IMAGES=64
-  VAL_MAX_IMAGES=32 POINT_EPOCHS=2 POINT_BATCH=16`.
+- Re-audit one real candidate source through the coordinate-scale adapter before
+  trusting any earlier detector-source discard. The jittered-GT point-regressor
+  smoke recovered when `SYNLOC_COORD_SCALE_MODE=actual_image` mapped 3840x2160
+  annotation coordinates to the cached 1920x1080 images and back to annotation
+  coordinates for SSKit. Next run:
+  `TRAIN_MODE=point_regressor SYNLOC_COORD_SCALE_MODE=actual_image
+  POINT_CANDIDATE_MODE=yolo TRAIN_MAX_IMAGES=64 VAL_MAX_IMAGES=32
+  POINT_EPOCHS=2 POINT_BATCH=16`. Start with the existing default YOLO26 bridge
+  or one previously best public soccer/SoccerNet-labeled source, and decide
+  from candidate IoU diagnostics whether prior detector failures were mostly
+  scale contamination or still true candidate-source failures.
+- Later, decide whether to rebuild the private data cache with true
+  annotation-size images or keep the explicit `actual_image` coordinate adapter
+  for cached fullHD jobs. Strict image-size matching should remain the default
+  guard when matching files exist.
 - Audit the pretrained-model/evaluator path before adding another model idea:
   verify model class names, selected class ids, preprocessing/image scale, bbox
   format, score thresholds, camera projection, category ids, and SSKit ingestion
@@ -182,6 +186,17 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   not a model verdict. The earlier connector launch
   `69fabfe7f2f4addb7839c185` also reconfirmed that Python 3.12 hits the known
   `xtcocotools` build-isolation failure; keep using Python 3.10.
+- `actual-image-scale-jittered-point-smoke` scored
+  `0.0032123790168145185` official `mAP-LocSim` after adding
+  `SYNLOC_COORD_SCALE_MODE=actual_image` for the direct point-regressor lane.
+  It trains/crops on actual 1920x1080 cached images and emits predictions back
+  in 3840x2160 annotation coordinates for SSKit. Candidate diagnostics recovered
+  to `gt_recall_iou_0_5=0.9578544061302682`,
+  `gt_recall_px_50=0.9980842911877394`, and
+  `mean_best_px_gt_to_pred=12.602958457397472`. This beats the prior jittered
+  smoke, pose smoke, and oracle-box direct point smoke, but it is not
+  challenge-submittable because candidate boxes are jittered GT. Artifact
+  upload still fails with HF model-repo LFS `403`.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -228,11 +243,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Pairing the direct point regressor with public `Adit-jain/soccana`
   detections; the SoccerNet-labeled YOLO11 audit produced many boxes but still
   had zero IoU-0.5 GT recall on the SynLoc validation slice.
-- Another public detector-source audit before fixing the proven image/cache
-  scale blocker. The jittered-GT rerun now fails loudly because `3840x2160`
-  annotation records are paired with `1920x1080` image files, so prior near-zero
-  detector overlap may be contaminated by file-selection or coordinate-scale
-  mismatch.
+- Another public detector-source audit without `SYNLOC_COORD_SCALE_MODE=actual_image`
+  while using the current cached fullHD images. Prior near-zero detector overlap
+  may be contaminated by coordinate scale, so real-candidate reruns must use the
+  repaired coordinate path or a rebuilt true-fullHD cache.
 - Running another RF-DETR SoccerNet scoring job just because the architecture
   mismatch is fixed. The large-model smoke scored zero with near-zero image-space
   overlap, so it needs a new preprocessing/coordinate-parity hypothesis first.
