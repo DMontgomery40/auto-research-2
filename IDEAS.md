@@ -209,6 +209,16 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   next tiny real-candidate audit; older detector rows without the adapter may
   have been scale-contaminated, but do not rerun already-discarded sources
   unless there is a specific class/preprocess/runtime reason.
+- `actual-image-hamza-football-candidate-audit` scored
+  `1.3407689313908168e-05` official `mAP-LocSim` with public
+  `HamzaAliKhan/football-players-detection` on 64 validation frames through the
+  repaired actual-image detector-audit path. Loaded labels were `0=ball`,
+  `1=goalkeeper`, `2=player`, `3=referee`; the run had 2,290 detections for
+  1,004 GT boxes but still `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.00099601593625498`, and
+  `mean_best_iou_gt_to_det=0.00950942234585973`. Discard this detector source
+  for the direct point regressor and avoid more generic public football YOLO
+  audits unless there is a new runtime/preprocess hypothesis.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
@@ -255,6 +265,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Pairing the direct point regressor with public `Adit-jain/soccana`
   detections; the SoccerNet-labeled YOLO11 audit produced many boxes but still
   had zero IoU-0.5 GT recall on the SynLoc validation slice.
+- Pairing the direct point regressor with public
+  `HamzaAliKhan/football-players-detection` boxes; even after the actual-image
+  detector-audit repair, it had near-zero IoU-0.5 GT recall on the same SynLoc
+  validation slice.
 - Another public detector-source audit without `SYNLOC_COORD_SCALE_MODE=actual_image`
   while using the current cached fullHD images. Prior near-zero detector overlap
   may be contaminated by coordinate scale, so real-candidate reruns must use the

@@ -254,6 +254,22 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   projection, and official SSKit evaluation. Local `python3 -m py_compile
   train.py` and `scripts/verify.sh` passed, including detector-box backscale
   coverage. No HF job was launched from the dirty mechanics pass.
+- `actual-image-hamza-football-candidate-audit` is a discard-result: job
+  `69fac706b745af80fb373923` evaluated
+  `HamzaAliKhan/football-players-detection` through the repaired
+  `SYNLOC_COORD_SCALE_MODE=actual_image` YOLO detector-audit path on 64
+  validation frames. Loaded labels were `0=ball`, `1=goalkeeper`, `2=player`,
+  `3=referee`, and the run produced 2,290 detections for 1,004 GT boxes, but
+  official `mAP-LocSim=1.3407689313908168e-05`, `recall_50=0.0`,
+  `precision_50=0.002554278416347382`,
+  `gt_recall_iou_0_5=0.00099601593625498`,
+  `gt_recall_iou_0_3=0.012948207171314742`, and
+  `mean_best_iou_gt_to_det=0.00950942234585973`. This public football detector
+  does not unblock the direct point regressor. Artifact upload again failed
+  with HF model-repo `403`; the printed `AUTONOMY_RESULT` log is the durable
+  result. First connector launch `69fac6f1f2f4addb7839c1af` failed before
+  running because the raw GitHub URL used a mistyped SHA and returned
+  `404: Not Found`.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -313,11 +329,11 @@ near-zero image-space overlap on SynLoc validation frames.
 
 Do not rerun the default YOLO26 candidate bridge just because the coordinate
 adapter exists; job `69fac472b745af80fb37390f` already gave a cleaner discard.
-The next useful unit is a tiny `SYNLOC_COORD_SCALE_MODE=actual_image` detector
-candidate audit from committed code, preferably an untried track/pose or
-football-player source with saved class-name and image-space recall diagnostics.
-If that still fails, pivot back to official SSKit/SoccerNet-format candidates
-or SoccerMaster official-runtime parity rather than another public-detector
-sweep. Also fix or work around HF model-repo write permission before relying on
-uploaded artifacts; job logs are currently the only durable result source for
-these smokes.
+The next useful unit should not be another generic public football YOLO
+candidate unless it has a specific new runtime/preprocess reason. The repaired
+actual-image path is now proven enough to audit candidates, and Hamza still had
+near-zero image-space overlap. Prefer official SSKit/SoccerNet-format
+candidates, SoccerMaster official-runtime parity, or a track/pose source with
+stronger same-frame recall diagnostics. Also fix or work around HF model-repo
+write permission before relying on uploaded artifacts; job logs are currently
+the only durable result source for these smokes.
