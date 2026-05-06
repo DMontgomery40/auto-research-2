@@ -201,6 +201,14 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `mean_best_iou_gt_to_det=0.0072488041644957375`, and
   `gt_recall_px_50=0.039923954372623575`. Discard this candidate bridge even
   after coordinate repair.
+- `detector-baseline-scale-adapter` added no score, but the standalone YOLO,
+  transformer, and RF-DETR detector-audit lanes now honor
+  `SYNLOC_COORD_SCALE_MODE=actual_image`. Boxes produced on actual cached
+  images are mapped back to annotation coordinates before diagnostics,
+  bottom-center projection, and official SSKit evaluation. Use this for the
+  next tiny real-candidate audit; older detector rows without the adapter may
+  have been scale-contaminated, but do not rerun already-discarded sources
+  unless there is a specific class/preprocess/runtime reason.
 - HF model artifact upload still fails with LFS `403` read-only token in
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or

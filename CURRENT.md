@@ -246,6 +246,14 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   `gt_recall_px_50=0.039923954372623575`. Artifact upload still failed with HF
   model-repo LFS `403`; the printed `AUTONOMY_RESULT` log is the durable
   result.
+- `detector-baseline-scale-adapter` added no new score yet but closes a
+  follow-on coordinate blocker in the candidate-audit lanes. `train.py` now
+  supports `SYNLOC_COORD_SCALE_MODE=actual_image` for YOLO, transformer, and
+  RF-DETR detector baselines, mapping boxes from the actual cached image size
+  back to annotation coordinates before image-space diagnostics, bottom-center
+  projection, and official SSKit evaluation. Local `python3 -m py_compile
+  train.py` and `scripts/verify.sh` passed, including detector-box backscale
+  coverage. No HF job was launched from the dirty mechanics pass.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -305,9 +313,11 @@ near-zero image-space overlap on SynLoc validation frames.
 
 Do not rerun the default YOLO26 candidate bridge just because the coordinate
 adapter exists; job `69fac472b745af80fb37390f` already gave a cleaner discard.
-The next useful unit is either an official SSKit/SoccerNet-format candidate
-source, SoccerMaster official-runtime parity that proves real athlete boxes on
-the same SynLoc frames, or a track/pose source with saved image-space recall
-diagnostics. Also fix or work around HF model-repo write permission before
-relying on uploaded artifacts; job logs are currently the only durable result
-source for these smokes.
+The next useful unit is a tiny `SYNLOC_COORD_SCALE_MODE=actual_image` detector
+candidate audit from committed code, preferably an untried track/pose or
+football-player source with saved class-name and image-space recall diagnostics.
+If that still fails, pivot back to official SSKit/SoccerNet-format candidates
+or SoccerMaster official-runtime parity rather than another public-detector
+sweep. Also fix or work around HF model-repo write permission before relying on
+uploaded artifacts; job logs are currently the only durable result source for
+these smokes.

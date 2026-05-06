@@ -316,6 +316,15 @@ def scale_xy(point: tuple[float, float], scale_x: float, scale_y: float) -> tupl
     return x * scale_x, y * scale_y
 
 
+def box_xyxy_to_annotation_scale(
+    box: tuple[float, float, float, float],
+    scale_x: float,
+    scale_y: float,
+) -> tuple[float, float, float, float]:
+    x1, y1, x2, y2 = box
+    return x1 / scale_x, y1 / scale_y, x2 / scale_x, y2 / scale_y
+
+
 def load_synloc_data(version: str, patterns: list[str]) -> Path:
     required = ["HF_TOKEN", "HF_DATASET_REPO"]
     missing = [key for key in required if not os.getenv(key)]
@@ -419,6 +428,7 @@ def predictions_for_model(
     imgsz: int,
     conf: float,
     iou: float,
+    coordinate_scale_mode: str,
 ) -> dict[str, Any]:
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
     images = gt["images"][: max_images or None]
@@ -440,7 +450,11 @@ def predictions_for_model(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path_for_record(data_root, image)
+        path, scale_x, scale_y, annotation_size, actual_size = image_path_and_scale_for_record(
+            data_root,
+            image,
+            coordinate_scale_mode=coordinate_scale_mode,
+        )
         width = float(image["width"])
         height = float(image["height"])
         preds = model.predict(
@@ -463,15 +477,16 @@ def predictions_for_model(
             if int(class_id) not in spec.athlete_class_ids:
                 continue
             x1, y1, x2, y2 = [float(v) for v in box]
-            det_boxes_by_image.setdefault(image_id, []).append([x1, y1, x2, y2])
-            point = np.array([[(x1 + x2) / 2.0, y2]], dtype=np.float32)
+            ax1, ay1, ax2, ay2 = box_xyxy_to_annotation_scale((x1, y1, x2, y2), scale_x, scale_y)
+            det_boxes_by_image.setdefault(image_id, []).append([ax1, ay1, ax2, ay2])
+            point = np.array([[(ax1 + ax2) / 2.0, ay2]], dtype=np.float32)
             center = np.array([[(width - 1) / 2.0, (height - 1) / 2.0]], dtype=np.float32)
             normalized = ((point - center) / width).astype(np.float32)
             bev = image_to_ground(image["camera_matrix"], image["undist_poly"], normalized)[0]
             results.append(
                 {
                     "area": 0,
-                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "bbox": [ax1, ay1, ax2 - ax1, ay2 - ay1],
                     "category_id": 1,
                     "id": det_id,
                     "image_id": image_id,
@@ -497,6 +512,9 @@ def predictions_for_model(
         "max_images": max_images,
         "imgsz": imgsz,
         "iou": iou,
+        "coordinate_scale_mode": coordinate_scale_mode,
+        "last_annotation_size": annotation_size if images else None,
+        "last_actual_size": actual_size if images else None,
         "diagnostics": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
@@ -517,6 +535,7 @@ def predictions_for_model(
         "imgsz": imgsz,
         "conf": conf,
         "iou": iou,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "num_images": len(images),
         "num_detections": len(results),
         "metrics": metrics,
@@ -534,6 +553,7 @@ def predictions_for_transformer_model(
     split: str,
     max_images: int,
     threshold: float,
+    coordinate_scale_mode: str,
 ) -> dict[str, Any]:
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
     images = gt["images"][: max_images or None]
@@ -560,7 +580,11 @@ def predictions_for_transformer_model(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path_for_record(data_root, image)
+        path, scale_x, scale_y, annotation_size, actual_size = image_path_and_scale_for_record(
+            data_root,
+            image,
+            coordinate_scale_mode=coordinate_scale_mode,
+        )
         width = float(image["width"])
         height = float(image["height"])
         pil_image = Image.open(path).convert("RGB")
@@ -568,7 +592,8 @@ def predictions_for_transformer_model(
         inputs = {key: value.to(device) for key, value in inputs.items()}
         with torch.no_grad():
             outputs = model(**inputs)
-        target_sizes = torch.tensor([[height, width]], device=device)
+        actual_height, actual_width = float(actual_size[1]), float(actual_size[0])
+        target_sizes = torch.tensor([[actual_height, actual_width]], device=device)
         processed = processor.post_process_object_detection(
             outputs,
             threshold=threshold,
@@ -581,15 +606,16 @@ def predictions_for_transformer_model(
             if int(class_id) not in spec.athlete_class_ids:
                 continue
             x1, y1, x2, y2 = [float(v) for v in box]
-            det_boxes_by_image.setdefault(image_id, []).append([x1, y1, x2, y2])
-            point = np.array([[(x1 + x2) / 2.0, y2]], dtype=np.float32)
+            ax1, ay1, ax2, ay2 = box_xyxy_to_annotation_scale((x1, y1, x2, y2), scale_x, scale_y)
+            det_boxes_by_image.setdefault(image_id, []).append([ax1, ay1, ax2, ay2])
+            point = np.array([[(ax1 + ax2) / 2.0, ay2]], dtype=np.float32)
             center = np.array([[(width - 1) / 2.0, (height - 1) / 2.0]], dtype=np.float32)
             normalized = ((point - center) / width).astype(np.float32)
             bev = image_to_ground(image["camera_matrix"], image["undist_poly"], normalized)[0]
             results.append(
                 {
                     "area": 0,
-                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "bbox": [ax1, ay1, ax2 - ax1, ay2 - ay1],
                     "category_id": 1,
                     "id": det_id,
                     "image_id": image_id,
@@ -612,6 +638,9 @@ def predictions_for_transformer_model(
         "model_class_names": model_class_names,
         "split": split,
         "max_images": max_images,
+        "coordinate_scale_mode": coordinate_scale_mode,
+        "last_annotation_size": annotation_size if images else None,
+        "last_actual_size": actual_size if images else None,
         "diagnostics": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
@@ -629,6 +658,7 @@ def predictions_for_transformer_model(
         "model_class_names": model_class_names,
         "max_images": max_images,
         "threshold": threshold,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "num_images": len(images),
         "num_detections": len(results),
         "metrics": metrics,
@@ -647,6 +677,7 @@ def predictions_for_rfdetr_model(
     max_images: int,
     threshold: float,
     model_class_name: str,
+    coordinate_scale_mode: str,
 ) -> dict[str, Any]:
     import rfdetr
 
@@ -689,7 +720,11 @@ def predictions_for_rfdetr_model(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path_for_record(data_root, image)
+        path, scale_x, scale_y, annotation_size, actual_size = image_path_and_scale_for_record(
+            data_root,
+            image,
+            coordinate_scale_mode=coordinate_scale_mode,
+        )
         width = float(image["width"])
         height = float(image["height"])
         pil_image = Image.open(path).convert("RGB")
@@ -702,15 +737,16 @@ def predictions_for_rfdetr_model(
             if class_id not in spec.athlete_class_ids:
                 continue
             x1, y1, x2, y2 = [float(v) for v in box.tolist()]
-            det_boxes_by_image.setdefault(image_id, []).append([x1, y1, x2, y2])
-            point = np.array([[(x1 + x2) / 2.0, y2]], dtype=np.float32)
+            ax1, ay1, ax2, ay2 = box_xyxy_to_annotation_scale((x1, y1, x2, y2), scale_x, scale_y)
+            det_boxes_by_image.setdefault(image_id, []).append([ax1, ay1, ax2, ay2])
+            point = np.array([[(ax1 + ax2) / 2.0, ay2]], dtype=np.float32)
             center = np.array([[(width - 1) / 2.0, (height - 1) / 2.0]], dtype=np.float32)
             normalized = ((point - center) / width).astype(np.float32)
             bev = image_to_ground(image["camera_matrix"], image["undist_poly"], normalized)[0]
             results.append(
                 {
                     "area": 0,
-                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "bbox": [ax1, ay1, ax2 - ax1, ay2 - ay1],
                     "category_id": 1,
                     "id": det_id,
                     "image_id": image_id,
@@ -735,6 +771,9 @@ def predictions_for_rfdetr_model(
         "model_class_names": model_class_names,
         "split": split,
         "max_images": max_images,
+        "coordinate_scale_mode": coordinate_scale_mode,
+        "last_annotation_size": annotation_size if images else None,
+        "last_actual_size": actual_size if images else None,
         "diagnostics": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
@@ -754,6 +793,7 @@ def predictions_for_rfdetr_model(
         "model_class_names": model_class_names,
         "max_images": max_images,
         "threshold": threshold,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "num_images": len(images),
         "num_detections": len(results),
         "metrics": metrics,
@@ -1886,6 +1926,9 @@ def run_baseline() -> dict[str, Any]:
     imgsz = env_int("YOLO_IMGSZ", 960)
     conf = env_float("YOLO_CONF", 0.01)
     iou = env_float("YOLO_IOU", 0.7)
+    coordinate_scale_mode = os.getenv("SYNLOC_COORD_SCALE_MODE", "strict").strip().lower()
+    if coordinate_scale_mode not in {"strict", "actual_image"}:
+        raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
     raw_specs = os.getenv("YOLO_BASELINES", ";".join(DEFAULT_BASELINES))
     specs = parse_baselines(raw_specs)
 
@@ -1912,6 +1955,7 @@ def run_baseline() -> dict[str, Any]:
             imgsz=imgsz,
             conf=conf,
             iou=iou,
+            coordinate_scale_mode=coordinate_scale_mode,
         )
         summary = item["summary"]
         evaluated.append(summary)
@@ -1931,6 +1975,7 @@ def run_baseline() -> dict[str, Any]:
         "split": split,
         "version": version,
         "max_images": max_images,
+        "coordinate_scale_mode": coordinate_scale_mode,
     }
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     emit_autonomy_result(summary)
@@ -1948,6 +1993,9 @@ def run_transformer_baseline() -> dict[str, Any]:
     version = os.getenv("SYNLOC_VERSION", "fullhd")
     max_images = env_int("TRAIN_MAX_IMAGES", 64)
     threshold = env_float("TRANSFORMER_CONF", 0.05)
+    coordinate_scale_mode = os.getenv("SYNLOC_COORD_SCALE_MODE", "strict").strip().lower()
+    if coordinate_scale_mode not in {"strict", "actual_image"}:
+        raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
     raw_specs = os.getenv("TRANSFORMER_BASELINES", ";".join(DEFAULT_TRANSFORMER_BASELINES))
     specs = parse_transformer_baselines(raw_specs)
 
@@ -1968,6 +2016,7 @@ def run_transformer_baseline() -> dict[str, Any]:
             split=split,
             max_images=max_images,
             threshold=threshold,
+            coordinate_scale_mode=coordinate_scale_mode,
         )
         summary = item["summary"]
         evaluated.append(summary)
@@ -1988,6 +2037,7 @@ def run_transformer_baseline() -> dict[str, Any]:
         "version": version,
         "max_images": max_images,
         "threshold": threshold,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "note": "Non-YOLO COCO transformer detector candidate source; bottom-center projection only.",
     }
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
@@ -2007,6 +2057,9 @@ def run_rfdetr_baseline() -> dict[str, Any]:
     max_images = env_int("TRAIN_MAX_IMAGES", 32)
     threshold = env_float("RFDETR_CONF", 0.5)
     model_class_name = os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge").strip()
+    coordinate_scale_mode = os.getenv("SYNLOC_COORD_SCALE_MODE", "strict").strip().lower()
+    if coordinate_scale_mode not in {"strict", "actual_image"}:
+        raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
     raw_specs = os.getenv("RFDETR_BASELINES", ";".join(DEFAULT_RFDETR_BASELINES))
     specs = parse_rfdetr_baselines(raw_specs)
 
@@ -2028,6 +2081,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
             max_images=max_images,
             threshold=threshold,
             model_class_name=model_class_name,
+            coordinate_scale_mode=coordinate_scale_mode,
         )
         summary = item["summary"]
         evaluated.append(summary)
@@ -2049,6 +2103,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
         "max_images": max_images,
         "threshold": threshold,
         "rfdetr_model_class": model_class_name,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "note": "SoccerNet-Tracking RF-DETR candidate source; bottom-center projection only.",
     }
     (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")

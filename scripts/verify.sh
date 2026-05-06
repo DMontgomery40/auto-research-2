@@ -52,6 +52,7 @@ functions = [
         "image_path_and_scale_for_record",
         "scale_xywh",
         "scale_xy",
+        "box_xyxy_to_annotation_scale",
     }
 ]
 module = ast.Module(body=functions, type_ignores=[])
@@ -65,6 +66,7 @@ image_path_for_record = namespace["image_path_for_record"]
 image_path_and_scale_for_record = namespace["image_path_and_scale_for_record"]
 scale_xywh = namespace["scale_xywh"]
 scale_xy = namespace["scale_xy"]
+box_xyxy_to_annotation_scale = namespace["box_xyxy_to_annotation_scale"]
 
 cases = [
     ((10.0, 20.0, 30.0, 40.0), 100, 100, 0.15),
@@ -130,6 +132,8 @@ with tempfile.TemporaryDirectory() as tmp:
         raise SystemExit("scale_xywh did not map annotation boxes into actual-image coordinates")
     if scale_xy((100.0, 200.0), scale_x, scale_y) != (50.0, 100.0):
         raise SystemExit("scale_xy did not map annotation points into actual-image coordinates")
+    if box_xyxy_to_annotation_scale((50.0, 100.0, 75.0, 140.0), scale_x, scale_y) != (100.0, 200.0, 150.0, 280.0):
+        raise SystemExit("box_xyxy_to_annotation_scale did not map detector boxes back to annotation coordinates")
 
 if 'os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge")' not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane must default to RFDETRLarge; the checkpoint is not base-width")
