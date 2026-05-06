@@ -1006,10 +1006,22 @@ def jitter_bbox_xywh(
 
 
 class PointCropDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
-    def __init__(self, samples: list[PointSample], *, image_size: int, crop_padding: float) -> None:
+    def __init__(
+        self,
+        samples: list[PointSample],
+        *,
+        image_size: int,
+        crop_padding: float,
+        train_jitter_center_frac: float = 0.0,
+        train_jitter_scale_frac: float = 0.0,
+        train_jitter_seed: int = 20260506,
+    ) -> None:
         self.samples = samples
         self.image_size = image_size
         self.crop_padding = crop_padding
+        self.train_jitter_center_frac = max(0.0, train_jitter_center_frac)
+        self.train_jitter_scale_frac = max(0.0, train_jitter_scale_frac)
+        self.train_jitter_seed = train_jitter_seed
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -1018,7 +1030,18 @@ class PointCropDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         sample = self.samples[index]
         with Image.open(sample.image_path) as image:
             rgb = image.convert("RGB")
-            left, top, right, bottom = crop_bounds(sample.bbox_xywh, rgb.width, rgb.height, self.crop_padding)
+            bbox_xywh = sample.bbox_xywh
+            if self.train_jitter_center_frac > 0.0 or self.train_jitter_scale_frac > 0.0:
+                rng = np.random.default_rng(self.train_jitter_seed + index)
+                bbox_xywh = jitter_bbox_xywh(
+                    bbox_xywh,
+                    image_width=rgb.width,
+                    image_height=rgb.height,
+                    center_frac=self.train_jitter_center_frac,
+                    scale_frac=self.train_jitter_scale_frac,
+                    rng=rng,
+                )
+            left, top, right, bottom = crop_bounds(bbox_xywh, rgb.width, rgb.height, self.crop_padding)
             crop = rgb.crop((left, top, right, bottom)).resize((self.image_size, self.image_size))
         array = np.asarray(crop, dtype=np.float32) / 255.0
         tensor = torch.from_numpy(array).permute(2, 0, 1)
@@ -2347,6 +2370,9 @@ def run_point_regressor() -> dict[str, Any]:
     jitter_center_frac = env_float("POINT_JITTER_CENTER_FRAC", 0.10)
     jitter_scale_frac = env_float("POINT_JITTER_SCALE_FRAC", 0.15)
     jitter_seed = env_int("POINT_JITTER_SEED", 20260505)
+    train_jitter_center_frac = env_float("POINT_TRAIN_JITTER_CENTER_FRAC", 0.0)
+    train_jitter_scale_frac = env_float("POINT_TRAIN_JITTER_SCALE_FRAC", 0.0)
+    train_jitter_seed = env_int("POINT_TRAIN_JITTER_SEED", 20260506)
     coordinate_scale_mode = os.getenv("SYNLOC_COORD_SCALE_MODE", "strict").strip().lower()
     if coordinate_scale_mode not in {"strict", "actual_image"}:
         raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
@@ -2378,7 +2404,14 @@ def run_point_regressor() -> dict[str, Any]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(env_int("POINT_SEED", 20260505))
     model = TinyPointRegressor().to(device)
-    dataset = PointCropDataset(train_samples, image_size=image_size, crop_padding=crop_padding)
+    dataset = PointCropDataset(
+        train_samples,
+        image_size=image_size,
+        crop_padding=crop_padding,
+        train_jitter_center_frac=train_jitter_center_frac,
+        train_jitter_scale_frac=train_jitter_scale_frac,
+        train_jitter_seed=train_jitter_seed,
+    )
     loader = DataLoader(dataset, batch_size=batch, shuffle=True, num_workers=2)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     loss_fn = nn.SmoothL1Loss()
@@ -2475,6 +2508,9 @@ def run_point_regressor() -> dict[str, Any]:
         "jitter_center_frac": jitter_center_frac if candidate_mode == "jittered" else None,
         "jitter_scale_frac": jitter_scale_frac if candidate_mode == "jittered" else None,
         "jitter_seed": jitter_seed if candidate_mode == "jittered" else None,
+        "train_jitter_center_frac": train_jitter_center_frac,
+        "train_jitter_scale_frac": train_jitter_scale_frac,
+        "train_jitter_seed": train_jitter_seed,
         "epoch_losses": epoch_losses,
         "validation": validation,
         "metric": "mAP-LocSim",

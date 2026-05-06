@@ -145,6 +145,15 @@ if "api.upload_folder(**kwargs, create_pr=True)" not in train_text:
     raise SystemExit("train.py must retry result upload as a Hub PR when direct commit is blocked")
 if 'os.getenv("HF_STRICT_UPLOAD", "0")' not in train_text:
     raise SystemExit("train.py must let scored experiments survive artifact upload failures by default")
+for needle in [
+    "POINT_TRAIN_JITTER_CENTER_FRAC",
+    "POINT_TRAIN_JITTER_SCALE_FRAC",
+    "POINT_TRAIN_JITTER_SEED",
+    "train_jitter_center_frac=train_jitter_center_frac",
+    "train_jitter_scale_frac=train_jitter_scale_frac",
+]:
+    if needle not in train_text:
+        raise SystemExit(f"point-regressor train-jitter contract missing {needle}")
 if 'def emit_autonomy_result(summary: dict[str, Any]) -> None:' not in train_text:
     raise SystemExit("train.py must emit AUTONOMY_RESULT through a shared helper")
 if "emit_autonomy_result(summary)\n    upload_result(summary[\"run_id\"], upload_root)" not in train_text:
