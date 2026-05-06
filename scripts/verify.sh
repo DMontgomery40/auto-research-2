@@ -112,6 +112,18 @@ if ! rg -q 'AUTONOMY_RESULT score and the upload blocker' scripts/codex_research
   echo "Codex tick prompt must record scores even when artifact upload is blocked" >&2
   exit 1
 fi
+if ! rg -q 'HF_GIT_REF' scripts/run_hf_train.sh; then
+  echo "HF train helper must pin train.py to a committed git ref" >&2
+  exit 1
+fi
+if ! rg -q 'raw.githubusercontent.com' scripts/run_hf_train.sh; then
+  echo "HF train helper must submit a reachable train.py URL, not a local path" >&2
+  exit 1
+fi
+if ! rg -q 'Working tree is dirty.*HF Jobs runs committed remote code' scripts/run_hf_train.sh; then
+  echo "HF train helper must refuse dirty local-only code before cloud submission" >&2
+  exit 1
+fi
 
 scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-tick.txt
 scripts/codex_research_loop.sh --allow-dirty --dry-run --iterations 2 >/tmp/auto-research-2-codex-loop.txt 2>&1
@@ -145,6 +157,11 @@ if "default local-first loop" not in loop: raise SystemExit("codex loop dry-run 
 hf = Path("/tmp/auto-research-2-hf-train.txt").read_text(encoding="utf-8")
 for needle in ["hf", "jobs", "uv", "run", "--detach", "--secrets", "HF_TOKEN", "train.py"]:
     if needle not in hf: raise SystemExit(f"HF train dry-run missing {needle}")
+if "https://raw.githubusercontent.com/" not in hf:
+    raise SystemExit("HF train dry-run must use a reachable raw GitHub train.py URL")
+for forbidden in ["/Users/", "~/Documents", "/Documents/", " file://"]:
+    if forbidden in hf:
+        raise SystemExit(f"HF train dry-run leaked a local path: {forbidden}")
 PYCHECK
 
 echo "verify ok"

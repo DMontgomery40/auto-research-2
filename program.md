@@ -146,9 +146,13 @@ TRAIN_MODE=finetune HF_FLAVOR=t4-small HF_TIMEOUT=2h scripts/run_hf_train.sh
 Pass extra `hf jobs uv run` arguments after `--` if needed. Keep the job
 detached, record the job URL, and pull logs/results back into `LEDGER.md`.
 
-Use the helper or the HF CLI upload path for local scripts. If using the HF Jobs
-MCP connector directly, pass inline script contents or a reachable URL; do not
-pass a local `train.py` path because the remote container cannot see it.
+The helper submits a raw GitHub URL for the current committed `train.py`, not a
+local file path. Before a real submission it refuses dirty worktrees and
+unpushed refs because the remote container cannot see local Mac-only edits. Use
+`HF_GIT_REMOTE`, `HF_GIT_REF`, or `HF_TRAIN_SCRIPT_URL` only when you have a
+specific reachable script source. If using the HF Jobs MCP connector directly,
+pass inline script contents or a reachable URL; do not pass a local `train.py`
+path because the remote container cannot see it.
 
 ## Current Research Direction
 
