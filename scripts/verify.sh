@@ -53,6 +53,7 @@ functions = [
         "scale_xywh",
         "scale_xy",
         "box_xyxy_to_annotation_scale",
+        "synloc_snapshot_patterns",
     }
 ]
 module = ast.Module(body=functions, type_ignores=[])
@@ -67,6 +68,29 @@ image_path_and_scale_for_record = namespace["image_path_and_scale_for_record"]
 scale_xywh = namespace["scale_xywh"]
 scale_xy = namespace["scale_xy"]
 box_xyxy_to_annotation_scale = namespace["box_xyxy_to_annotation_scale"]
+synloc_snapshot_patterns = namespace["synloc_snapshot_patterns"]
+
+if synloc_snapshot_patterns("fullhd", ["valid"]) != [
+    "raw/fullhd/annotations.zip",
+    "raw/fullhd/manifest.json",
+    "raw/fullhd/val.zip",
+]:
+    raise SystemExit("validation-only SynLoc fetch must avoid train.zip")
+if synloc_snapshot_patterns("fullhd", ["train", "valid", "val"]) != [
+    "raw/fullhd/annotations.zip",
+    "raw/fullhd/manifest.json",
+    "raw/fullhd/train.zip",
+    "raw/fullhd/val.zip",
+]:
+    raise SystemExit("train+valid SynLoc fetch must deduplicate val.zip aliases")
+if synloc_snapshot_patterns("fullhd", ["challenge"]) != [
+    "raw/fullhd/annotations.zip",
+    "raw/fullhd/manifest.json",
+    "raw/fullhd/challenge.zip",
+]:
+    raise SystemExit("challenge SynLoc fetch must use the challenge split archive")
+if 'load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])' in train_text:
+    raise SystemExit("run modes must use split-specific SynLoc snapshot patterns instead of raw/*.zip")
 
 cases = [
     ((10.0, 20.0, 30.0, 40.0), 100, 100, 0.15),

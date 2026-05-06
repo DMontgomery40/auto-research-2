@@ -343,6 +343,12 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   does not unblock the direct point regressor. Artifact upload again failed
   after `AUTONOMY_RESULT` with HF model-repo `403`; the printed log is the
   durable score.
+- `split-specific-synloc-fetch` added no score but fixes a loop-time mechanics
+  waste exposed by the Pericles audit: validation-only baseline, transformer,
+  and RF-DETR jobs now fetch only annotations, manifest, and the requested split
+  archive instead of `raw/fullhd/*.zip`; train/keypoint/point-regressor jobs
+  still fetch train plus valid. `scripts/verify.sh` covers this fetch-pattern
+  contract so future validation-only jobs do not silently download train.zip.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation

@@ -225,6 +225,28 @@ def extract_archives(cache_dir: Path, out_dir: Path) -> None:
             zf.extractall(out_dir)
 
 
+def synloc_snapshot_patterns(version: str, splits: list[str]) -> list[str]:
+    split_archives = {
+        "valid": "val.zip",
+        "val": "val.zip",
+        "validation": "val.zip",
+        "train": "train.zip",
+        "test": "test.zip",
+        "challenge": "challenge.zip",
+    }
+    patterns = [
+        f"raw/{version}/annotations.zip",
+        f"raw/{version}/manifest.json",
+    ]
+    for split in splits:
+        normalized = split.strip().lower()
+        if not normalized:
+            continue
+        archive = split_archives.get(normalized, f"{normalized}.zip")
+        patterns.append(f"raw/{version}/{archive}")
+    return list(dict.fromkeys(patterns))
+
+
 def find_annotation(root: Path, split: str) -> Path:
     names = {
         "valid": ["val.json", "valid.json", "validation.json"],
@@ -1942,7 +1964,7 @@ def run_baseline() -> dict[str, Any]:
     raw_specs = os.getenv("YOLO_BASELINES", ";".join(DEFAULT_BASELINES))
     specs = parse_baselines(raw_specs)
 
-    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    data_root = load_synloc_data(version, synloc_snapshot_patterns(version, [split]))
     gt_path = find_annotation(data_root, split)
     model_dir = Path("/tmp/yolo-models")
 
@@ -2009,7 +2031,7 @@ def run_transformer_baseline() -> dict[str, Any]:
     raw_specs = os.getenv("TRANSFORMER_BASELINES", ";".join(DEFAULT_TRANSFORMER_BASELINES))
     specs = parse_transformer_baselines(raw_specs)
 
-    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    data_root = load_synloc_data(version, synloc_snapshot_patterns(version, [split]))
     gt_path = find_annotation(data_root, split)
     upload_root = Path("/tmp/transformer-baseline-results")
     if upload_root.exists():
@@ -2073,7 +2095,7 @@ def run_rfdetr_baseline() -> dict[str, Any]:
     raw_specs = os.getenv("RFDETR_BASELINES", ";".join(DEFAULT_RFDETR_BASELINES))
     specs = parse_rfdetr_baselines(raw_specs)
 
-    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    data_root = load_synloc_data(version, synloc_snapshot_patterns(version, [split]))
     gt_path = find_annotation(data_root, split)
     upload_root = Path("/tmp/rfdetr-baseline-results")
     if upload_root.exists():
@@ -2136,7 +2158,7 @@ def run_finetune() -> dict[str, Any]:
     batch = env_int("YOLO_BATCH", 4)
     spec = parse_baselines(os.getenv("YOLO_BASELINE_FOR_TRAIN", DEFAULT_BASELINES[0]))[0]
 
-    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    data_root = load_synloc_data(version, synloc_snapshot_patterns(version, ["train", "valid"]))
     train_gt = find_annotation(data_root, "train")
     val_gt = find_annotation(data_root, "valid")
     dataset = make_yolo_dataset(data_root, train_gt, val_gt, train_max=train_max, val_max=val_max)
@@ -2225,7 +2247,7 @@ def run_keypoint() -> dict[str, Any]:
     score_modes = keypoint_score_modes(os.getenv("YOLO_KEYPOINT_SCORE_MODE", "combined"))
     pose_model = os.getenv("YOLO_POSE_MODEL", "yolo11n-pose.pt")
 
-    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    data_root = load_synloc_data(version, synloc_snapshot_patterns(version, ["train", "valid"]))
     train_gt = find_annotation(data_root, "train")
     val_gt = find_annotation(data_root, "valid")
     dataset, dataset_manifest = make_yolo_keypoint_dataset(
@@ -2351,7 +2373,7 @@ def run_point_regressor() -> dict[str, Any]:
     if coordinate_scale_mode not in {"strict", "actual_image"}:
         raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
 
-    data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
+    data_root = load_synloc_data(version, synloc_snapshot_patterns(version, ["train", "valid"]))
     train_gt = find_annotation(data_root, "train")
     val_gt = find_annotation(data_root, "valid")
     train_samples, train_skipped = build_point_samples(
