@@ -183,6 +183,14 @@ if ! rg -q 'Not logged in' scripts/run_hf_train.sh; then
   echo "HF train helper must detect hf CLI's Not logged in output before submission" >&2
   exit 1
 fi
+if ! rg -q -- '--preflight' scripts/run_hf_train.sh; then
+  echo "HF train helper must provide a non-submitting credential preflight" >&2
+  exit 1
+fi
+if ! rg -q 'PREFLIGHT=1' scripts/run_hf_train.sh; then
+  echo "HF train preflight must reuse the submission credential checks" >&2
+  exit 1
+fi
 
 scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-tick.txt
 scripts/codex_research_loop.sh --allow-dirty --dry-run --iterations 2 >/tmp/auto-research-2-codex-loop.txt 2>&1

@@ -298,6 +298,13 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   not launch a `404: Not Found` job for a local-only commit. The cloud blocker
   remains credentials/scope: local `hf auth whoami` still returns
   `Not logged in`, and no private SynLoc score was attempted.
+- `hf-submit-preflight` added no score but makes the remaining cloud blocker
+  explicit before a job is launched. `scripts/run_hf_train.sh --preflight`
+  now reuses the submission path's repo-relative raw GitHub URL construction
+  and credential checks without submitting to HF Jobs. In this shell it fails
+  before the dirty-worktree check with
+  `HF_TOKEN is not visible and hf CLI is not logged in; export HF_TOKEN before
+  submitting.` No private SynLoc score was attempted.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -367,5 +374,6 @@ write permission before relying on uploaded artifacts; job logs are currently
 the only durable result source for these smokes. Before the next cloud
 experiment from this checkout, restore a repo-local Hugging Face token/login
 with read access to `dmontgomery40/auto-research-2-synloc-data` and the
-intended model-result write path, push any local commit that `HF_GIT_REF`
-points at, or explicitly document a safe alternate connector identity.
+intended model-result write path, run `scripts/run_hf_train.sh --preflight`,
+push any local commit that `HF_GIT_REF` points at, or explicitly document a
+safe alternate connector identity.

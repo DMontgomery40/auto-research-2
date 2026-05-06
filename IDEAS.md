@@ -237,8 +237,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   returns `Not logged in` and `HF_TOKEN` is unset. The run helper dry-run still
   builds a committed, repo-relative Python 3.10 `t4-small` command, and now
   refuses dry-runs for refs that are not present on the configured remote. The
-  next cloud blocker to clear is Hugging Face credential scope, plus pushing
-  any local commit before using it as `HF_GIT_REF`, not train.py packaging.
+  run helper also has `--preflight`, which checks credentials, clean committed
+  code, and reachable `train.py` without submitting a job. The next cloud
+  blocker to clear is Hugging Face credential scope, plus pushing any local
+  commit before using it as `HF_GIT_REF`, not train.py packaging.
 
 ## Maybe Later
 

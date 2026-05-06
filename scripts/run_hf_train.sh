@@ -13,11 +13,12 @@ PYTHON_VERSION="${HF_PYTHON:-3.10}"
 GIT_REMOTE="${HF_GIT_REMOTE:-origin}"
 GIT_REF="${HF_GIT_REF:-$(git rev-parse HEAD)}"
 DRY_RUN=0
+PREFLIGHT=0
 EXTRA_ARGS=()
 
 usage() {
   cat <<'EOF'
-Usage: TRAIN_MODE=baseline scripts/run_hf_train.sh [--dry-run] [-- extra hf jobs args]
+Usage: TRAIN_MODE=baseline scripts/run_hf_train.sh [--dry-run|--preflight] [-- extra hf jobs args]
 
 Submits train.py as a detached Hugging Face UV Job. This helper is mechanics
 only: choose the experiment in program.md/local Codex, then run one bounded job.
@@ -82,6 +83,10 @@ while [ "$#" -gt 0 ]; do
     --dry-run)
       DRY_RUN=1
       ;;
+    --preflight)
+      PREFLIGHT=1
+      DRY_RUN=1
+      ;;
     --)
       shift
       EXTRA_ARGS+=("$@")
@@ -123,6 +128,23 @@ if [ -z "${HF_TRAIN_SCRIPT_URL:-}" ]; then
 fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
+  if [ "$PREFLIGHT" -eq 1 ]; then
+    if ! command -v hf >/dev/null 2>&1; then
+      echo "hf CLI is required. Install/authenticate Hugging Face CLI first." >&2
+      exit 1
+    fi
+    if [ -z "${HF_TOKEN:-}" ]; then
+      hf_whoami="$(hf auth whoami 2>&1 || true)"
+      if [ -z "$hf_whoami" ] || printf '%s\n' "$hf_whoami" | grep -qi '^Not logged in'; then
+        echo "HF_TOKEN is not visible and hf CLI is not logged in; export HF_TOKEN before submitting." >&2
+        exit 1
+      fi
+    fi
+    if [ -n "$(git status --porcelain)" ]; then
+      echo "Working tree is dirty. Commit/stash/clean first because HF Jobs runs committed remote code, not local files." >&2
+      exit 1
+    fi
+  fi
   printf '%q ' "${cmd[@]}"
   printf '\n'
   exit 0
