@@ -44,7 +44,15 @@ functions = [
     node
     for node in tree.body
     if isinstance(node, ast.FunctionDef)
-    and node.name in {"crop_bounds", "jitter_bbox_xywh", "image_path", "image_path_for_record"}
+    and node.name in {
+        "crop_bounds",
+        "jitter_bbox_xywh",
+        "image_path",
+        "image_path_for_record",
+        "image_path_and_scale_for_record",
+        "scale_xywh",
+        "scale_xy",
+    }
 ]
 module = ast.Module(body=functions, type_ignores=[])
 ast.fix_missing_locations(module)
@@ -54,6 +62,9 @@ crop_bounds = namespace["crop_bounds"]
 jitter_bbox_xywh = namespace["jitter_bbox_xywh"]
 image_path = namespace["image_path"]
 image_path_for_record = namespace["image_path_for_record"]
+image_path_and_scale_for_record = namespace["image_path_and_scale_for_record"]
+scale_xywh = namespace["scale_xywh"]
+scale_xy = namespace["scale_xy"]
 
 cases = [
     ((10.0, 20.0, 30.0, 40.0), 100, 100, 0.15),
@@ -91,8 +102,10 @@ with tempfile.TemporaryDirectory() as tmp:
     (root / "fullhd" / "nested").mkdir(parents=True)
     wrong = root / "resized" / "frame001.jpg"
     right = root / "fullhd" / "nested" / "frame001.jpg"
+    only_resized = root / "resized" / "frame002.jpg"
     Image.new("RGB", (1920, 1080)).save(wrong)
     Image.new("RGB", (3840, 2160)).save(right)
+    Image.new("RGB", (1920, 1080)).save(only_resized)
     image = {"file_name": "frames/frame001.jpg", "width": 3840, "height": 2160}
     resolved = image_path_for_record(root, image)
     if resolved != right:
@@ -104,6 +117,19 @@ with tempfile.TemporaryDirectory() as tmp:
             raise
     else:
         raise SystemExit("dimension-aware image lookup should fail when no candidate matches annotation size")
+    path, scale_x, scale_y, annotation_size, actual_size = image_path_and_scale_for_record(
+        root,
+        {"file_name": "frames/frame002.jpg", "width": 3840, "height": 2160},
+        coordinate_scale_mode="actual_image",
+    )
+    if path != only_resized or (scale_x, scale_y) != (0.5, 0.5):
+        raise SystemExit(f"actual-image coordinate scale picked {(path, scale_x, scale_y)}, expected resized half-scale")
+    if annotation_size != (3840, 2160) or actual_size != (1920, 1080):
+        raise SystemExit(f"actual-image coordinate scale reported wrong sizes: {annotation_size}, {actual_size}")
+    if scale_xywh((100.0, 200.0, 50.0, 80.0), scale_x, scale_y) != (50.0, 100.0, 25.0, 40.0):
+        raise SystemExit("scale_xywh did not map annotation boxes into actual-image coordinates")
+    if scale_xy((100.0, 200.0), scale_x, scale_y) != (50.0, 100.0):
+        raise SystemExit("scale_xy did not map annotation points into actual-image coordinates")
 
 if 'os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge")' not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane must default to RFDETRLarge; the checkpoint is not base-width")

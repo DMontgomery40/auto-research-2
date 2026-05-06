@@ -283,6 +283,39 @@ def image_path_for_record(root: Path, image: dict[str, Any]) -> Path:
     )
 
 
+def image_path_and_scale_for_record(
+    root: Path,
+    image: dict[str, Any],
+    *,
+    coordinate_scale_mode: str,
+) -> tuple[Path, float, float, tuple[int, int], tuple[int, int]]:
+    expected_width = int(round(float(image["width"])))
+    expected_height = int(round(float(image["height"])))
+    if coordinate_scale_mode == "strict":
+        path = image_path_for_record(root, image)
+    elif coordinate_scale_mode == "actual_image":
+        path = image_path(root, image["file_name"])
+    else:
+        raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
+    with Image.open(path) as opened:
+        actual_width, actual_height = int(opened.width), int(opened.height)
+    if actual_width <= 0 or actual_height <= 0:
+        raise RuntimeError(f"Image dimensions must be positive for {path}: {actual_width}x{actual_height}")
+    scale_x = actual_width / expected_width
+    scale_y = actual_height / expected_height
+    return path, scale_x, scale_y, (expected_width, expected_height), (actual_width, actual_height)
+
+
+def scale_xywh(box: tuple[float, float, float, float], scale_x: float, scale_y: float) -> tuple[float, float, float, float]:
+    x, y, w, h = box
+    return x * scale_x, y * scale_y, w * scale_x, h * scale_y
+
+
+def scale_xy(point: tuple[float, float], scale_x: float, scale_y: float) -> tuple[float, float]:
+    x, y = point
+    return x * scale_x, y * scale_y
+
+
 def load_synloc_data(version: str, patterns: list[str]) -> Path:
     required = ["HF_TOKEN", "HF_DATASET_REPO"]
     missing = [key for key in required if not os.getenv(key)]
@@ -816,6 +849,10 @@ class PointSample:
     annotation_id: int | None
     bbox_xywh: tuple[float, float, float, float]
     point_xy: tuple[float, float]
+    annotation_bbox_xywh: tuple[float, float, float, float]
+    annotation_point_xy: tuple[float, float]
+    coord_scale_x: float
+    coord_scale_y: float
 
 
 def build_point_samples(
@@ -825,6 +862,7 @@ def build_point_samples(
     max_images: int,
     source_keypoint_index: int,
     keypoint_target: str,
+    coordinate_scale_mode: str,
 ) -> tuple[list[PointSample], list[dict[str, Any]]]:
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
     images = gt["images"][: max_images or None]
@@ -838,7 +876,11 @@ def build_point_samples(
     samples: list[PointSample] = []
     skipped: list[dict[str, Any]] = []
     for image_id, image in images_by_id.items():
-        path = image_path_for_record(data_root, image)
+        path, scale_x, scale_y, annotation_size, actual_size = image_path_and_scale_for_record(
+            data_root,
+            image,
+            coordinate_scale_mode=coordinate_scale_mode,
+        )
         width = float(image["width"])
         height = float(image["height"])
         for ann in annotations_by_image.get(image_id, []):
@@ -863,8 +905,12 @@ def build_point_samples(
                     image_path=path,
                     image_id=image_id,
                     annotation_id=ann.get("id"),
-                    bbox_xywh=(x, y, w, h),
-                    point_xy=(px, py),
+                    bbox_xywh=scale_xywh((x, y, w, h), scale_x, scale_y),
+                    point_xy=scale_xy((px, py), scale_x, scale_y),
+                    annotation_bbox_xywh=(x, y, w, h),
+                    annotation_point_xy=(px, py),
+                    coord_scale_x=scale_x,
+                    coord_scale_y=scale_y,
                 )
             )
     return samples, skipped
@@ -990,6 +1036,19 @@ def predict_point_from_crop(
     return px, py
 
 
+def point_to_annotation_scale(sample: PointSample, point_xy: tuple[float, float]) -> tuple[float, float]:
+    if sample.coord_scale_x <= 0 or sample.coord_scale_y <= 0:
+        raise ValueError(f"Invalid coordinate scale for image_id={sample.image_id}: {sample.coord_scale_x}, {sample.coord_scale_y}")
+    return point_xy[0] / sample.coord_scale_x, point_xy[1] / sample.coord_scale_y
+
+
+def box_to_annotation_scale(sample: PointSample, box_xywh: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+    if sample.coord_scale_x <= 0 or sample.coord_scale_y <= 0:
+        raise ValueError(f"Invalid coordinate scale for image_id={sample.image_id}: {sample.coord_scale_x}, {sample.coord_scale_y}")
+    x, y, w, h = box_xywh
+    return x / sample.coord_scale_x, y / sample.coord_scale_y, w / sample.coord_scale_x, h / sample.coord_scale_y
+
+
 def evaluate_point_regressor(
     *,
     model: nn.Module,
@@ -1009,16 +1068,17 @@ def evaluate_point_regressor(
     audit_examples: list[dict[str, Any]] = []
     det_id = 1
     for sample in samples:
-        x, y, w, h = sample.bbox_xywh
-        px, py = predict_point_from_crop(
+        x, y, w, h = sample.annotation_bbox_xywh
+        px_actual, py_actual = predict_point_from_crop(
             model,
             sample,
             image_size=image_size,
             crop_padding=crop_padding,
             device=device,
         )
+        px, py = point_to_annotation_scale(sample, (px_actual, py_actual))
         gt_box = xywh_to_xyxy([x, y, w, h])
-        gt_point = sample.point_xy
+        gt_point = sample.annotation_point_xy
         gt_boxes_by_image.setdefault(sample.image_id, []).append(gt_box)
         det_boxes_by_image.setdefault(sample.image_id, []).append(gt_box)
         gt_points_by_image.setdefault(sample.image_id, []).append(gt_point)
@@ -1032,6 +1092,8 @@ def evaluate_point_regressor(
                     "bbox_xywh": [x, y, w, h],
                     "target_keypoint": [gt_point[0], gt_point[1], 2.0],
                     "predicted_keypoint": [px, py, 2.0],
+                    "predicted_keypoint_actual_image": [px_actual, py_actual, 2.0],
+                    "coord_scale": [sample.coord_scale_x, sample.coord_scale_y],
                     "point_error_px": error_px,
                 }
             )
@@ -1100,7 +1162,7 @@ def evaluate_point_regressor_on_jittered_candidates(
         with Image.open(sample.image_path) as image:
             width = image.width
             height = image.height
-        x, y, w, h = sample.bbox_xywh
+        x, y, w, h = sample.annotation_bbox_xywh
         jx, jy, jw, jh = jitter_bbox_xywh(
             sample.bbox_xywh,
             image_width=width,
@@ -1115,8 +1177,12 @@ def evaluate_point_regressor_on_jittered_candidates(
             annotation_id=sample.annotation_id,
             bbox_xywh=(jx, jy, jw, jh),
             point_xy=sample.point_xy,
+            annotation_bbox_xywh=box_to_annotation_scale(sample, (jx, jy, jw, jh)),
+            annotation_point_xy=sample.annotation_point_xy,
+            coord_scale_x=sample.coord_scale_x,
+            coord_scale_y=sample.coord_scale_y,
         )
-        px, py = predict_point_from_crop(
+        px_actual, py_actual = predict_point_from_crop(
             model,
             jittered_sample,
             image_size=image_size,
@@ -1124,8 +1190,10 @@ def evaluate_point_regressor_on_jittered_candidates(
             device=device,
         )
         gt_box = xywh_to_xyxy([x, y, w, h])
-        det_box = xywh_to_xyxy([jx, jy, jw, jh])
-        gt_point = sample.point_xy
+        jx_ann, jy_ann, jw_ann, jh_ann = jittered_sample.annotation_bbox_xywh
+        det_box = xywh_to_xyxy([jx_ann, jy_ann, jw_ann, jh_ann])
+        gt_point = sample.annotation_point_xy
+        px, py = point_to_annotation_scale(sample, (px_actual, py_actual))
         gt_boxes_by_image.setdefault(sample.image_id, []).append(gt_box)
         det_boxes_by_image.setdefault(sample.image_id, []).append(det_box)
         gt_points_by_image.setdefault(sample.image_id, []).append(gt_point)
@@ -1136,17 +1204,20 @@ def evaluate_point_regressor_on_jittered_candidates(
                     "image_id": sample.image_id,
                     "annotation_id": sample.annotation_id,
                     "gt_bbox_xywh": [x, y, w, h],
-                    "jittered_bbox_xywh": [jx, jy, jw, jh],
+                    "jittered_bbox_xywh": [jx_ann, jy_ann, jw_ann, jh_ann],
+                    "jittered_bbox_actual_image_xywh": [jx, jy, jw, jh],
                     "candidate_iou": box_iou_xyxy(gt_box, det_box),
                     "target_keypoint": [gt_point[0], gt_point[1], 2.0],
                     "predicted_keypoint": [px, py, 2.0],
+                    "predicted_keypoint_actual_image": [px_actual, py_actual, 2.0],
+                    "coord_scale": [sample.coord_scale_x, sample.coord_scale_y],
                     "point_error_px": nearest_point_distance((px, py), [gt_point]),
                 }
             )
         results.append(
             {
                 "area": 0,
-                "bbox": [jx, jy, jw, jh],
+                "bbox": [jx_ann, jy_ann, jw_ann, jh_ann],
                 "category_id": 1,
                 "id": det_id,
                 "image_id": sample.image_id,
@@ -1204,6 +1275,7 @@ def evaluate_point_regressor_on_yolo_candidates(
     keypoint_target: str,
     source_keypoint_index: int,
     audit_sample_images: int,
+    coordinate_scale_mode: str,
 ) -> dict[str, Any]:
     point_model.eval()
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
@@ -1240,7 +1312,11 @@ def evaluate_point_regressor_on_yolo_candidates(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path_for_record(data_root, image)
+        path, scale_x, scale_y, _annotation_size, _actual_size = image_path_and_scale_for_record(
+            data_root,
+            image,
+            coordinate_scale_mode=coordinate_scale_mode,
+        )
         preds = detector.predict(
             source=str(path),
             imgsz=detector_imgsz,
@@ -1270,22 +1346,31 @@ def evaluate_point_regressor_on_yolo_candidates(
                 annotation_id=None,
                 bbox_xywh=(x1, y1, x2 - x1, y2 - y1),
                 point_xy=(0.0, 0.0),
+                annotation_bbox_xywh=(x1 / scale_x, y1 / scale_y, (x2 - x1) / scale_x, (y2 - y1) / scale_y),
+                annotation_point_xy=(0.0, 0.0),
+                coord_scale_x=scale_x,
+                coord_scale_y=scale_y,
             )
-            px, py = predict_point_from_crop(
+            px_actual, py_actual = predict_point_from_crop(
                 point_model,
                 sample,
                 image_size=image_size,
                 crop_padding=crop_padding,
                 device=device,
             )
+            px, py = point_to_annotation_scale(sample, (px_actual, py_actual))
+            ax, ay, aw, ah = sample.annotation_bbox_xywh
             candidates.append(
                 {
-                    "bbox": [x1, y1, x2 - x1, y2 - y1],
-                    "xyxy": [x1, y1, x2, y2],
+                    "bbox": [ax, ay, aw, ah],
+                    "xyxy": [ax, ay, ax + aw, ay + ah],
+                    "bbox_actual_image": [x1, y1, x2 - x1, y2 - y1],
                     "keypoints": [px, py, 2.0],
+                    "keypoints_actual_image": [px_actual, py_actual, 2.0],
                     "point": (px, py),
                     "score": float(score),
                     "class_id": int(class_id),
+                    "coord_scale": [scale_x, scale_y],
                 }
             )
         if max_detections_per_image > 0:
@@ -2197,6 +2282,9 @@ def run_point_regressor() -> dict[str, Any]:
     jitter_center_frac = env_float("POINT_JITTER_CENTER_FRAC", 0.10)
     jitter_scale_frac = env_float("POINT_JITTER_SCALE_FRAC", 0.15)
     jitter_seed = env_int("POINT_JITTER_SEED", 20260505)
+    coordinate_scale_mode = os.getenv("SYNLOC_COORD_SCALE_MODE", "strict").strip().lower()
+    if coordinate_scale_mode not in {"strict", "actual_image"}:
+        raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
 
     data_root = load_synloc_data(version, [f"raw/{version}/*.zip", f"raw/{version}/manifest.json"])
     train_gt = find_annotation(data_root, "train")
@@ -2207,6 +2295,7 @@ def run_point_regressor() -> dict[str, Any]:
         max_images=train_max,
         source_keypoint_index=source_keypoint_index,
         keypoint_target=keypoint_target,
+        coordinate_scale_mode=coordinate_scale_mode,
     )
     val_samples, val_skipped = build_point_samples(
         data_root,
@@ -2214,6 +2303,7 @@ def run_point_regressor() -> dict[str, Any]:
         max_images=val_max,
         source_keypoint_index=source_keypoint_index,
         keypoint_target=keypoint_target,
+        coordinate_scale_mode=coordinate_scale_mode,
     )
     if not train_samples or not val_samples:
         raise RuntimeError(
@@ -2285,6 +2375,7 @@ def run_point_regressor() -> dict[str, Any]:
             keypoint_target=keypoint_target,
             source_keypoint_index=source_keypoint_index,
             audit_sample_images=audit_sample_images,
+            coordinate_scale_mode=coordinate_scale_mode,
         )
     validation = item["summary"]
     summary = {
@@ -2295,6 +2386,7 @@ def run_point_regressor() -> dict[str, Any]:
         "candidate_mode": candidate_mode,
         "oracle_candidate_boxes": candidate_mode == "oracle",
         "keypoint_target": keypoint_target,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "source_keypoint_index": source_keypoint_index,
         "train_images": train_max,
         "val_images": val_max,
