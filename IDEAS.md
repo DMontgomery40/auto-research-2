@@ -233,14 +233,15 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
   a different upload path is proven.
-- Current local shell cannot submit repo-local HF Jobs: `hf auth whoami`
-  returns `Not logged in` and `HF_TOKEN` is unset. The run helper dry-run still
-  builds a committed, repo-relative Python 3.10 `t4-small` command, and now
-  refuses dry-runs for refs that are not present on the configured remote. The
-  run helper also has `--preflight`, which checks credentials, clean committed
-  code, and reachable `train.py` without submitting a job. The next cloud
-  blocker to clear is Hugging Face credential scope, plus pushing any local
-  commit before using it as `HF_GIT_REF`, not train.py packaging.
+- Repo-local HF Jobs are not credential-blocked when `.env` is loaded:
+  sourcing `.env` authenticates as `dmontgomery40`. The earlier
+  `hf auth whoami` / unset-`HF_TOKEN` diagnosis was a helper env-loading bug,
+  not a Hugging Face access blocker. `scripts/run_hf_train.sh` now loads
+  repo-local `.env`, refuses dry-runs for refs that are not present on the
+  configured remote, and has `--preflight` to check credentials, clean
+  committed code, and reachable `train.py` without submitting a job. The next
+  cloud guardrail is to run preflight and push any local commit before using it
+  as `HF_GIT_REF`, not to re-debug basic HF access.
 
 ## Maybe Later
 

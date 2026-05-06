@@ -281,30 +281,21 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   audit, so the actual-image adapter does not rescue generic RT-DETR person
   candidates. Artifact upload again failed with HF model-repo `403`; the
   printed `AUTONOMY_RESULT` log is the durable score.
-- `repo-local-hf-auth-blocker` added no score: this local shell cannot submit
-  a private SynLoc HF Job through `scripts/run_hf_train.sh` because
-  `hf auth whoami` returns `Not logged in` and `HF_TOKEN` is unset. A dry-run
-  confirmed the helper can build a committed, repo-relative Python 3.10
-  `t4-small` command against current pushed ref
-  `41b84dd583cffa3effb5508251aaed2990dde3e8`, so the blocker is credential
-  scope rather than packaging. A Hugging Face connector is available in this
-  session, but it reports a different HF identity than the repo owner, so do
-  not use it for private `dmontgomery40/...` SynLoc data/model jobs unless the
-  owner explicitly authorizes that identity and access path.
+- `repo-local-hf-env-loader-bug` added no score: the repo-local helper had a
+  false credential failure because `scripts/run_hf_train.sh` checked only the
+  inherited shell environment and `hf auth whoami`; it did not load the
+  repo-local `.env` that already contains `HF_TOKEN`. Sourcing `.env`
+  authenticates as `dmontgomery40`, and prior connector-launched HF jobs were
+  real. This was a helper/env-loading bug, not a Hugging Face access blocker.
 - `hf-dry-run-reachability-guard` added no score but closes the bad-SHA HF
   packaging blocker family. `scripts/run_hf_train.sh --dry-run` now checks
   that the selected `HF_GIT_REF` exists on the configured remote before
   printing the raw GitHub `train.py` URL, so a copied dry-run command should
-  not launch a `404: Not Found` job for a local-only commit. The cloud blocker
-  remains credentials/scope: local `hf auth whoami` still returns
-  `Not logged in`, and no private SynLoc score was attempted.
-- `hf-submit-preflight` added no score but makes the remaining cloud blocker
-  explicit before a job is launched. `scripts/run_hf_train.sh --preflight`
-  now reuses the submission path's repo-relative raw GitHub URL construction
-  and credential checks without submitting to HF Jobs. In this shell it fails
-  before the dirty-worktree check with
-  `HF_TOKEN is not visible and hf CLI is not logged in; export HF_TOKEN before
-  submitting.` No private SynLoc score was attempted.
+  not launch a `404: Not Found` job for a local-only commit.
+- `hf-submit-preflight` added no score but gives the repo-local helper a
+  non-submitting submission check. After the `.env` loader fix, preflight
+  reads repo-local `HF_TOKEN`, verifies the selected git ref is pushed, and
+  prints the HF Jobs command without exposing the token.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -372,8 +363,7 @@ candidates, SoccerMaster official-runtime parity, or a track/pose source with
 stronger same-frame recall diagnostics. Also fix or work around HF model-repo
 write permission before relying on uploaded artifacts; job logs are currently
 the only durable result source for these smokes. Before the next cloud
-experiment from this checkout, restore a repo-local Hugging Face token/login
-with read access to `dmontgomery40/auto-research-2-synloc-data` and the
-intended model-result write path, run `scripts/run_hf_train.sh --preflight`,
-push any local commit that `HF_GIT_REF` points at, or explicitly document a
-safe alternate connector identity.
+experiment from this checkout, run `scripts/run_hf_train.sh --preflight` and
+push any local commit that `HF_GIT_REF` points at. The helper now loads
+repo-local `.env`; do not treat a bare interactive shell `hf auth whoami`
+result as the repo credential state.
