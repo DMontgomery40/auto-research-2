@@ -71,6 +71,65 @@ github_raw_base() {
   printf 'https://raw.githubusercontent.com/%s' "$repo"
 }
 
+check_hf_job_write_scope() {
+  if [ -z "${HF_TOKEN:-}" ]; then
+    return
+  fi
+  set +e
+  python3 - <<'PY'
+import json
+import os
+import sys
+import urllib.request
+
+source = os.getenv("HF_WHOAMI_JSON_FILE")
+try:
+    if source:
+        with open(source, "r", encoding="utf-8") as handle:
+            info = json.load(handle)
+    else:
+        try:
+            from huggingface_hub import HfApi
+        except Exception:
+            req = urllib.request.Request(
+                "https://huggingface.co/api/whoami-v2",
+                headers={"Authorization": f"Bearer {os.environ['HF_TOKEN']}"},
+            )
+            with urllib.request.urlopen(req, timeout=20) as response:
+                info = json.load(response)
+        else:
+            info = HfApi(token=os.environ["HF_TOKEN"]).whoami()
+except Exception as exc:
+    print(f"Could not inspect HF_TOKEN job.write permission: {exc}", file=sys.stderr)
+    sys.exit(3)
+
+access = info.get("auth", {}).get("accessToken", {})
+if access.get("role") != "fineGrained":
+    sys.exit(0)
+fine_grained = access.get("fineGrained", {})
+permissions = set(fine_grained.get("global") or [])
+for scoped in fine_grained.get("scoped") or []:
+    permissions.update(scoped.get("permissions") or [])
+if "job.write" in permissions:
+    sys.exit(0)
+
+name = info.get("name") or "current user"
+print(
+    f"HF_TOKEN for {name} is authenticated but lacks job.write; local hf CLI cannot create Jobs. "
+    "Use the Hugging Face Jobs connector/app or update .env with a token that has job.write.",
+    file=sys.stderr,
+)
+sys.exit(2)
+PY
+  status="$?"
+  set -e
+  case "$status" in
+    0) return ;;
+    2) exit 1 ;;
+    *) return ;;
+  esac
+}
+
 remote_url="$(git config --get "remote.${GIT_REMOTE}.url" || true)"
 if [ -n "${HF_TRAIN_SCRIPT_URL:-}" ]; then
   SCRIPT_URL="$HF_TRAIN_SCRIPT_URL"
@@ -148,6 +207,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
         exit 1
       fi
     fi
+    check_hf_job_write_scope
     if [ -n "$(git status --porcelain)" ]; then
       echo "Working tree is dirty. Commit/stash/clean first because HF Jobs runs committed remote code, not local files." >&2
       exit 1
@@ -175,6 +235,7 @@ if [ -z "${HF_TOKEN:-}" ]; then
     exit 1
   fi
 fi
+check_hf_job_write_scope
 
 echo "Submitting train.py to Hugging Face Jobs: mode=${MODE} flavor=${FLAVOR} timeout=${TIMEOUT} python=${PYTHON_VERSION} ref=${GIT_REF} script=${SCRIPT_URL}" >&2
 "${cmd[@]}"

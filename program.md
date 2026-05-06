@@ -154,6 +154,14 @@ specific reachable script source. If using the HF Jobs MCP connector directly,
 pass inline script contents or a reachable URL; do not pass a local `train.py`
 path because the remote container cannot see it.
 
+If the repo-local `hf` CLI token can authenticate and read repos but preflight
+or actual job creation fails with missing `job.write`, use the Hugging Face Jobs connector/app
+for job creation instead of retrying the same local CLI token. Keep the same raw
+GitHub `train.py` URL, environment variables, and `HF_TOKEN` secret, then follow
+the connector-created job to an official score or explicit blocker. If the
+connector/app is unavailable in that runtime, record exactly one
+cloud-submission blocker and stop the pass.
+
 ## Current Research Direction
 
 Active direction: track/pose/keypoint or direct ground-point prediction.

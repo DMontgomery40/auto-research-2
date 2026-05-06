@@ -1895,23 +1895,33 @@ def make_yolo_dataset(data_root: Path, train_gt: Path, val_gt: Path, *, train_ma
     return dataset
 
 
-def upload_result(run_id: str, folder: Path) -> None:
+def upload_result(run_id: str, folder: Path) -> bool:
     api = HfApi(token=os.environ["HF_TOKEN"])
+    kwargs = {
+        "repo_id": os.environ["HF_MODEL_REPO"],
+        "repo_type": "model",
+        "folder_path": folder,
+        "path_in_repo": f"runs/{run_id}",
+        "commit_message": f"Record {run_id}",
+    }
     try:
-        api.upload_folder(
-            repo_id=os.environ["HF_MODEL_REPO"],
-            repo_type="model",
-            folder_path=folder,
-            path_in_repo=f"runs/{run_id}",
-            commit_message=f"Record {run_id}",
-        )
+        api.upload_folder(**kwargs)
+        return True
     except Exception as exc:
+        if "create_pr=1" in str(exc):
+            try:
+                api.upload_folder(**kwargs, create_pr=True)
+                return True
+            except Exception as pr_exc:
+                exc = pr_exc
         print(
             "UPLOAD_RESULT_FAILED "
             + json.dumps({"run_id": run_id, "error": repr(exc)}, sort_keys=True),
             flush=True,
         )
-        raise RuntimeError(f"Result upload failed for {run_id}") from exc
+        if os.getenv("HF_STRICT_UPLOAD", "0").strip().lower() in {"1", "true", "yes"}:
+            raise RuntimeError(f"Result upload failed for {run_id}") from exc
+        return False
 
 
 def run_baseline() -> dict[str, Any]:

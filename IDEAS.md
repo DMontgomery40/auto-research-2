@@ -10,14 +10,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   regressor has signal when candidates are GT-like, but the default YOLO26
   bridge stayed far below the pose smoke even after
   `SYNLOC_COORD_SCALE_MODE=actual_image`.
-- Rerun the selected RF-DETR SoccerNet Large coordinate-parity smoke once the
-  repo-local HF token has `job.write`: `TRAIN_MODE=rfdetr_baseline
-  SYNLOC_COORD_SCALE_MODE=actual_image TRAIN_MAX_IMAGES=32
-  RFDETR_MODEL_CLASS=RFDETRLarge RFDETR_CONF=0.1`. This is worth exactly one
-  bounded pass because the previous RF-DETR Large score predated detector-lane
-  backscaling from actual cached image coordinates to annotation coordinates.
-  If it remains near zero, discard this candidate path without more RF-DETR
-  sweeps.
+- Do not rerun the selected RF-DETR SoccerNet Large coordinate-parity smoke
+  without a new runtime/preprocessing hypothesis. Connector job
+  `69fb0327b745af80fb373bd5` already ran the bounded actual-image RF-DETR Large
+  audit and scored `mAP-LocSim=0.0` with near-zero image-space overlap.
 - Later, decide whether to rebuild the private data cache with true
   annotation-size images or keep the explicit `actual_image` coordinate adapter
   for cached fullHD jobs. Strict image-size matching should remain the default
@@ -237,23 +233,19 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `mean_best_iou_gt_to_det=0.02903191841477167`, and 10,000 detections for
   1,004 GT boxes. Discard generic RT-DETR person candidates even after the
   coordinate-scale repair.
-- HF model artifact upload still fails with LFS `403` read-only token in
-  connector jobs; do not assume artifacts landed in
-  `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
-  a different upload path is proven.
-- Repo-local HF Jobs are not credential-blocked when `.env` is loaded:
-  sourcing `.env` authenticates as `dmontgomery40`. The earlier
-  `hf auth whoami` / unset-`HF_TOKEN` diagnosis was a helper env-loading bug,
-  not a Hugging Face access blocker. `scripts/run_hf_train.sh` now loads
-  repo-local `.env`, refuses dry-runs for refs that are not present on the
-  configured remote, and has `--preflight` to check credentials, clean
-  committed code, and reachable `train.py` without submitting a job. The next
-  cloud guardrail is to run preflight and push any local commit before using it
-  as `HF_GIT_REF`, not to re-debug basic HF access.
-- Repo-local HF Jobs are currently submission-blocked at actual job creation:
-  the same `.env` token passes preflight but lacks `job.write` for
-  `dmontgomery40`, producing HF `403` on `https://huggingface.co/api/jobs/dmontgomery40`.
-  Fix token scope/namespace permission before the next cloud score attempt.
+- HF model artifact upload has failed with direct-commit `403` in connector
+  jobs. `train.py` now retries result upload as a Hub PR and treats upload
+  failure as nonfatal after `AUTONOMY_RESULT` unless `HF_STRICT_UPLOAD=1`, but
+  do not assume artifacts landed in `dmontgomery40/auto-research-2-synloc-models`
+  until a later job proves the PR/write path.
+- Repo-local HF access is split by credential surface: `.env` loads and
+  authenticates as `dmontgomery40`, but the fine-grained local token lacks
+  `job.write`, so the bare `hf` CLI cannot create Jobs. Run
+  `scripts/run_hf_train.sh --preflight` before local submission; it now detects
+  that before actual submission. When the Hugging Face Jobs connector/app is
+  available, use it for job creation with the same raw GitHub `train.py` URL,
+  env, and `HF_TOKEN` secret; if it is unavailable in a runtime, record one
+  explicit cloud-submission blocker instead of repeating no-score passes.
 
 ## Maybe Later
 

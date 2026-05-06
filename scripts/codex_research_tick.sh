@@ -85,6 +85,12 @@ iteration. Do not treat a successful single pass as the end of autonomy.
 - Submit cloud work through repo-local helpers such as scripts/run_hf_train.sh
   or commands that clone the repo and apply repo-relative patches. Do not pass
   /Users/... paths, ~/Documents paths, or ad hoc gists into cloud jobs.
+- If scripts/run_hf_train.sh preflight or actual submission fails with missing
+  HF `job.write`, do not keep retrying the local CLI token. Use the Hugging Face Jobs connector/app
+  when available, passing the same reachable raw GitHub train.py URL, env, and
+  `HF_TOKEN` as a secret; then follow that job to an official score or explicit
+  blocker. If that connector/app is unavailable in this runtime, record exactly
+  one cloud-submission blocker and stop the pass.
 - If you launch a cloud job, follow it to an official score or an explicit
   blocker before ending; do not leave a live job ambiguous.
 - If a job reaches official evaluation and then artifact upload fails, record

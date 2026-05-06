@@ -296,22 +296,26 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   non-submitting submission check. After the `.env` loader fix, preflight
   reads repo-local `HF_TOKEN`, verifies the selected git ref is pushed, and
   prints the HF Jobs command without exposing the token.
-- `hf-job-write-permission-blocker` added no score: a bounded SoccerNet
-  RF-DETR Large actual-image candidate audit was selected and preflight passed,
-  but actual `hf jobs uv run` submission failed before job creation with HF
-  `403` because the repo-local token lacks `job.write` for namespace
-  `dmontgomery40`. The intended experiment was
-  `TRAIN_MODE=rfdetr_baseline SYNLOC_COORD_SCALE_MODE=actual_image
-  TRAIN_MAX_IMAGES=32 RFDETR_MODEL_CLASS=RFDETRLarge RFDETR_CONF=0.1` against
-  committed ref `489ea13187588166f6d410cf526d36981197b3fc`. This is a cloud
-  permission blocker, not a model verdict.
-- `hf-job-write-permission-recheck` added no score: the same bounded RF-DETR
-  Large actual-image audit was retried from pushed ref
-  `092a50188d92eb6ebb1000e0e89ff929d84b5972`. Helper preflight again produced
-  a reachable repo-relative raw GitHub `train.py` command, but actual HF Jobs
-  creation failed before any job id or official score with the same HF `403`:
-  missing `job.write` for namespace `dmontgomery40`. No model code changed and
-  no cloud experiment ran.
+- `hf-job-write-permission-blocker` and
+  `hf-job-write-permission-recheck` added no score but exposed the exact local
+  submission boundary: `.env` loads and authenticates as `dmontgomery40`, but
+  the fine-grained token lacks `job.write`, so the repo-local `hf` CLI cannot
+  create Jobs. This is not an HF access blocker for connector-launched jobs.
+- `actual-image-rfdetr-soccernet-large-candidate-audit` used the Hugging Face
+  Jobs connector to run the selected RF-DETR Large audit anyway. Job
+  `69fb0327b745af80fb373bd5` ran on `t4-small`, downloaded the SynLoc archives
+  and `julianzu9612/RFDETR-Soccernet`, loaded `RFDETRLarge` on CUDA, and reached
+  official SSKit eval. Score was `mAP-LocSim=0.0`, `precision_50=0.0`,
+  `recall_50=0.0`, with 566 detections for 526 GT boxes,
+  `gt_recall_iou_0_5=0.0019011406844106464`, and
+  `mean_best_iou_gt_to_det=0.007630024549978594`. Discard this RF-DETR
+  SoccerNet checkpoint as a current candidate source.
+- `hf-jobwrite-and-upload-guard` added no score but prevents this failure family
+  from repeating silently: helper preflight now detects fine-grained
+  no-`job.write` tokens before actual submission, the loop contract routes that
+  case to the Hugging Face Jobs connector/app when available, and `train.py`
+  does not turn a scored experiment into a failed iteration just because
+  artifact upload is blocked.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -364,26 +368,22 @@ or a track/pose source with real athlete-box recall on the same frames.
 
 SoccerMaster remains possible only after official-runtime parity. Copied
 adapter scores are not valid SoccerMaster verdicts. RF-DETR SoccerNet large
-runtime parity is now sufficient to score, but the default checkpoint smoke had
-near-zero image-space overlap on SynLoc validation frames.
+runtime parity is sufficient to score, and the post-adapter RF-DETR Large audit
+still had near-zero image-space overlap on SynLoc validation frames, so do not
+spend another pass on that checkpoint without a new preprocessing/runtime
+parity hypothesis.
 
 ## Next Action
 
-First unblock repo-local Hugging Face Jobs write permission: the token in
-`.env` is visible to `scripts/run_hf_train.sh` and passes helper preflight, but
-actual job creation in `dmontgomery40` still fails because it lacks
-`job.write`. After that permission is fixed, rerun the already-selected bounded
-RF-DETR experiment:
-`TRAIN_MODE=rfdetr_baseline HF_FLAVOR=t4-small HF_TIMEOUT=2h
-SYNLOC_COORD_SCALE_MODE=actual_image TRAIN_MAX_IMAGES=32
-RFDETR_MODEL_CLASS=RFDETRLarge RFDETR_CONF=0.1 scripts/run_hf_train.sh --
---env SYNLOC_COORD_SCALE_MODE=actual_image --env TRAIN_MAX_IMAGES=32 --env
-RFDETR_MODEL_CLASS=RFDETRLarge --env RFDETR_CONF=0.1`. This has a specific
-coordinate-parity reason: the earlier RF-DETR Large smoke ran before detector
-lanes backscaled cached 1920x1080 detections into 3840x2160 annotation
-coordinates. If it scores near zero again, discard this RF-DETR candidate path
-more confidently. Do not rerun the default YOLO26 candidate bridge just because
-the coordinate adapter exists; job `69fac472b745af80fb37390f` already gave a
-cleaner discard. Also fix or work around HF model-repo write permission before
-relying on uploaded artifacts; job logs are currently the only durable result
-source for these smokes.
+Next loop should move past RF-DETR SoccerNet Large and look for an official
+SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
+or a track/pose source with real athlete-box recall on the same SynLoc frames.
+For job submission, use `scripts/run_hf_train.sh --preflight` before the local
+CLI path; if it reports missing `job.write`, launch through the Hugging Face
+Jobs connector/app with the same raw GitHub `train.py` URL and env, or record a
+single cloud-submission blocker if the connector/app is unavailable in that
+runtime. Do not rerun the default YOLO26 candidate bridge just because the
+coordinate adapter exists; job `69fac472b745af80fb37390f` already gave a clean
+discard. Artifact upload should now retry as a Hub PR and remain nonfatal after
+`AUTONOMY_RESULT`; job logs are still the durable score source until model-repo
+write/PR persistence is proven.

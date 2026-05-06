@@ -141,12 +141,14 @@ if "model_class(pretrain_weights=str(checkpoint_path))" not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane should load checkpoints through the RF-DETR public constructor")
 if "model.model.model.load_state_dict(state)" in train_text:
     raise SystemExit("RF-DETR SoccerNet lane should not manually strict-load unknown architecture state")
-if 'raise RuntimeError(f"Result upload failed for {run_id}") from exc' not in train_text:
-    raise SystemExit("train.py must fail the run when result upload fails")
+if "api.upload_folder(**kwargs, create_pr=True)" not in train_text:
+    raise SystemExit("train.py must retry result upload as a Hub PR when direct commit is blocked")
+if 'os.getenv("HF_STRICT_UPLOAD", "0")' not in train_text:
+    raise SystemExit("train.py must let scored experiments survive artifact upload failures by default")
 if 'def emit_autonomy_result(summary: dict[str, Any]) -> None:' not in train_text:
     raise SystemExit("train.py must emit AUTONOMY_RESULT through a shared helper")
 if "emit_autonomy_result(summary)\n    upload_result(summary[\"run_id\"], upload_root)" not in train_text:
-    raise SystemExit("train.py must print AUTONOMY_RESULT before strict artifact upload")
+    raise SystemExit("train.py must print AUTONOMY_RESULT before artifact upload")
 if "print(\"AUTONOMY_RESULT \" + json.dumps(summary, sort_keys=True))" in train_text:
     raise SystemExit("train.py must not print AUTONOMY_RESULT only after run_* returns")
 PYCHECK
@@ -167,6 +169,10 @@ if ! rg -q 'AUTONOMY_RESULT score and the upload blocker' scripts/codex_research
   echo "Codex tick prompt must record scores even when artifact upload is blocked" >&2
   exit 1
 fi
+if ! rg -q 'Hugging Face Jobs connector/app' scripts/codex_research_tick.sh; then
+  echo "Codex tick prompt must route around local HF CLI job.write failures through the HF Jobs connector" >&2
+  exit 1
+fi
 if ! rg -q 'HF_GIT_REF' scripts/run_hf_train.sh; then
   echo "HF train helper must pin train.py to a committed git ref" >&2
   exit 1
@@ -185,6 +191,14 @@ if ! rg -q 'Not logged in' scripts/run_hf_train.sh; then
 fi
 if ! rg -q 'HF_ENV_FILE' scripts/run_hf_train.sh; then
   echo "HF train helper must load repo-local .env before checking HF_TOKEN" >&2
+  exit 1
+fi
+if ! rg -q 'whoami-v2' scripts/run_hf_train.sh || ! rg -q 'job.write' scripts/run_hf_train.sh; then
+  echo "HF train helper must inspect fine-grained HF_TOKEN job.write permission before submission" >&2
+  exit 1
+fi
+if ! rg -q 'HF_WHOAMI_JSON_FILE' scripts/run_hf_train.sh; then
+  echo "HF train helper must expose a test fixture path for token-scope preflight coverage" >&2
   exit 1
 fi
 if ! rg -q 'set -a' scripts/run_hf_train.sh; then
@@ -213,6 +227,33 @@ EOF
 env -u HF_TOKEN -u HF_FLAVOR -u TRAIN_MODE -u HF_DATASET_REPO -u HF_MODEL_REPO \
   HF_ENV_FILE=/tmp/auto-research-2-hf-env-test.env \
   scripts/run_hf_train.sh --dry-run >/tmp/auto-research-2-hf-env-train.txt
+cat >/tmp/auto-research-2-no-job-write.json <<'EOF'
+{
+  "name": "dmontgomery40",
+  "auth": {
+    "accessToken": {
+      "role": "fineGrained",
+      "fineGrained": {
+        "global": ["discussion.write"],
+        "scoped": [
+          {"entity": {"name": "dmontgomery40"}, "permissions": ["repo.content.read", "repo.write"]}
+        ]
+      }
+    }
+  }
+}
+EOF
+if env -u HF_TOKEN -u HF_FLAVOR -u TRAIN_MODE -u HF_DATASET_REPO -u HF_MODEL_REPO \
+  HF_ENV_FILE=/tmp/auto-research-2-hf-env-test.env \
+  HF_WHOAMI_JSON_FILE=/tmp/auto-research-2-no-job-write.json \
+  scripts/run_hf_train.sh --preflight >/tmp/auto-research-2-no-job-write.out 2>/tmp/auto-research-2-no-job-write.err; then
+  echo "HF train preflight must fail fine-grained tokens that lack job.write" >&2
+  exit 1
+fi
+if ! rg -q 'lacks job.write' /tmp/auto-research-2-no-job-write.err; then
+  echo "HF train preflight must explain missing job.write clearly" >&2
+  exit 1
+fi
 
 python3 - <<'PYCHECK'
 from pathlib import Path
@@ -247,11 +288,17 @@ if "https://raw.githubusercontent.com/" not in hf:
 for forbidden in ["/Users/", "~/Documents", "/Documents/", " file://"]:
     if forbidden in hf:
         raise SystemExit(f"HF train dry-run leaked a local path: {forbidden}")
+program = Path("program.md").read_text(encoding="utf-8")
+if "missing `job.write`" not in program or "Hugging Face Jobs connector/app" not in program:
+    raise SystemExit("program.md must preserve the HF Jobs connector fallback for local CLI job.write failures")
 hf_env = Path("/tmp/auto-research-2-hf-env-train.txt").read_text(encoding="utf-8")
 for needle in ["--flavor cpu-basic", "--env TRAIN_MODE=transformer_baseline", "--env HF_DATASET_REPO=example/synloc-data", "--env HF_MODEL_REPO=example/synloc-models"]:
     if needle not in hf_env: raise SystemExit(f"HF train .env dry-run did not load {needle}")
 if "dummy-secret-for-verify" in hf_env:
     raise SystemExit("HF train dry-run leaked HF_TOKEN from .env")
+job_write_err = Path("/tmp/auto-research-2-no-job-write.err").read_text(encoding="utf-8")
+if "Hugging Face Jobs connector/app" not in job_write_err:
+    raise SystemExit("HF train job.write failure must point to the connector/app fallback")
 PYCHECK
 
 echo "verify ok"
