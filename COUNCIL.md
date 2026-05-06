@@ -1,48 +1,27 @@
 # Council
 
-The challenge council is available at:
+The sibling challenge council lives at:
 
 ```text
 ../challenge-council/
-/Users/davidmontgomery/challenge-council/
 ```
 
-Automation inbox contract:
+Use it sparingly:
 
-```text
-../challenge-council/data/automation_queue/inbox/<request_id>/council_request.md
-../challenge-council/data/automation_queue/inbox/<request_id>/request.json
-```
+- when stuck,
+- after a meaningful new baseline,
+- before a large spend,
+- every 2-3 days during serious autonomous work.
 
-Worker outputs:
-
-```text
-../challenge-council/data/automation_queue/done/<request_id>/final_report.md
-../challenge-council/data/automation_queue/failed/<request_id>/status.json
-```
-
-Use:
+Queue a request:
 
 ```bash
-python3 scripts/ask_council.py --title "SynLoc strategy after baseline"
+python3 scripts/ask_council.py --title "SynLoc strategy after pose smoke"
 ```
 
-`scripts/ask_council.py` auto-discovers the existing council inbox. Override it with `CHALLENGE_COUNCIL_INBOX` or `--queue` if this checkout moves.
+Good requests include the current state, ledger excerpt, budget, ideas already
+tried, and one concrete question.
 
-Good council requests include:
-
-- official task summary,
-- current best score,
-- baseline command and metrics,
-- experiment ledger excerpt,
-- ideas already tried,
-- `COUNCIL_DOSSIER.md`,
-- `RESEARCH_PRIORS.md`,
-- `autonomy/state.json` summary and recent `autonomy/events.jsonl`,
-- the baseline implementation being criticized,
-- budget constraints,
-- concrete question.
-
-The request generator now includes a richer dossier by default. Use the council as the external skeptical board: it should be allowed to say the agent is wasting time, missing obvious soccer-specific context, or spending too much compute on the wrong signal.
-
-Do not use the council as a substitute for running the baseline. Do not ask it to mine leaked submissions or post-deadline winning writeups.
+The council may review official materials, our logs, our ledger, and general
+public research. Do not ask it to mine leaked submissions or post-deadline
+winner writeups.

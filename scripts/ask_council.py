@@ -2,12 +2,10 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,61 +66,6 @@ def fenced(path: Path, *, language: str = "text", max_chars: int = MAX_TEXT_CHAR
     return f"```{language}\n{read_excerpt(path, max_chars=max_chars)}\n```"
 
 
-def load_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {"error": f"Could not parse {path.name}"}
-    return payload if isinstance(payload, dict) else {"error": f"{path.name} was not a JSON object"}
-
-
-def compact_history_item(item: dict[str, Any]) -> dict[str, Any]:
-    result = item.get("result") if isinstance(item.get("result"), dict) else {}
-    metrics = result.get("metrics") if isinstance(result.get("metrics"), dict) else {}
-    return {
-        "label": item.get("label"),
-        "id": item.get("id"),
-        "status": item.get("status"),
-        "flavor": item.get("flavor"),
-        "cost_estimate_usd": item.get("cost_estimate_usd"),
-        "submitted_at": item.get("submitted_at"),
-        "completed_at": item.get("completed_at"),
-        "failed_at": item.get("failed_at"),
-        "run_id": result.get("run_id"),
-        "model": result.get("model"),
-        "num_images": result.get("num_images"),
-        "num_detections": result.get("num_detections"),
-        "map_locsim": metrics.get("map_locsim"),
-        "score_threshold": metrics.get("score_threshold"),
-    }
-
-
-def state_summary() -> str:
-    state = load_json(ROOT / "autonomy" / "state.json")
-    if not state:
-        return "_Missing autonomy/state.json_\n"
-    history = state.get("history") if isinstance(state.get("history"), list) else []
-    summary = {
-        "phase": state.get("phase"),
-        "active_job": state.get("active_job"),
-        "spent_estimate_usd": state.get("spent_estimate_usd"),
-        "weekly_budget_usd": state.get("weekly_budget_usd"),
-        "updated_at": state.get("updated_at"),
-        "recent_history": [compact_history_item(item) for item in history[-8:] if isinstance(item, dict)],
-    }
-    return json.dumps(summary, indent=2, sort_keys=True)
-
-
-def events_tail(lines: int = 40) -> str:
-    path = ROOT / "autonomy" / "events.jsonl"
-    if not path.exists():
-        return "_Missing autonomy/events.jsonl_\n"
-    rows = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    return "\n".join(rows[-lines:]) + "\n"
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Queue a Challenge Council request.")
     parser.add_argument("--title", required=True, help="Short request title.")
@@ -150,26 +93,11 @@ Target: 2026 Spiideo SoccerNet SynLoc
 
 - Goal: beat the best tracked SynLoc score by June 30, 2026.
 - Primary metric: mAP-LocSim, higher is better.
-- Weekly compute budget: $25 unless owner approves more by GitHub issue.
 - Keep the harness simple and markdown-first.
 - Do not use leaked solutions, post-deadline solution writeups, or prior SoccerNet result material.
 - If official 2026 results are not available yet, include no results material.
 - The council is the outside reviewer: be blunt, call out dumb plans, and give high-context strategic hints.
-- The council can recommend outside resources or model directions, but the autonomy repo still owns execution and budget gates.
-
-## Council Dossier
-
-{read_excerpt(ROOT / "COUNCIL_DOSSIER.md")}
-
-## Research Priors
-
-{read_excerpt(ROOT / "RESEARCH_PRIORS.md")}
-
-## Autonomy State Summary
-
-```json
-{state_summary()}
-```
+- The council can recommend outside resources or model directions, but this repo owns execution and budget gates.
 
 ## Current State
 
@@ -179,10 +107,6 @@ Target: 2026 Spiideo SoccerNet SynLoc
 
 {read_excerpt(ROOT / "LEDGER.md")}
 
-## Budget Ledger
-
-{read_excerpt(ROOT / "BUDGET.md")}
-
 ## Ideas
 
 {read_excerpt(ROOT / "IDEAS.md")}
@@ -191,22 +115,17 @@ Target: 2026 Spiideo SoccerNet SynLoc
 
 Do not spend Stage 1 reading full source unless needed. The key files are:
 
-- Current baseline script: `cloud/synloc_baseline_yolo.py`
+- Operating loop: `program.md`
+- Current editable payload: `train.py`
 - Official devkit baseline reference: `refs/sskit/baseline.py`
 - Official evaluator wrapper: `scripts/evaluate_synloc.py`
-- Local operating loop: `program.md`
 
-The important baseline assumption is already summarized above: current baseline uses generic COCO `person` detections, bbox bottom-center projection, and official `mAP-LocSim`.
-
-## Recent Autonomy Events
-
-```jsonl
-{events_tail(30)}
-```
+The important current assumption is already summarized above: generic detector
+fine-tuning failed, while the SSKit keypoint/oracle path is the strongest signal.
 """
     (request_dir / "council_request.md").write_text(body, encoding="utf-8")
     (request_dir / "request.json").write_text(
-        json.dumps({"workspace_label": "auto-research-2"}, indent=2) + "\n",
+        '{\n  "workspace_label": "auto-research-2"\n}\n',
         encoding="utf-8",
     )
     print(request_dir)

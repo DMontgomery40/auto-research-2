@@ -1,83 +1,237 @@
 # Current State
 
-Updated: 2026-05-02
+Updated: 2026-05-05
 
 ## Mission
 
-Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by June 30, 2026.
+Beat the best tracked score for the 2026 Spiideo SoccerNet SynLoc challenge by
+June 30, 2026.
 
-## Known Facts
+Primary metric: official SSKit `mAP-LocSim`, higher is better.
 
-- Official task: single-frame world-coordinate athlete detection and localization.
-- Official metric: `mAP-LocSim`, higher is better.
-- Official devkit: `https://github.com/Spiideo/sskit`.
-- Local SSKit reference clone: `refs/sskit` at `9e28ad1`.
-- Local Karpathy autoresearch reference clone: `refs/karpathy-autoresearch` at `228791f`.
-- Local credentials file exists: `.env`.
-- `.env` has `HF_TOKEN`, `SOCCERNET_USERNAME`, `SOCCERNET_PASSWORD`, and the separate Spiideo sign-in password alias.
-- GitHub CLI is already authenticated as `DMontgomery40`.
-- Data download helper exists: `scripts/download_synloc.py`, but it is intended for cloud job payloads.
-- Official metric wrapper exists: `scripts/evaluate_synloc.py`, but meaningful metric runs belong on cloud CUDA GPUs.
-- Repo volume has about 137 GiB free as of 2026-04-26 after owner cleanup.
-- Local model validation is explicitly out of scope because local MLX/Mac execution has no parity with cloud CUDA training and inference.
-- Owner has signed the SoccerNet NDA and has an official SoccerNet password; SynLoc data is cleared for this project.
-- Dataset download also requires the Spiideo Research username/email as `SOCCERNET_USERNAME`.
-- The Spiideo sign-in password is separate from the SoccerNet data password. Use `SOCCERNET_SIGNIN_PASSWORD`; `SOCCERNET_PASSWORD_2` is accepted as an alias.
-- Private HF dataset/cache repo exists: `dmontgomery40/auto-research-2-synloc-data`.
-- Private HF model/checkpoint repo exists: `dmontgomery40/auto-research-2-synloc-models`.
-- Persistent heartbeat exists: `.github/workflows/autonomy.yml`.
-- Autonomy-labeled issue comments/edits now wake the heartbeat immediately.
-- Controller state exists: `autonomy/state.json`.
-- Cloud smoke succeeded on HF Jobs T4 with SoccerNet and SSKit imports.
-- Cloud dataset cache is present for `fullhd` validation:
-  - `annotations.zip` sha256 `848c15ee5ad00494e636d5ca776f57aa10fd2533ad5bc5088c9702782ebabb87`
-  - `val.zip` sha256 `a0d19585df77e18253f9d35d4c0b1c07d36af8e53797bc04fc8aa901d7c3d68e`
-- Baseline probe job `69ee962cd2c8bd8662bd0432` failed before execution because the PEP 723 dependency used a bare `git+https://...` URL. It is now patched to `sskit @ git+https://github.com/Spiideo/sskit.git`.
-- Baseline probe job `69efa0ccd70108f37ace0980` got past PEP 723 parsing, then failed on `xtcocotools` versus NumPy 2 ABI compatibility. The baseline job now pins `numpy<2`.
-- Baseline probe job `69efa24bd70108f37ace098f` got past the NumPy issue, then failed because `ultralytics` imported desktop OpenCV and required `libGL.so.1`. The baseline now uses TorchVision Faster R-CNN instead.
-- Baseline probe job `69efa359d2c8bd8662bd113e` got past TorchVision imports, then failed because GitHub SSKit imports `scipy` without declaring it. The baseline job now includes `scipy`.
-- Baseline probe job `69efa455d2c8bd8662bd115b` completed on CUDA for 64 validation images with TorchVision Faster R-CNN: `mAP-LocSim=0.00012376237623762376`, 2,831 detections, run artifact `baseline-torchvision-2026-04-27T18-02-12.913357Z`.
-- SoccerMaster is available as a soccer-specific lead. Its paper reports strong athlete detection and role benchmarks, including `92.3` AP@50, `50.5` mAP, and `99.2` role accuracy on the paper's pretraining-task evaluation. The sibling zero-score run should be treated as a runtime/config/decode failure until proven otherwise.
-- Sibling repo `/Users/davidmontgomery/v2d-research` tested a copied SoccerMaster GSR adapter on a bounded 64-frame SynLoc slice (`synloc-20260426-1308`): all rows scored `mAP-LocSim=0.0`, with no decoded `player` detections. This is not a verdict against SoccerMaster; it means this repo should first audit weight placement, role mapping, class dimensions, normalization, and raw logits before using projected scores.
-- Full baseline job `69efa541d70108f37ace099f` completed on HF Jobs `l4x1` for all 6,777 `fullhd valid` images with TorchVision Faster R-CNN: `mAP-LocSim=0.00003561507229859677`, 288,766 detections, selected score threshold `0.49995696544647217`, run artifact `baseline-torchvision-2026-04-27T18-17-53.729401Z`.
-- The full baseline is a scoring-pipeline sanity check, not a serious model direction: it uses COCO `person` boxes, projects each bbox bottom-center point into pitch coordinates, and scores almost zero.
-- SoccerMaster wiring probe job `69f229c4d70108f37ace174a` completed after the asset-path repair. It loaded the weights and ran CUDA inference on 4 images, but the copied Rondo adapter used the wrong role-label order. Official SoccerMaster defines `ball=0`, `goalkeeper=1`, `other=2`, `player=3`, `referee=4`, `None=5`; the copied adapter labeled id `3` as `ball` and id `4` as `staff`. Reinterpreting the last raw counts means the probe likely emitted `player=1120` and `referee=80`, not zero athlete output.
-- Corrected-role SoccerMaster wiring probe job `69f23419d2c8bd8662bd31f2` completed on HF Jobs `t4-small`. It confirmed raw athlete output: `player=1196`, `referee=4`; at confidence `0.05`: `player=731`, `referee=4`; verdict `raw-athlete-output-present`.
-- SoccerMaster-to-SynLoc conversion/eval probe job `69f23612d2c8bd8662bd3210` completed on HF Jobs `t4-small`. Best 64-image result: `mAP-LocSim=0.000007373902767781469`, role set `athlete`, threshold `0.01`, 18,268 detections, run artifact `soccermaster-synloc-probe-2026-04-29T16-51-53-869121Z`.
-- That score is worse than the 64-image TorchVision baseline (`0.00012376237623762376`). Treat this as evidence that the copied adapter/runtime is still not source-faithful, not as evidence that SoccerMaster is bad.
-- The unresolved leak is bigger than role-label plumbing: official SoccerMaster is a video/spatiotemporal model with temporal attention, an official Deformable DETR/MSDeformAttn detection path, and official `PostProcess`. The copied Rondo adapter drops temporal weights, runs single images through plain SigLIP, approximates MSDeformAttn with `grid_sample`, and custom-decodes boxes/NMS.
-- `train.py` now exists and must baseline-evaluate the active pretrained football YOLO26 path before any training. Soccana is retired from active defaults and remains only as historical evidence.
-- Pretrained YOLO baseline job `69f24012d2c8bd8662bd3267` completed on HF Jobs `t4-small`. It is now historical: YOLO26l scored `mAP-LocSim=0.000046702783485895764` with 2,338 detections; the now-retired Soccana row scored `mAP-LocSim=0.000057407296779217454` with 2,610 detections. Training remains blocked because official SynLoc recall was still `0.0`.
-- SSKit dev-kit oracle retry job `69f2462ed70108f37ace17b5` completed on HF Jobs `cpu-upgrade` for 64 validation images and 1,004 annotations. Exact GT `position_on_pitch` scored `mAP-LocSim=1.0`; GT ground keypoints projected by SSKit scored `0.9809895759040843`; GT bbox bottom-center through SSKit keypoint projection and `BBoxLocSimCOCOeval` both scored `0.5686594909116471` with `precision_50=0.9269269269269269` and `recall_50=0.92`.
-- Current controller phase is `train_dataset_cache_pending`; no active HF job exists, and issue #10 contains the owner approval for a `$25` budget reload before the next paid `dataset-cache-train-valid` job.
-- GitHub issue #7 is historical/live context, but no longer the intended stall point.
-- The oracle proves the official data, camera calibration, evaluator, and SSKit projection path are not globally broken. The near-zero pretrained detector scores are on the prediction side: wrong/poor boxes for SynLoc, class or role filtering, source-domain mismatch, postprocess/decode, or using non-SynLoc pretrained detectors as if they were official SynLoc baselines.
-- Do not start training from a near-zero detector path. The next work must be dev-kit-first: use the official SSKit result formats, `position_from_keypoint_index`, `BBoxLocSimCOCOeval`, FOOTPASS/official challenge assets, and official baseline/runtime code before any fine-tune.
-- Codex Goals are enabled in the local Codex config and are first-class for local worktree sessions. Set the local worktree thread Goal from `GOAL.md` or issue #7. Goals are local-thread steering only; keep markdown, `autonomy/state.json`, and GitHub issues as the durable control plane.
-- Research/decision-making is now explicitly local Codex work, not Hugging Face work. Use `scripts/codex_research_tick.sh` to launch one local `gpt-5.5`/`xhigh` research tick; HF Jobs remain CUDA-only execution payloads.
-- AK-style cadence now has an executable local loop: `scripts/codex_research_loop.sh` runs one local research chance every `300` seconds and dispatches the GitHub Actions heartbeat only when the pushed state is actionable.
-- Future SoccerMaster wiring probes should use the cheapest viable HF CUDA flavor, currently `t4-small`, with tight timeouts. Escalate to `l4x1` only after a documented T4 memory/runtime failure or a clear full-run reason.
-- Council requests now include `COUNCIL_DOSSIER.md`, autonomy state/events, budget, and baseline source so the council can give high-context criticism before the next expensive run.
+## Runtime
 
-## Unknowns
+- Local Codex `gpt-5.5` / `low` is the researcher.
+- Hugging Face Jobs are CUDA execution substrate only.
+- Private HF dataset/cache repo: `dmontgomery40/auto-research-2-synloc-data`.
+- Private HF model/checkpoint repo: `dmontgomery40/auto-research-2-synloc-models`.
+- SynLoc data is cleared for this project; the owner has signed the SoccerNet NDA.
+- Keep data, checkpoints, predictions, logs, and local references out of git.
 
-- Current public/test/challenge leaderboard top score.
-- Codabench credentials/session status.
-- Exact Hugging Face storage layout for predictions, checkpoints, metrics, and logs.
+## Verified Facts
+
+- Official task: single-frame athlete detection plus world-coordinate pitch
+  localization.
+- SSKit oracle exact GT `position_on_pitch`: `mAP-LocSim=1.0`.
+- SSKit-projected GT ground keypoint: `mAP-LocSim=0.9809895759040843`.
+- GT bbox bottom-center through SSKit: `mAP-LocSim=0.5686594909116471`.
+- Generic TorchVision full validation baseline:
+  `mAP-LocSim=0.00003561507229859677`.
+- Pretrained football YOLO26 baseline (`mobadam/football-player-detection`,
+  football/sports YOLO26, not verified as SoccerNet/SynLoc-pretrained):
+  `mAP-LocSim=0.000046702783485895764`, `recall_50=0.0`.
+- Pose/keypoint smoke: `mAP-LocSim=0.000825082508250825`.
+- `first-yolo-train` is a discard:
+  `mAP-LocSim=3.572767401302389e-06`, `recall_50=0.0`, worse than pose smoke.
+- `keypoint-yolo11n-smoke` is a discard-result:
+  `mAP-LocSim=5.743033700121752e-07`, `recall_50=0.0`,
+  `gt_recall_px_50=0.05179282868525897`, worse than pose smoke.
+- `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
+  top-25-per-frame filtering reduced candidate noise but official SSKit still
+  printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
+  `frame_accuracy=0.000`; the same job then failed artifact upload with HF
+  model-repo LFS `403` because the connector token had read but not write
+  permission.
+- `keypoint-audit-samples` added no new score yet: `train.py TRAIN_MODE=keypoint`
+  now saves model class names, raw class counts, GT rows, top predicted
+  keypoints, and nearest-GT pixel distances in the validation audit artifacts,
+  but the local HF CLI could not submit the smoke because no Hugging Face token
+  or login was present in this shell.
+- `keypoint-score-mode-audit` added no new score yet: the keypoint lane now has
+  `YOLO_KEYPOINT_SCORE_MODE=combined|box|keypoint` so the next tiny cloud smoke
+  can separate bad point placement from bad candidate/COCO score ranking.
+- `keypoint-score-mode-matrix` is a discard-result: job
+  `69f938fd98a8d679adfb9346` trained one epoch on 64 train / 32 valid images
+  and compared `combined`, `box`, and `keypoint` ranking from the same
+  checkpoint. Best official score was `combined` with
+  `mAP-LocSim=7.407224512974988e-06`, `recall_50=0.0`,
+  `gt_recall_px_50=0.017110266159695818`, and
+  `gt_recall_iou_0_5=0.0019011406844106464`, far below the pose smoke.
+- `bbox-bottom-center-keypoint-target` added no new score yet: `train.py
+  TRAIN_MODE=keypoint` now supports
+  `SYNLOC_KEYPOINT_TARGET=annotation|bbox_bottom_center`, so the same official
+  `position_from_keypoint_index=0` path can test whether a model learns the
+  easier bbox bottom-center proxy that scored `mAP-LocSim=0.5686594909` with
+  GT boxes. A tiny `t4-small` smoke was attempted with 64 train / 32 valid /
+  1 epoch, but no HF job was created because this shell is not logged into
+  Hugging Face and `HF_TOKEN` is unset.
+- `bbox-bottom-center-keypoint-smoke` is a discard-result: job
+  `69f93dc79d85bec4d76f29ed` trained one epoch on 64 train / 32 valid images
+  with `SYNLOC_KEYPOINT_TARGET=bbox_bottom_center`. Official
+  `mAP-LocSim=7.316002536214212e-06`, `precision_50=0.0024630541871921183`,
+  `recall_50=0.0`, `gt_recall_px_50=0.017110266159695818`, and
+  `gt_recall_iou_0_5=0.0019011406844106464`, still far below the pose smoke.
+- `direct-point-regressor-oracle-candidates` added no new score yet:
+  `train.py TRAIN_MODE=point_regressor` now trains a tiny crop-based direct
+  point regressor and evaluates through official SSKit
+  `position_from_keypoint_index=0`, using GT boxes as oracle validation
+  candidates to isolate point quality from detector recall. This is not a
+  challenge-submittable setup. A tiny `t4-small` smoke command was prepared for
+  64 train / 32 valid / 2 epochs, but no HF job was created because this shell
+  is not logged into Hugging Face.
+- `direct-point-regressor-oracle-smoke` is a keep-signal but not a valid
+  submission path: job `69fa5b70f2f4addb7839bfba` trained on 64 train / 32
+  valid images for 2 epochs using GT boxes as oracle candidates and scored
+  official `mAP-LocSim=0.0027874657923080423`, beating pose smoke
+  `0.000825082508250825`. Candidate boxes were oracle-perfect
+  (`gt_recall_iou_0_5=1.0`) and point diagnostics improved over YOLO11n-pose
+  (`gt_recall_px_50=0.39272030651340994`), so direct point quality is worth a
+  next experiment only if paired with real candidates. The job also confirmed a
+  persistent artifact blocker: model-repo LFS upload still fails with HF `403`
+  because the injected token has read but not write permission.
+- `point-regressor-yolo-candidates` is a discard-result: job
+  `69fa5f40f2f4addb7839bfd9` trained the same tiny direct point regressor and
+  evaluated it on real `mobadam/football-player-detection` YOLO26 candidate
+  boxes with top-25 per image. Official `mAP-LocSim=0.0`,
+  `precision_50=0.0`, `recall_50=0.0`; diagnostics show the candidate source
+  failed before point quality mattered: `gt_recall_iou_0_5=0.0`,
+  `gt_recall_iou_0_3=0.0019011406844106464`,
+  `gt_recall_px_50=0.0019011406844106464`, 508 predictions for 526 GT boxes.
+  Artifact upload again failed with HF model-repo LFS `403`.
+- `yolo11n-coco-person-candidate-audit` is a discard-result: job
+  `69fa6402f2f4addb7839bffe` evaluated public Ultralytics `yolo11n.pt` COCO
+  person detections on 64 validation frames through official SSKit bottom-center
+  projection. Official `mAP-LocSim=4.0550130098334066e-05`,
+  `precision_50=0.006825938566552901`, `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.00099601593625498`, and 4,014 person detections for
+  1,004 GT boxes. This is slightly better than the full generic TorchVision
+  baseline but far below the pose smoke and does not solve candidate recall.
+  Two earlier connector launches exposed HF Jobs packaging hazards
+  (`xtcocotools` build isolation and NumPy ABI); the working recipe used
+  Python 3.10, `numpy<2`, and the published `xtcocotools` wheel. Artifact
+  upload still failed with HF model-repo `403`.
+- `football-yolo26-imgsz1600-candidate-audit` is a discard-result: job
+  `69fa6701f2f4addb7839c00a` evaluated the football YOLO26 detector at larger
+  `YOLO_IMGSZ=1600` and lower `YOLO_CONF=0.001` on 64 validation frames. It
+  produced 2,125 detections for 1,004 GT boxes, but official
+  `mAP-LocSim=4.877335024142809e-06`, `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.0`, and
+  `mean_best_iou_gt_to_det=0.0012062984910266583`. Image scale and confidence
+  threshold did not rescue this candidate source. Artifact upload still failed
+  with HF model-repo `403`.
+- `easychamp-martinjolif-source-candidate-audit` is a discard-result: job
+  `69fa6a3ab745af80fb3734f9` evaluated two different soccer-specific public
+  detector candidates on 64 validation frames. Best was
+  `martinjolif-yolo11m` with official
+  `mAP-LocSim=1.0820754206568197e-05`, `precision_50=0.00273224043715847`,
+  `recall_50=0.0`, `gt_recall_iou_0_5=0.0`,
+  `gt_recall_iou_0_3=0.00099601593625498`, and
+  `mean_best_iou_gt_to_det=0.0013935321462024005`; `easychamp-yolov8` was
+  similar at `mAP-LocSim=9.32798528843463e-06`. These public soccer detectors
+  do not unblock direct point regression. First launch
+  `69fa6a1db745af80fb3734f7` failed before scoring on the known Python 3.12
+  `xtcocotools` build-isolation issue; Python 3.10 remains the working HF Jobs
+  recipe. Artifact upload still failed with HF model-repo `403`.
+- `rtdetr-r18-coco-person-candidate-audit` is a discard-result: job
+  `69fa6d7ff2f4addb7839c046` evaluated a non-YOLO COCO RT-DETR person detector
+  on 64 validation frames through official SSKit bottom-center projection.
+  Official `mAP-LocSim=7.549363399931301e-06`, `precision_50=0.0013343499809378575`,
+  `recall_50=0.0`, `gt_recall_iou_0_5=0.0069721115537848604`, and
+  `mean_best_iou_gt_to_det=0.029056858644601863`. This had slightly better
+  candidate recall than prior public-detector audits but remains far below the
+  pose smoke and does not unblock direct point regression. `train.py` now keeps
+  a reusable `TRAIN_MODE=transformer_baseline` lane for future non-YOLO
+  detector audits. Artifact upload still failed with HF model-repo `403`.
+- `uisikdag-yolov8-football-candidate-audit` is a discard-result: corrected
+  job `69fa71b6b745af80fb373541` evaluated
+  `uisikdag/yolo-v8-football-players-detection` on 64 validation frames with
+  athlete classes `1,2,3` after initial job `69fa7058f2f4addb7839c058`
+  accidentally selected `ball=0`. The corrected official score was
+  `mAP-LocSim=7.084787190704759e-06`, `precision_50=0.0017889087656529517`,
+  `recall_50=0.0`, `gt_recall_iou_0_5=0.0`, and
+  `mean_best_iou_gt_to_det=0.003439228441225626` from 2,265 detections for
+  1,004 GT boxes. This older public football YOLO source does not unblock
+  direct point regression. Artifact upload still failed with HF model-repo
+  `403`.
+- `rfdetr-soccernet-large-parity-smoke` is a discard-result but resolves the
+  prior shape blocker: job `69fa7cefb745af80fb3735c0` loaded
+  `julianzu9612/RFDETR-Soccernet` with `RFDETRLarge`, proving the previous
+  `192/384` versus `128/256` tensor mismatch was caused by using
+  `RFDETRBase`. The 16-frame official SSKit smoke still scored
+  `mAP-LocSim=0.0`, `precision_50=0.0`, `recall_50=0.0`,
+  `gt_recall_iou_0_5=0.0`, and `mean_best_iou_gt_to_det=0.0012578130198192673`
+  from 156 detections for 301 GT boxes. Keep the `RFDETRLarge` mechanics, but
+  do not treat this SoccerNet-Tracking checkpoint as the next candidate source
+  without a new preprocessing/coordinate-parity reason. Artifact upload still
+  failed with HF model-repo `403`.
+- `soccana-yolo11-soccernet-candidate-audit` is a discard-result: job
+  `69fa8013b745af80fb3735e4` evaluated `Adit-jain/soccana`, whose loaded
+  labels were `0=Player`, `1=Ball`, `2=Referee`, on 64 validation frames at
+  `YOLO_IMGSZ=1280` and `YOLO_CONF=0.01`. Official
+  `mAP-LocSim=4.304778303917348e-05`, `precision_50=0.004347826086956522`,
+  `recall_50=0.0`, `gt_recall_iou_0_5=0.0`, and
+  `mean_best_iou_gt_to_det=0.0018615731134729054` from 1,584 detections for
+  1,004 GT boxes. This SoccerNet-labeled public YOLO11 detector does not
+  unblock direct point regression. First wrapper job
+  `69fa7ffef2f4addb7839c083` failed before scoring because the wrapper omitted
+  `train.py` dependencies; artifact upload still failed with HF model-repo
+  `403`.
+- Compute rule: use the cheapest option that actually works, always.
+
+## Interpretation
+
+Active direction remains track/pose/keypoint or direct ground-point prediction.
+
+The official data, camera calibration, evaluator, and SSKit projection path are
+not globally broken. The failure is on the prediction side.
+
+Zero or near-zero official scores from a soccer/football-pretrained model on
+SoccerNet data should be treated as runtime, class mapping, coordinate,
+preprocess, prediction-format, or evaluator plumbing failures until audited.
+Do not treat them as model underperformance.
+
+`train.py` now has a `TRAIN_MODE=keypoint` lane that trains one projected
+ground keypoint and evaluates through official SSKit `position_from_keypoint_index=0`.
+The tiny YOLO11n-pose smokes proved the wiring but produced too many noisy
+detections and too little point recall to promote. Top-k filtering, the
+`combined`/`box`/`keypoint` score-mode matrix, and the bbox-bottom-center target
+did not rescue official recall, so do not spend another pass on this exact
+YOLO11n-pose setup through confidence ranking or target switching alone. The
+saved audit examples show candidate points often hundreds of pixels from the
+nearest GT point, which points to a point-quality/model-family problem more than
+an SSKit ingestion problem.
+
+`TRAIN_MODE=point_regressor` beat the pose smoke while given GT boxes, so the
+direct crop-regressor point head is not dead. Pairing it with the existing
+football YOLO26 candidate source scored zero because image-space candidate
+recall was essentially absent, and a larger-image/lower-threshold YOLO26 audit
+did not fix it. Public COCO `yolo11n` person detections, public COCO RT-DETR
+person detections, and four public soccer/football YOLO detectors
+(`easychamp-yolov8`, `martinjolif-yolo11m`, `uisikdag-yolov8-football`,
+`Adit-jain/soccana`) all failed as useful candidate sources despite producing
+many boxes. Do not spend another pass pairing the point regressor with generic
+COCO person boxes, COCO transformer detector boxes, or these public
+soccer/football YOLO detectors. The next blocker is an official
+SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
+or a track/pose source with real athlete-box recall on the same frames.
+
+SoccerMaster remains possible only after official-runtime parity. Copied
+adapter scores are not valid SoccerMaster verdicts. RF-DETR SoccerNet large
+runtime parity is now sufficient to score, but the default checkpoint smoke had
+near-zero image-space overlap on SynLoc validation frames.
 
 ## Next Action
 
-1. Wake the heartbeat so it can cache `train,valid` under the refreshed `$50` budget cap.
-2. After the cache job completes, record artifacts and only then advance toward a real source-specific pose/keypoint train/valid experiment.
-3. In parallel, run `scripts/codex_research_loop.sh --iterations 12` locally for a bounded one-hour no-spend research pass. The local Codex pass may improve the next train/valid pose experiment plan, inspect sources, patch code, and update issues, but it must not spend beyond the refreshed cap without owner approval.
-
-<!-- autonomy-snapshot:start -->
-## Autonomy Snapshot
-
-- Updated: 2026-05-06T01:06:53.968958Z
-- Phase: `train_result_review`
-- Active job: `none`
-- Spend estimate: `$27.50 / $50.00`
-- Blocker: none
-- Last result: `first-yolo-train` `69f82ec59d85bec4d76f1d3d` score `n/a` threshold `n/a`
-<!-- autonomy-snapshot:end -->
+Choose one genuinely different candidate-generation experiment before
+revisiting direct point regression at scale: official SSKit/SoccerNet-format
+candidates, SoccerMaster official-runtime parity that proves real athlete boxes
+on the same validation frames, or a track/pose source with saved box-recall
+diagnostics. Do not spend
+the next pass on football YOLO26 image-size/confidence tuning, generic COCO
+person detectors, COCO RT-DETR detector boxes, the public
+EasyChamp/MartijnJolif/Uisikdag/Adit-jain soccer-football YOLO detectors, or
+another RF-DETR SoccerNet scoring job without a new preprocessing/coordinate-
+parity hypothesis. Keep treating GT-box oracle point-regressor runs as
+diagnostics only. Also fix or work around HF model-repo write permission before
+relying on uploaded artifacts; job logs are currently the only durable result
+source for these smokes.
