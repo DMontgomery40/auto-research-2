@@ -296,6 +296,15 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   non-submitting submission check. After the `.env` loader fix, preflight
   reads repo-local `HF_TOKEN`, verifies the selected git ref is pushed, and
   prints the HF Jobs command without exposing the token.
+- `hf-job-write-permission-blocker` added no score: a bounded SoccerNet
+  RF-DETR Large actual-image candidate audit was selected and preflight passed,
+  but actual `hf jobs uv run` submission failed before job creation with HF
+  `403` because the repo-local token lacks `job.write` for namespace
+  `dmontgomery40`. The intended experiment was
+  `TRAIN_MODE=rfdetr_baseline SYNLOC_COORD_SCALE_MODE=actual_image
+  TRAIN_MAX_IMAGES=32 RFDETR_MODEL_CLASS=RFDETRLarge RFDETR_CONF=0.1` against
+  committed ref `489ea13187588166f6d410cf526d36981197b3fc`. This is a cloud
+  permission blocker, not a model verdict.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -353,17 +362,20 @@ near-zero image-space overlap on SynLoc validation frames.
 
 ## Next Action
 
-Do not rerun the default YOLO26 candidate bridge just because the coordinate
-adapter exists; job `69fac472b745af80fb37390f` already gave a cleaner discard.
-The next useful unit should not be another generic public football YOLO
-candidate unless it has a specific new runtime/preprocess reason. The repaired
-actual-image path is now proven enough to audit candidates, and Hamza still had
-near-zero image-space overlap. Prefer official SSKit/SoccerNet-format
-candidates, SoccerMaster official-runtime parity, or a track/pose source with
-stronger same-frame recall diagnostics. Also fix or work around HF model-repo
-write permission before relying on uploaded artifacts; job logs are currently
-the only durable result source for these smokes. Before the next cloud
-experiment from this checkout, run `scripts/run_hf_train.sh --preflight` and
-push any local commit that `HF_GIT_REF` points at. The helper now loads
-repo-local `.env`; do not treat a bare interactive shell `hf auth whoami`
-result as the repo credential state.
+First unblock repo-local Hugging Face Jobs write permission: the token in
+`.env` authenticates but cannot create jobs in `dmontgomery40` because it lacks
+`job.write`. After that permission is fixed, rerun the already-selected bounded
+RF-DETR experiment:
+`TRAIN_MODE=rfdetr_baseline HF_FLAVOR=t4-small HF_TIMEOUT=2h
+SYNLOC_COORD_SCALE_MODE=actual_image TRAIN_MAX_IMAGES=32
+RFDETR_MODEL_CLASS=RFDETRLarge RFDETR_CONF=0.1 scripts/run_hf_train.sh --
+--env SYNLOC_COORD_SCALE_MODE=actual_image --env TRAIN_MAX_IMAGES=32 --env
+RFDETR_MODEL_CLASS=RFDETRLarge --env RFDETR_CONF=0.1`. This has a specific
+coordinate-parity reason: the earlier RF-DETR Large smoke ran before detector
+lanes backscaled cached 1920x1080 detections into 3840x2160 annotation
+coordinates. If it scores near zero again, discard this RF-DETR candidate path
+more confidently. Do not rerun the default YOLO26 candidate bridge just because
+the coordinate adapter exists; job `69fac472b745af80fb37390f` already gave a
+cleaner discard. Also fix or work around HF model-repo write permission before
+relying on uploaded artifacts; job logs are currently the only durable result
+source for these smokes.

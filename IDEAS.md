@@ -10,6 +10,14 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   regressor has signal when candidates are GT-like, but the default YOLO26
   bridge stayed far below the pose smoke even after
   `SYNLOC_COORD_SCALE_MODE=actual_image`.
+- Rerun the selected RF-DETR SoccerNet Large coordinate-parity smoke once the
+  repo-local HF token has `job.write`: `TRAIN_MODE=rfdetr_baseline
+  SYNLOC_COORD_SCALE_MODE=actual_image TRAIN_MAX_IMAGES=32
+  RFDETR_MODEL_CLASS=RFDETRLarge RFDETR_CONF=0.1`. This is worth exactly one
+  bounded pass because the previous RF-DETR Large score predated detector-lane
+  backscaling from actual cached image coordinates to annotation coordinates.
+  If it remains near zero, discard this candidate path without more RF-DETR
+  sweeps.
 - Later, decide whether to rebuild the private data cache with true
   annotation-size images or keep the explicit `actual_image` coordinate adapter
   for cached fullHD jobs. Strict image-size matching should remain the default
@@ -242,6 +250,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   committed code, and reachable `train.py` without submitting a job. The next
   cloud guardrail is to run preflight and push any local commit before using it
   as `HF_GIT_REF`, not to re-debug basic HF access.
+- Repo-local HF Jobs are currently submission-blocked at actual job creation:
+  the same `.env` token passes preflight but lacks `job.write` for
+  `dmontgomery40`, producing HF `403` on `https://huggingface.co/api/jobs/dmontgomery40`.
+  Fix token scope/namespace permission before the next cloud score attempt.
 
 ## Maybe Later
 
