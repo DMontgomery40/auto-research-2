@@ -250,6 +250,15 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `mean_best_iou_gt_to_det=0.023235810243179132`. Discard this detector as a
   direct point-regressor candidate source and avoid more generic public sports
   YOLO audits unless there is a source-specific runtime/preprocess hypothesis.
+- `keremberke-yolov5m-runtime-blocker` did not reach official scoring.
+  Connector job `69fbd3a2317220dbbd1a5671` launched the legacy
+  `keremberke/yolov5m-football` checkpoint through the repaired actual-image
+  detector-audit path on 16 validation frames, but current Ultralytics failed
+  while loading the old YOLOv5 model with
+  `TypeError: BaseModel.fuse() got an unexpected keyword argument 'verbose'`.
+  Treat this as an integration blocker rather than a detector verdict. A
+  YOLOv5-specific loader is not the next best mechanics work unless a stronger
+  source-specific reason appears.
 - HF model artifact upload has failed with direct-commit `403` in connector
   jobs. `train.py` now retries result upload as a Hub PR and treats upload
   failure as nonfatal after `AUTONOMY_RESULT` unless `HF_STRICT_UPLOAD=1`, but
@@ -314,6 +323,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `PericlesRodrigues01/player-detector` boxes; it produced many `Person`
   detections but still had near-zero IoU-0.5 GT recall and stayed below the
   pose smoke.
+- Building legacy YOLOv5 support just to run `keremberke/yolov5m-football`;
+  the first connector attempt failed before scoring on an old-checkpoint
+  Ultralytics compatibility error, and this is still generic public football
+  detector hunting without a source-specific SynLoc reason.
 - Another public detector-source audit without `SYNLOC_COORD_SCALE_MODE=actual_image`
   while using the current cached fullHD images. Prior near-zero detector overlap
   may be contaminated by coordinate scale, so real-candidate reruns must use the

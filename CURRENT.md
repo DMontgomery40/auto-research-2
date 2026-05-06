@@ -349,6 +349,19 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   archive instead of `raw/fullhd/*.zip`; train/keypoint/point-regressor jobs
   still fetch train plus valid. `scripts/verify.sh` covers this fetch-pattern
   contract so future validation-only jobs do not silently download train.zip.
+- `keremberke-yolov5m-runtime-blocker` added no score: connector job
+  `69fbd3a2317220dbbd1a5671` tried the unscored legacy
+  `keremberke/yolov5m-football` detector through
+  `SYNLOC_COORD_SCALE_MODE=actual_image` on 16 validation frames. The repo
+  helper preflight correctly stopped on missing local `job.write`, the
+  connector launched the same committed raw GitHub `train.py`, and the job
+  fetched only annotations, manifest, and `val.zip`. It failed before official
+  SSKit evaluation when the current Ultralytics runtime attempted to load the
+  old YOLOv5 checkpoint and raised
+  `TypeError: BaseModel.fuse() got an unexpected keyword argument 'verbose'`.
+  Treat this as an integration blocker, not a detector verdict. Do not add a
+  YOLOv5-specific runtime path without a stronger source-specific reason than
+  another generic public football detector.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -396,7 +409,10 @@ detections, and five public soccer/football YOLO detectors
 useful candidate sources despite producing many boxes. Do not spend another
 pass pairing the point regressor with generic COCO person boxes, COCO
 transformer detector boxes, or these public soccer/football YOLO detectors.
-The next blocker is an official
+The untried legacy `keremberke/yolov5m-football` source did not reach scoring
+because its old YOLOv5 checkpoint is incompatible with the current Ultralytics
+runtime, so a YOLOv5 loader is now a mechanics decision rather than a free
+candidate audit. The next blocker is an official
 SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
 or a track/pose source with real athlete-box recall on the same frames.
 Training the same tiny point regressor on deterministic jittered GT crops did
@@ -420,7 +436,9 @@ the same SynLoc frames. Do not rerun the point-regressor train-jitter variant;
 it underperformed the existing no-train-jitter actual-image jittered smoke and
 its code was reverted. Do not rerun `PericlesRodrigues01/player-detector`; it
 produced many boxes but stayed below pose smoke with near-zero image-space
-overlap.
+overlap. Do not spend the next pass building legacy YOLOv5 support for
+`keremberke/yolov5m-football` unless there is a concrete source-specific reason
+to believe that checkpoint is worth a new runtime lane.
 For job submission, use `scripts/run_hf_train.sh --preflight` before the local
 CLI path; if it reports missing `job.write`, launch through the Hugging Face
 Jobs connector/app with the same raw GitHub `train.py` URL and env, or record a
