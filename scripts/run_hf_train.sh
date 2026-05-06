@@ -131,9 +131,12 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-if [ -z "${HF_TOKEN:-}" ] && ! hf auth whoami >/dev/null 2>&1; then
-  echo "HF_TOKEN is not visible and hf CLI is not logged in; export HF_TOKEN before submitting." >&2
-  exit 1
+if [ -z "${HF_TOKEN:-}" ]; then
+  hf_whoami="$(hf auth whoami 2>&1 || true)"
+  if [ -z "$hf_whoami" ] || printf '%s\n' "$hf_whoami" | grep -qi '^Not logged in'; then
+    echo "HF_TOKEN is not visible and hf CLI is not logged in; export HF_TOKEN before submitting." >&2
+    exit 1
+  fi
 fi
 
 if [ -z "${HF_TRAIN_SCRIPT_URL:-}" ]; then
