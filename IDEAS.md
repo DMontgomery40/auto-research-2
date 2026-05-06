@@ -233,6 +233,11 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   connector jobs; do not assume artifacts landed in
   `dmontgomery40/auto-research-2-synloc-models` unless write access is fixed or
   a different upload path is proven.
+- Current local shell cannot submit repo-local HF Jobs: `hf auth whoami`
+  returns `Not logged in` and `HF_TOKEN` is unset. The run helper dry-run still
+  builds a valid committed, repo-relative Python 3.10 `t4-small` command, so
+  the next cloud blocker to clear is Hugging Face credential scope, not
+  train.py packaging.
 
 ## Maybe Later
 

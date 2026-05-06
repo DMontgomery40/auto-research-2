@@ -281,6 +281,16 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   audit, so the actual-image adapter does not rescue generic RT-DETR person
   candidates. Artifact upload again failed with HF model-repo `403`; the
   printed `AUTONOMY_RESULT` log is the durable score.
+- `repo-local-hf-auth-blocker` added no score: this local shell cannot submit
+  a private SynLoc HF Job through `scripts/run_hf_train.sh` because
+  `hf auth whoami` returns `Not logged in` and `HF_TOKEN` is unset. A dry-run
+  confirmed the helper can build a committed, repo-relative Python 3.10
+  `t4-small` command against current pushed ref
+  `41b84dd583cffa3effb5508251aaed2990dde3e8`, so the blocker is credential
+  scope rather than packaging. A Hugging Face connector is available in this
+  session, but it reports a different HF identity than the repo owner, so do
+  not use it for private `dmontgomery40/...` SynLoc data/model jobs unless the
+  owner explicitly authorizes that identity and access path.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -347,4 +357,8 @@ near-zero image-space overlap. Prefer official SSKit/SoccerNet-format
 candidates, SoccerMaster official-runtime parity, or a track/pose source with
 stronger same-frame recall diagnostics. Also fix or work around HF model-repo
 write permission before relying on uploaded artifacts; job logs are currently
-the only durable result source for these smokes.
+the only durable result source for these smokes. Before the next cloud
+experiment from this checkout, restore a repo-local Hugging Face token/login
+with read access to `dmontgomery40/auto-research-2-synloc-data` and the
+intended model-result write path, or explicitly document a safe alternate
+connector identity.
