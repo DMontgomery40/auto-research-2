@@ -316,6 +316,19 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   case to the Hugging Face Jobs connector/app when available, and `train.py`
   does not turn a scored experiment into a failed iteration just because
   artifact upload is blocked.
+- `point-regressor-train-jitter-smoke` is a discard-result: job
+  `69fbcd06317220dbbd1a5657` trained the direct point regressor with
+  deterministic jittered GT crops
+  (`POINT_TRAIN_JITTER_CENTER_FRAC=0.10`,
+  `POINT_TRAIN_JITTER_SCALE_FRAC=0.15`) and evaluated the same actual-image
+  jittered-GT candidate smoke. Official
+  `mAP-LocSim=0.003013072317418499`, below the previous no-train-jitter
+  actual-image jittered smoke `0.0032123790168145185`; diagnostics remained
+  strong for the synthetic candidates (`gt_recall_iou_0_5=0.9578544061302682`,
+  `gt_recall_px_50=0.9980842911877394`) with mean point error about `12.67`
+  px. The temporary train-jitter code was reverted because the score did not
+  justify widening `train.py`. Artifact upload again failed after
+  `AUTONOMY_RESULT` with HF model-repo LFS `403`.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -365,6 +378,10 @@ COCO person boxes, COCO transformer detector boxes, or these public
 soccer/football YOLO detectors. The next blocker is an official
 SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
 or a track/pose source with real athlete-box recall on the same frames.
+Training the same tiny point regressor on deterministic jittered GT crops did
+not improve the synthetic jittered-candidate score, so do not add jittered-crop
+training knobs back without a new point-head architecture or candidate-noise
+hypothesis.
 
 SoccerMaster remains possible only after official-runtime parity. Copied
 adapter scores are not valid SoccerMaster verdicts. RF-DETR SoccerNet large
@@ -378,6 +395,8 @@ parity hypothesis.
 Next loop should move past RF-DETR SoccerNet Large and look for an official
 SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
 or a track/pose source with real athlete-box recall on the same SynLoc frames.
+Do not rerun the point-regressor train-jitter variant; it underperformed the
+existing no-train-jitter actual-image jittered smoke and its code was reverted.
 For job submission, use `scripts/run_hf_train.sh --preflight` before the local
 CLI path; if it reports missing `job.write`, launch through the Hugging Face
 Jobs connector/app with the same raw GitHub `train.py` URL and env, or record a

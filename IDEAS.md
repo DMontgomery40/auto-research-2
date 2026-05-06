@@ -233,6 +233,14 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `mean_best_iou_gt_to_det=0.02903191841477167`, and 10,000 detections for
   1,004 GT boxes. Discard generic RT-DETR person candidates even after the
   coordinate-scale repair.
+- `point-regressor-train-jitter-smoke` scored
+  `0.003013072317418499` official `mAP-LocSim` when the direct point regressor
+  was trained with deterministic jittered GT crops and evaluated on the same
+  actual-image jittered-GT candidate smoke. This is below the previous
+  no-train-jitter result `0.0032123790168145185`, so discard this training
+  augmentation as a standalone point-head robustness fix. The temporary
+  `POINT_TRAIN_JITTER_*` code was reverted; do not add it back without a new
+  architecture or candidate-noise hypothesis.
 - HF model artifact upload has failed with direct-commit `403` in connector
   jobs. `train.py` now retries result upload as a Hub PR and treats upload
   failure as nonfatal after `AUTONOMY_RESULT` unless `HF_STRICT_UPLOAD=1`, but
@@ -300,6 +308,9 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Running another RF-DETR SoccerNet scoring job just because the architecture
   mismatch is fixed. The large-model smoke scored zero with near-zero image-space
   overlap, so it needs a new preprocessing/coordinate-parity hypothesis first.
+- Re-adding point-regressor train-jitter knobs or rerunning the same jittered
+  crop training smoke; it underperformed the no-train-jitter actual-image
+  jittered candidate score.
 - Treating zero or near-zero official scores from soccer/football-pretrained
   models as model underperformance before auditing runtime/plumbing.
 - Another confidence-only candidate filter or score-mode job on the same
