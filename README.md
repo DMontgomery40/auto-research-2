@@ -30,6 +30,10 @@ Ignored local/heavy directories include `refs/`, `data/`, `runs/`, `outputs/`,
 Local Codex is the researcher: `gpt-5.5`, `low`, this repo, markdown state,
 small code edits, commits, and next-experiment choice.
 
+Run the loop from a normal local checkout outside `~/Documents`. Recent macOS
+File Provider/CloudDocs state denied Codex and Git access to a `~/Documents`
+checkout even when file modes looked normal.
+
 Hugging Face Jobs are CUDA execution substrate only: data setup, training,
 inference, official evaluation, and artifact upload.
 

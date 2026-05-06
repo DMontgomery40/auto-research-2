@@ -1589,7 +1589,7 @@ def make_yolo_dataset(data_root: Path, train_gt: Path, val_gt: Path, *, train_ma
     return dataset
 
 
-def upload_result(run_id: str, folder: Path) -> bool:
+def upload_result(run_id: str, folder: Path) -> None:
     api = HfApi(token=os.environ["HF_TOKEN"])
     try:
         api.upload_folder(
@@ -1605,8 +1605,7 @@ def upload_result(run_id: str, folder: Path) -> bool:
             + json.dumps({"run_id": run_id, "error": repr(exc)}, sort_keys=True),
             flush=True,
         )
-        return False
-    return True
+        raise RuntimeError(f"Result upload failed for {run_id}") from exc
 
 
 def run_baseline() -> dict[str, Any]:

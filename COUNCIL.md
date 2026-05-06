@@ -4,7 +4,6 @@ The sibling challenge council lives at:
 
 ```text
 ../challenge-council/
-/Users/davidmontgomery/challenge-council/
 ```
 
 Use it sparingly:

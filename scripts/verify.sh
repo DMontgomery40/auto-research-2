@@ -65,11 +65,18 @@ if "model_class(pretrain_weights=str(checkpoint_path))" not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane should load checkpoints through the RF-DETR public constructor")
 if "model.model.model.load_state_dict(state)" in train_text:
     raise SystemExit("RF-DETR SoccerNet lane should not manually strict-load unknown architecture state")
+if 'raise RuntimeError(f"Result upload failed for {run_id}") from exc' not in train_text:
+    raise SystemExit("train.py must fail the run when result upload fails")
 PYCHECK
 
 bash -n scripts/codex_research_tick.sh
 bash -n scripts/codex_research_loop.sh
 bash -n scripts/run_hf_train.sh
+
+if ! rg -q 'Refusing to run from ~/Documents' scripts/codex_research_tick.sh scripts/codex_research_loop.sh; then
+  echo "Codex loop scripts must refuse the damaged ~/Documents checkout path" >&2
+  exit 1
+fi
 
 scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-tick.txt
 scripts/codex_research_loop.sh --allow-dirty --dry-run --iterations 2 >/tmp/auto-research-2-codex-loop.txt 2>&1
@@ -79,7 +86,7 @@ python3 - <<'PYCHECK'
 from pathlib import Path
 required_docs = {
     "program.md": ["gpt-5.5", "low", "train.py", "mAP-LocSim", "0.9809895759", "first-yolo-train", "scripts/run_hf_train.sh", "cheapest option that actually works", "outer shell loop is the loop"],
-    "README.md": ["program.md", "train.py", "scripts/run_hf_train.sh", "Hugging Face Jobs are CUDA execution substrate only", "cheapest option that actually works"],
+    "README.md": ["program.md", "train.py", "scripts/run_hf_train.sh", "Hugging Face Jobs are CUDA execution substrate only", "cheapest option that actually works", "outside `~/Documents`"],
     "AGENTS.md": ["program.md", "train.py", "Hugging Face Jobs are CUDA execution substrate only", "0.9809895759", "cheapest option that actually works"],
     "CURRENT.md": ["0.9809895759040843", "3.572767401302389e-06", "track/pose/keypoint", "cheapest option that actually works"],
     "LEDGER.md": ["first-yolo-train", "discard", "0.000825082508250825"],

@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+case "$ROOT" in
+  "$HOME"/Documents/*)
+    echo "Refusing to run from ~/Documents; macOS File Provider can deny Codex/Git access there. Use a non-Documents local checkout of this repo." >&2
+    exit 1
+    ;;
+esac
+
 INTERVAL_SECONDS="${CODEX_RESEARCH_INTERVAL_SECONDS:-300}"
 ITERATIONS="${CODEX_RESEARCH_ITERATIONS:-0}"
 MAX_RUNTIME_SECONDS="${CODEX_RESEARCH_MAX_RUNTIME_SECONDS:-0}"

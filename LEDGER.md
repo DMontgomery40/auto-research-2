@@ -39,7 +39,7 @@ Primary metric: official SSKit `mAP-LocSim` (higher is better).
 
 ## External Evidence Pulled In
 
-- Sibling `/Users/davidmontgomery/v2d-research` ran a copied SoccerMaster GSR
+- Sibling `../v2d-research` ran a copied SoccerMaster GSR
   adapter on 64 SynLoc frames and got `mAP-LocSim=0.0` with no decoded `player`
   detections. Treat that as integration/config evidence, not a SoccerMaster
   model verdict.

@@ -51,11 +51,6 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-if ! command -v hf >/dev/null 2>&1; then
-  echo "hf CLI is required. Install/authenticate Hugging Face CLI first." >&2
-  exit 1
-fi
-
 cmd=(
   hf jobs uv run
   --flavor "$FLAVOR"
@@ -77,6 +72,11 @@ if [ "$DRY_RUN" -eq 1 ]; then
   printf '%q ' "${cmd[@]}"
   printf '\n'
   exit 0
+fi
+
+if ! command -v hf >/dev/null 2>&1; then
+  echo "hf CLI is required. Install/authenticate Hugging Face CLI first." >&2
+  exit 1
 fi
 
 echo "Submitting train.py to Hugging Face Jobs: mode=${MODE} flavor=${FLAVOR} timeout=${TIMEOUT} python=${PYTHON_VERSION}" >&2

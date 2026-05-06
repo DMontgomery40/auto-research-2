@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+case "$ROOT" in
+  "$HOME"/Documents/*)
+    echo "Refusing to run from ~/Documents; macOS File Provider can deny Codex/Git access there. Use a non-Documents local checkout of this repo." >&2
+    exit 1
+    ;;
+esac
+
 MODEL="${CODEX_RESEARCH_MODEL:-gpt-5.5}"
 EFFORT="${CODEX_RESEARCH_EFFORT:-low}"
 ALLOW_DIRTY=0
@@ -55,7 +62,7 @@ prompt_file="$(mktemp "${TMPDIR:-/tmp}/auto-research-2-codex-prompt.XXXXXX")"
 trap 'rm -f "$prompt_file"' EXIT
 
 cat > "$prompt_file" <<'EOF'
-You are the local Codex researcher for /Users/davidmontgomery/auto-research-2.
+You are the local Codex researcher for this auto-research-2 checkout.
 
 Read these first:
 

@@ -17,6 +17,11 @@ Local Codex is the researcher. Use `gpt-5.5` with `low` reasoning on this
 Mac for source inspection, web research, hypothesis selection, code edits,
 ledger updates, commits, and deciding the next experiment.
 
+Use a normal local checkout outside `~/Documents` as the local control-plane
+checkout. macOS File Provider/CloudDocs has previously denied Codex and Git
+access to a `~/Documents` checkout with `Operation not permitted` even though
+ownership and file modes looked normal.
+
 Hugging Face Jobs are CUDA execution substrate. They run bounded scripts for
 dataset setup, training, inference, official evaluation, and artifact upload.
 They do not decide what to try next.
