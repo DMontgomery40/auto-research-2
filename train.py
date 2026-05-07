@@ -83,6 +83,13 @@ def parse_int_set(raw: str) -> set[int]:
     return {int(item.strip()) for item in raw.split(",") if item.strip()}
 
 
+def parse_int_list(raw: str) -> list[int]:
+    values = [int(item.strip()) for item in raw.split(",") if item.strip()]
+    if not values:
+        raise ValueError(f"Expected at least one integer in {raw!r}")
+    return values
+
+
 def xywh_to_xyxy(box: list[float] | tuple[float, float, float, float]) -> list[float]:
     x, y, w, h = [float(v) for v in box]
     return [x, y, x + w, y + h]
@@ -182,6 +189,22 @@ def parse_baselines(raw: str) -> list[BaselineSpec]:
             )
         )
     return specs
+
+
+def parse_class_variants(raw: str) -> list[tuple[str, set[int]]]:
+    variants: list[tuple[str, set[int]]] = []
+    for entry in [item.strip() for item in raw.split(";") if item.strip()]:
+        try:
+            name, class_ids = entry.split("=", 1)
+        except ValueError as exc:
+            raise RuntimeError("Each class variant must be name=class_ids") from exc
+        name = name.strip()
+        if not name:
+            raise RuntimeError("Class variant name cannot be empty")
+        variants.append((name, parse_int_set(class_ids)))
+    if not variants:
+        raise RuntimeError("At least one class variant is required")
+    return variants
 
 
 def parse_transformer_baselines(raw: str) -> list[BaselineSpec]:
@@ -2051,6 +2074,100 @@ def run_baseline() -> dict[str, Any]:
     return summary
 
 
+def run_detector_class_audit() -> dict[str, Any]:
+    required = ["HF_TOKEN", "HF_DATASET_REPO", "HF_MODEL_REPO"]
+    missing = [key for key in required if not os.getenv(key)]
+    if missing:
+        raise RuntimeError(f"Missing required environment variables: {missing}")
+
+    split = os.getenv("SYNLOC_SPLIT", "valid")
+    version = os.getenv("SYNLOC_VERSION", "fullhd")
+    imgsz = env_int("YOLO_IMGSZ", 1280)
+    conf = env_float("YOLO_CONF", 0.01)
+    iou = env_float("YOLO_IOU", 0.7)
+    max_images_values = parse_int_list(os.getenv("AUDIT_MAX_IMAGES_LIST", "16,32"))
+    coordinate_scale_mode = os.getenv("SYNLOC_COORD_SCALE_MODE", "actual_image").strip().lower()
+    if coordinate_scale_mode not in {"strict", "actual_image"}:
+        raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
+    base_spec = parse_baselines(
+        os.getenv(
+            "AUDIT_YOLO_BASELINE",
+            "tmoklc-football-player-detection|tmoklc/football-player-detection|football-player-detection.pt|0,1,2,3",
+        )
+    )[0]
+    class_variants = parse_class_variants(
+        os.getenv("AUDIT_CLASS_VARIANTS", "all=0,1,2,3;athletes=1,2,3;player=2")
+    )
+
+    data_root = load_synloc_data(version, synloc_snapshot_patterns(version, [split]))
+    gt_path = find_annotation(data_root, split)
+    model_path = download_model(base_spec, Path("/tmp/yolo-models") / base_spec.name)
+    upload_root = Path("/tmp/detector-class-audit-results")
+    if upload_root.exists():
+        shutil.rmtree(upload_root)
+    upload_root.mkdir(parents=True, exist_ok=True)
+
+    evaluated: list[dict[str, Any]] = []
+    best: dict[str, Any] | None = None
+    for max_images in max_images_values:
+        for variant_name, class_ids in class_variants:
+            spec = BaselineSpec(
+                name=f"{base_spec.name}-{variant_name}-{max_images}f",
+                repo=base_spec.repo,
+                filename=base_spec.filename,
+                athlete_class_ids=class_ids,
+            )
+            item = predictions_for_model(
+                model_path=model_path,
+                spec=spec,
+                data_root=data_root,
+                gt_path=gt_path,
+                split=split,
+                max_images=max_images,
+                imgsz=imgsz,
+                conf=conf,
+                iou=iou,
+                coordinate_scale_mode=coordinate_scale_mode,
+            )
+            summary = item["summary"]
+            summary["audit_variant"] = variant_name
+            summary["audit_max_images"] = max_images
+            evaluated.append(summary)
+            shutil.copytree(item["out_dir"], upload_root / summary["run_id"])
+            if best is None or summary["diagnostics"]["gt_recall_iou_0_5"] > best["diagnostics"]["gt_recall_iou_0_5"]:
+                best = summary
+
+    assert best is not None
+    summary = {
+        "ok": True,
+        "ts": utc_now(),
+        "mode": "detector_class_audit",
+        "run_id": f"detector-class-audit-{utc_now().replace(':', '-')}",
+        "base_model": base_spec.name,
+        "repo": base_spec.repo,
+        "filename": base_spec.filename,
+        "metric": "mAP-LocSim",
+        "split": split,
+        "version": version,
+        "imgsz": imgsz,
+        "conf": conf,
+        "iou": iou,
+        "coordinate_scale_mode": coordinate_scale_mode,
+        "max_images_values": max_images_values,
+        "class_variants": [
+            {"name": name, "class_ids": sorted(class_ids)}
+            for name, class_ids in class_variants
+        ],
+        "best_by_gt_recall_iou_0_5": best,
+        "evaluated": evaluated,
+        "note": "No-training audit for the tmoklc detector-only versus point-bridge mismatch; varies class selection and validation slice size.",
+    }
+    (upload_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    emit_autonomy_result(summary)
+    upload_result(summary["run_id"], upload_root)
+    return summary
+
+
 def run_transformer_baseline() -> dict[str, Any]:
     required = ["HF_TOKEN", "HF_DATASET_REPO", "HF_MODEL_REPO"]
     missing = [key for key in required if not os.getenv(key)]
@@ -2568,6 +2685,8 @@ def main() -> None:
     mode = os.getenv("TRAIN_MODE", "baseline").strip().lower()
     if mode == "baseline":
         summary = run_baseline()
+    elif mode in {"detector_class_audit", "yolo_class_audit", "tmoklc_audit"}:
+        summary = run_detector_class_audit()
     elif mode in {"transformer_baseline", "rtdetr_baseline", "detr_baseline"}:
         summary = run_transformer_baseline()
     elif mode in {"rfdetr_baseline", "rfdetr", "soccernet_rfdetr"}:

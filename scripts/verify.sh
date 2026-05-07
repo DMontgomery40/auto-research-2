@@ -181,6 +181,12 @@ if '"rfdetr==1.2.1"' in script_header:
     raise SystemExit("RF-DETR must not be installed in every UV job because it can pull GUI OpenCV into YOLO runs")
 if "def ensure_rfdetr_runtime() -> Any:" not in train_text or "rfdetr = ensure_rfdetr_runtime()" not in train_text:
     raise SystemExit("RF-DETR runtime must be installed lazily only for RF-DETR mode")
+if 'def run_detector_class_audit() -> dict[str, Any]:' not in train_text:
+    raise SystemExit("train.py must keep the detector class/slice audit mode for bridge-mismatch diagnosis")
+if '"all=0,1,2,3;athletes=1,2,3;player=2"' not in train_text:
+    raise SystemExit("detector class audit must compare all, athlete-only, and player-only class selections")
+if '{"detector_class_audit", "yolo_class_audit", "tmoklc_audit"}' not in train_text:
+    raise SystemExit("main() must expose detector_class_audit aliases")
 if "model_class(pretrain_weights=str(checkpoint_path))" not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane should load checkpoints through the RF-DETR public constructor")
 if "model.model.model.load_state_dict(state)" in train_text:

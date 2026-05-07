@@ -32,7 +32,7 @@ Submits train.py as a detached Hugging Face UV Job. This helper is mechanics
 only: choose the experiment in program.md/local Codex, then run one bounded job.
 
 Environment:
-  TRAIN_MODE       baseline, transformer_baseline, rfdetr_baseline, finetune, keypoint, or point_regressor; default baseline
+  TRAIN_MODE       baseline, detector_class_audit, transformer_baseline, rfdetr_baseline, finetune, keypoint, or point_regressor; default baseline
   HF_FLAVOR        default t4-small
   HF_TIMEOUT       default 2h
   HF_PYTHON        default 3.10
