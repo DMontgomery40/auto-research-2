@@ -4,13 +4,6 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Fix the HF Jobs UV/OpenCV packaging blocker before spending another scoring
-  launch. The matched tmoklc point-regressor bridge job
-  `69fbe081aff1cd33e8f2ec29` failed before training/evaluation while importing
-  Ultralytics/OpenCV with `ImportError: libGL.so.1`. Keep this as a small
-  `train.py` mechanics fix: make point-regressor jobs install/import headless
-  `cv2` without requiring system GL, while preserving the RF-DETR lane's
-  optional runtime needs. Then rerun the exact matched tmoklc bridge below.
 - Rerun the direct point regressor plus `tmoklc/football-player-detection`
   bridge with detector settings matched to the strong detector-only audit:
   `TRAIN_MODE=point_regressor`, `POINT_CANDIDATE_MODE=yolo`,
@@ -21,7 +14,11 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   IoU, but it used the point-regressor defaults of detector `imgsz=960` and
   top-25. The earlier detector-only audit used `YOLO_IMGSZ=1280` and looked
   genuinely strong on 16 frames, so isolate the setting mismatch before
-  discarding tmoklc or returning to source search.
+  discarding tmoklc or returning to source search. The first matched rerun,
+  job `69fbe081aff1cd33e8f2ec29`, failed before scoring on
+  `ImportError: libGL.so.1`; the repo now pins headless OpenCV for YOLO jobs
+  and installs RF-DETR lazily, so rerun this exact matched bridge before
+  spending on another source search.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.

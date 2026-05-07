@@ -39,6 +39,7 @@ import numpy as np
 from PIL import Image
 
 train_text = Path("train.py").read_text(encoding="utf-8")
+script_header = train_text.split("# ///", 2)[1]
 tree = ast.parse(train_text)
 functions = [
     node
@@ -174,6 +175,12 @@ if "akx, aky = scale_xy((kx, ky), 1.0 / scale_x, 1.0 / scale_y)" not in train_te
 
 if 'os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge")' not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane must default to RFDETRLarge; the checkpoint is not base-width")
+if '"opencv-python-headless>=4.10,<5"' not in script_header:
+    raise SystemExit("UV script dependencies must pin headless OpenCV for YOLO/Ultralytics jobs")
+if '"rfdetr==1.2.1"' in script_header:
+    raise SystemExit("RF-DETR must not be installed in every UV job because it can pull GUI OpenCV into YOLO runs")
+if "def ensure_rfdetr_runtime() -> Any:" not in train_text or "rfdetr = ensure_rfdetr_runtime()" not in train_text:
+    raise SystemExit("RF-DETR runtime must be installed lazily only for RF-DETR mode")
 if "model_class(pretrain_weights=str(checkpoint_path))" not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane should load checkpoints through the RF-DETR public constructor")
 if "model.model.model.load_state_dict(state)" in train_text:

@@ -3,10 +3,10 @@
 # dependencies = [
 #   "huggingface_hub>=0.24.0",
 #   "ultralytics-opencv-headless>=8.4.29",
+#   "opencv-python-headless>=4.10,<5",
 #   "torch",
 #   "torchvision",
 #   "transformers==4.50.0",
-#   "rfdetr==1.2.1",
 #   "sskit @ git+https://github.com/Spiideo/sskit.git",
 #   "scipy",
 #   "numpy<2",
@@ -20,6 +20,8 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
+import sys
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -157,6 +159,11 @@ DEFAULT_RFDETR_BASELINES = [
     "rfdetr-soccernet|julianzu9612/RFDETR-Soccernet|weights/checkpoint_best_regular.pth|1,2,3",
 ]
 
+RFDETR_RUNTIME_REQUIREMENTS = [
+    "rfdetr==1.2.1",
+    "opencv-python-headless>=4.10,<5",
+]
+
 
 def parse_baselines(raw: str) -> list[BaselineSpec]:
     specs: list[BaselineSpec] = []
@@ -213,6 +220,17 @@ def parse_rfdetr_baselines(raw: str) -> list[BaselineSpec]:
             )
         )
     return specs
+
+
+def ensure_rfdetr_runtime() -> Any:
+    try:
+        import rfdetr
+    except ImportError:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", *RFDETR_RUNTIME_REQUIREMENTS]
+        )
+        import rfdetr
+    return rfdetr
 
 
 def extract_archives(cache_dir: Path, out_dir: Path) -> None:
@@ -701,7 +719,7 @@ def predictions_for_rfdetr_model(
     model_class_name: str,
     coordinate_scale_mode: str,
 ) -> dict[str, Any]:
-    import rfdetr
+    rfdetr = ensure_rfdetr_runtime()
 
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
     images = gt["images"][: max_images or None]

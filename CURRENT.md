@@ -87,6 +87,13 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   packaging blocker, not a tmoklc/model verdict. Fix the UV/OpenCV dependency
   surface so point-regressor jobs import headless `cv2` without system GL, then
   rerun the same matched bridge command.
+- `opencv-headless-rfdetr-lazy-install` is a keep-mechanics fix for that
+  blocker. The default UV payload now pins `opencv-python-headless>=4.10,<5`
+  for YOLO/Ultralytics jobs and no longer installs `rfdetr==1.2.1` in every
+  run, avoiding a transitive GUI OpenCV dependency before point-regressor code
+  can execute. RF-DETR support remains available behind lazy installation only
+  when `TRAIN_MODE=rfdetr_baseline` is selected, and `scripts/verify.sh` guards
+  the dependency split. Rerun the exact matched tmoklc bridge command next.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
@@ -490,13 +497,12 @@ parity hypothesis.
 
 ## Next Action
 
-Next loop should first fix the Hugging Face UV/OpenCV packaging blocker from
-job `69fbe081aff1cd33e8f2ec29`: the matched tmoklc bridge failed before
-training because importing Ultralytics/OpenCV required `libGL.so.1`. Keep this
-as a mechanics fix, not a model experiment. After `train.py` can import
-headless `cv2` in the point-regressor UV job, rerun the same bounded direct
-point-regressor smoke using `tmoklc/football-player-detection` as the real
-candidate source:
+Next loop should rerun the same bounded direct point-regressor smoke using
+`tmoklc/football-player-detection` as the real candidate source. The
+Hugging Face UV/OpenCV packaging blocker from job
+`69fbe081aff1cd33e8f2ec29` has a repo-local mechanics fix now: YOLO jobs use
+headless OpenCV by default, while RF-DETR installs its extra runtime lazily.
+Use this exact matched bridge command:
 `TRAIN_MODE=point_regressor SYNLOC_COORD_SCALE_MODE=actual_image
 POINT_CANDIDATE_MODE=yolo
 POINT_DETECTOR_BASELINE=tmoklc-football-player-detection|tmoklc/football-player-detection|football-player-detection.pt|1,2,3
