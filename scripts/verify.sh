@@ -127,16 +127,39 @@ with tempfile.TemporaryDirectory() as tmp:
     root = Path(tmp)
     (root / "resized").mkdir()
     (root / "fullhd" / "nested").mkdir(parents=True)
+    (root / "train").mkdir()
+    (root / "val").mkdir()
     wrong = root / "resized" / "frame001.jpg"
     right = root / "fullhd" / "nested" / "frame001.jpg"
     only_resized = root / "resized" / "frame002.jpg"
+    train_duplicate = root / "train" / "frame003.jpg"
+    val_duplicate = root / "val" / "frame003.jpg"
     Image.new("RGB", (1920, 1080)).save(wrong)
     Image.new("RGB", (3840, 2160)).save(right)
     Image.new("RGB", (1920, 1080)).save(only_resized)
+    Image.new("RGB", (1920, 1080), (10, 20, 30)).save(train_duplicate)
+    Image.new("RGB", (1920, 1080), (40, 50, 60)).save(val_duplicate)
     image = {"file_name": "frames/frame001.jpg", "width": 3840, "height": 2160}
     resolved = image_path_for_record(root, image)
     if resolved != right:
         raise SystemExit(f"dimension-aware image lookup picked {resolved}, expected {right}")
+    split_image = {"file_name": "frames/frame003.jpg", "width": 3840, "height": 2160}
+    path, scale_x, scale_y, _annotation_size, _actual_size = image_path_and_scale_for_record(
+        root,
+        split_image,
+        coordinate_scale_mode="actual_image",
+        split="valid",
+    )
+    if path != val_duplicate or (scale_x, scale_y) != (0.5, 0.5):
+        raise SystemExit(f"actual-image valid lookup picked {(path, scale_x, scale_y)}, expected val duplicate")
+    path, scale_x, scale_y, _annotation_size, _actual_size = image_path_and_scale_for_record(
+        root,
+        split_image,
+        coordinate_scale_mode="actual_image",
+        split="train",
+    )
+    if path != train_duplicate or (scale_x, scale_y) != (0.5, 0.5):
+        raise SystemExit(f"actual-image train lookup picked {(path, scale_x, scale_y)}, expected train duplicate")
     try:
         image_path(root, "frames/frame001.jpg", expected_width=4096, expected_height=2160)
     except RuntimeError as exc:

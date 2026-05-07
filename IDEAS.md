@@ -4,20 +4,18 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Audit the `tmoklc/football-player-detection` detector-to-point bridge
-  ingestion before rerunning or scaling it. The detector-only class/slice audit
-  job `69fbe74baff1cd33e8f2ec7c` showed the detector stays strong on the exact
-  32-frame validation slice: athlete-only classes `1,2,3` scored official
-  `mAP-LocSim=0.006958124383866958` with
-  `gt_recall_iou_0_5=0.8384030418250951`, while the matched point-regressor
-  bridge job `69fbe2c0aff1cd33e8f2ec42` still collapsed to official
-  `mAP-LocSim=0.0` and `gt_recall_iou_0_5=0.0019011406844106464`. Class ids,
-  validation slice size, actual-image scaling, and raw detector recall are no
-  longer plausible explanations. A good next pass is a code-level audit that
-  makes `evaluate_point_regressor_on_yolo_candidates()` and
-  `predictions_for_model()` emit/compare boxes for the same image ids before
-  point-head cropping or top-k selection, then fixes the first concrete
-  divergence. Do not rerun the same tmoklc bridge command unchanged.
+- Rerun the `tmoklc/football-player-detection` detector-to-point bridge once
+  from the split-aware image lookup commit. Job `69fbea40aff1cd33e8f2eca0`
+  showed the matched bridge collapse is already present in
+  `raw_detector_boxes_before_point`, before point crops or top-k, with
+  `gt_recall_iou_0_5=0.0019011406844106464`. The concrete bug found in this
+  pass is duplicate-basename split leakage: point-regressor mode downloads
+  train and val, so validation annotations could be paired with train images
+  such as `000000.jpg`. `train.py` now passes split hints through detector,
+  keypoint, and point image lookup, and `scripts/verify.sh` guards same-name
+  train/val selection. Next command should be the same bounded tmoklc bridge
+  smoke; if raw detector recall recovers to the detector-class-audit level,
+  judge the point head, otherwise continue ingestion audit.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.

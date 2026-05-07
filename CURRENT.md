@@ -130,6 +130,22 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   the raw GitHub URL used a mistyped SHA and returned `404: Not Found`.
   Artifact upload again failed after `AUTONOMY_RESULT` with HF model-repo
   `403`.
+- `tmoklc-bridge-split-leak-audit` is a blocker-fix update, not a model
+  verdict: job `69fbea40aff1cd33e8f2eca0` reran the matched tmoklc
+  detector-to-point bridge from committed ref
+  `e419c94b066d17b41082a958ebb803a89415c150` with extra pre-point detector
+  diagnostics. It again reached official SSKit evaluation and printed
+  `mAP-LocSim=0.0`, but the new diagnostics showed the collapse was already
+  present in `raw_detector_boxes_before_point`, before point crops or top-k:
+  `gt_recall_iou_0_5=0.0019011406844106464` with 617 detector boxes for 526 GT
+  boxes. Audit examples exposed the likely cause: point-regressor jobs download
+  both train and val archives, and duplicate basenames such as `000000.jpg`
+  could resolve to the train image while using validation annotations. `train.py`
+  now passes split hints through image lookup for detector, keypoint, and point
+  paths, and `scripts/verify.sh` guards same-basename train/val selection.
+  Rerun the same matched tmoklc bridge from the split-aware commit next; do not
+  treat the pre-fix score as a detector/model result. Artifact upload still
+  failed after `AUTONOMY_RESULT` with HF model-repo LFS `403`.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and

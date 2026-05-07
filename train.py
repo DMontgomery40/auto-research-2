@@ -310,6 +310,7 @@ def image_path(
     *,
     expected_width: int | float | None = None,
     expected_height: int | float | None = None,
+    preferred_split: str | None = None,
 ) -> Path:
     candidates = [
         root / file_name,
@@ -318,6 +319,22 @@ def image_path(
     ]
     candidates.extend(root.rglob(Path(file_name).name))
     candidates = [candidate for candidate in candidates if candidate.exists() and candidate.is_file()]
+    split_aliases = {
+        "valid": {"valid", "val"},
+        "val": {"valid", "val"},
+        "train": {"train"},
+        "challenge": {"challenge", "test"},
+        "test": {"challenge", "test"},
+    }
+    aliases = split_aliases.get((preferred_split or "").lower(), set())
+    if aliases:
+        candidates = sorted(
+            candidates,
+            key=lambda candidate: (
+                not any(part.lower() in aliases for part in candidate.parts),
+                str(candidate),
+            ),
+        )
     if expected_width is not None and expected_height is not None:
         expected_size = (int(round(float(expected_width))), int(round(float(expected_height))))
         mismatches: list[str] = []
@@ -337,12 +354,13 @@ def image_path(
     raise FileNotFoundError(file_name)
 
 
-def image_path_for_record(root: Path, image: dict[str, Any]) -> Path:
+def image_path_for_record(root: Path, image: dict[str, Any], *, split: str | None = None) -> Path:
     return image_path(
         root,
         image["file_name"],
         expected_width=image.get("width"),
         expected_height=image.get("height"),
+        preferred_split=split,
     )
 
 
@@ -351,13 +369,14 @@ def image_path_and_scale_for_record(
     image: dict[str, Any],
     *,
     coordinate_scale_mode: str,
+    split: str | None = None,
 ) -> tuple[Path, float, float, tuple[int, int], tuple[int, int]]:
     expected_width = int(round(float(image["width"])))
     expected_height = int(round(float(image["height"])))
     if coordinate_scale_mode == "strict":
-        path = image_path_for_record(root, image)
+        path = image_path_for_record(root, image, split=split)
     elif coordinate_scale_mode == "actual_image":
-        path = image_path(root, image["file_name"])
+        path = image_path(root, image["file_name"], preferred_split=split)
     else:
         raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
     with Image.open(path) as opened:
@@ -517,6 +536,7 @@ def predictions_for_model(
             data_root,
             image,
             coordinate_scale_mode=coordinate_scale_mode,
+            split=split,
         )
         width = float(image["width"])
         height = float(image["height"])
@@ -647,6 +667,7 @@ def predictions_for_transformer_model(
             data_root,
             image,
             coordinate_scale_mode=coordinate_scale_mode,
+            split=split,
         )
         width = float(image["width"])
         height = float(image["height"])
@@ -787,6 +808,7 @@ def predictions_for_rfdetr_model(
             data_root,
             image,
             coordinate_scale_mode=coordinate_scale_mode,
+            split=split,
         )
         width = float(image["width"])
         height = float(image["height"])
@@ -962,6 +984,7 @@ def build_point_samples(
     data_root: Path,
     gt_path: Path,
     *,
+    split: str,
     max_images: int,
     source_keypoint_index: int,
     keypoint_target: str,
@@ -983,6 +1006,7 @@ def build_point_samples(
             data_root,
             image,
             coordinate_scale_mode=coordinate_scale_mode,
+            split=split,
         )
         width = float(image["width"])
         height = float(image["height"])
@@ -1423,6 +1447,7 @@ def evaluate_point_regressor_on_yolo_candidates(
             data_root,
             image,
             coordinate_scale_mode=coordinate_scale_mode,
+            split="valid",
         )
         preds = detector.predict(
             source=str(path),
@@ -1652,6 +1677,7 @@ def make_yolo_keypoint_dataset(
                 data_root,
                 image,
                 coordinate_scale_mode=coordinate_scale_mode,
+                split=split,
             )
             stem = f"{int(image['id']):08d}_{Path(image['file_name']).stem}"
             image_target = dataset / "images" / split / f"{stem}{src.suffix.lower() or '.jpg'}"
@@ -1770,6 +1796,7 @@ def predictions_for_keypoint_model(
             data_root,
             image,
             coordinate_scale_mode=coordinate_scale_mode,
+            split=split,
         )
         preds = model.predict(
             source=str(path),
@@ -2560,6 +2587,7 @@ def run_point_regressor() -> dict[str, Any]:
     train_samples, train_skipped = build_point_samples(
         data_root,
         train_gt,
+        split="train",
         max_images=train_max,
         source_keypoint_index=source_keypoint_index,
         keypoint_target=keypoint_target,
@@ -2568,6 +2596,7 @@ def run_point_regressor() -> dict[str, Any]:
     val_samples, val_skipped = build_point_samples(
         data_root,
         val_gt,
+        split="valid",
         max_images=val_max,
         source_keypoint_index=source_keypoint_index,
         keypoint_target=keypoint_target,
