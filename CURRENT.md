@@ -210,6 +210,22 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   context alone; change learning rate, point head/loss, candidate filtering, or
   train slice size. Artifact upload still failed after `AUTONOMY_RESULT` with
   HF model-repo LFS `403`; the printed job log is the durable score.
+- `tmoklc-256-train-bridge` is a discard-result: job
+  `69fbfbde317220dbbd1a574a` held the current best split-aware tmoklc
+  detector-to-point bridge fixed and changed only `TRAIN_MAX_IMAGES=128` to
+  `TRAIN_MAX_IMAGES=256` from committed ref
+  `908a44aa1b767b4be9ce0d529913a03c83888084`. It reached official SSKit
+  evaluation and exactly tied, but did not improve, the current best official
+  `mAP-LocSim=0.009405940594059406`. Detector diagnostics stayed healthy:
+  `raw_detector_boxes_before_point.gt_recall_iou_0_5=0.8384030418250951`,
+  `gt_recall_iou_0_3=0.9106463878326996`,
+  `det_precision_iou_0_5=0.6752368064952639`, and 739 detections for 526 GT
+  boxes. Point diagnostics were slightly worse than the 128-image best:
+  `gt_recall_px_50=0.9315589353612167`, mean best GT-to-pred point error about
+  `38.31` px, and 739 predictions. Do not spend the next loop on train-slice
+  size alone; change learning rate, point head/loss, candidate filtering, or
+  validation breadth. Artifact upload still failed after `AUTONOMY_RESULT` with
+  HF model-repo LFS `403`; the printed job log is the durable score.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
@@ -617,11 +633,13 @@ Next loop should build on the split-aware tmoklc detector-to-point bridge:
 job `69fbf206317220dbbd1a5719` is the current best real-candidate score at
 `mAP-LocSim=0.009405940594059406` from 128 train / 32 valid, 2 epochs,
 `POINT_CROP_PADDING=0.15`. Do not rerun the exact best smoke unchanged, do not
-try more epochs alone, and do not try wider crop context alone; jobs
-`69fbf50aaff1cd33e8f2ed35` and `69fbf877317220dbbd1a5741` both tied without
+try more epochs alone, do not try wider crop context alone, and do not try
+larger train slice alone; jobs `69fbf50aaff1cd33e8f2ed35`,
+`69fbf877317220dbbd1a5741`, and `69fbfbde317220dbbd1a574a` all tied without
 improving and slightly worsened point error. The next useful unit is a bounded
-learning-rate, point-head/loss, candidate-filtering, or train-slice experiment
-on this same source, with the same raw detector diagnostics kept in the log.
+learning-rate, point-head/loss, candidate-filtering, or validation-breadth
+experiment on this same source, with the same raw detector diagnostics kept in
+the log.
 Keep judging with official SSKit `mAP-LocSim` and stop if raw detector recall
 collapses again.
 

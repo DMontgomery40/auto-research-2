@@ -17,9 +17,11 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   (`POINT_EPOCHS=4`) and exactly tied the best score while slightly worsening
   mean point error, and job `69fbf877317220dbbd1a5741` tried wider crop context
   alone (`POINT_CROP_PADDING=0.30`) and also tied while slightly worsening mean
-  point error. Do not spend the next pass on epoch count or crop padding alone.
-  Keep logging `raw_detector_boxes_before_point` so any score change can be
-  separated from detector/candidate collapse.
+  point error. Job `69fbfbde317220dbbd1a574a` then increased only the train
+  slice to 256 images and also tied while slightly worsening mean point error.
+  Do not spend the next pass on epoch count, crop padding, or train-slice size
+  alone. Keep logging `raw_detector_boxes_before_point` so any score change can
+  be separated from detector/candidate collapse.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.
