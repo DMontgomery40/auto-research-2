@@ -180,6 +180,20 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   as candidate filtering or point-head/loss, rather than merely rerunning the
   same 128-image smoke. Artifact upload still failed after `AUTONOMY_RESULT`
   with HF model-repo LFS `403`; the printed job log is the durable score.
+- `tmoklc-128-train-4epoch-bridge` is a discard-result: job
+  `69fbf50aaff1cd33e8f2ed35` held the current best 128-image split-aware
+  tmoklc bridge fixed and changed only `POINT_EPOCHS=2` to `POINT_EPOCHS=4`
+  from committed ref `ba7f14a9c86dd0d460d76bb742fabd1fbefb88af`. It reached
+  official SSKit evaluation and exactly tied, but did not improve, the current
+  best official `mAP-LocSim=0.009405940594059406`. Detector diagnostics stayed
+  healthy at `raw_detector_boxes_before_point.gt_recall_iou_0_5=0.8384030418250951`,
+  `gt_recall_iou_0_3=0.9106463878326996`, `det_precision_iou_0_5=0.6752368064952639`,
+  and 739 detections for 526 GT boxes. Point losses continued down, but mean
+  best GT-to-pred point error was slightly worse at about `38.96` px, with
+  `gt_recall_px_50=0.9315589353612167`. Do not spend the next loop on more
+  epochs alone; change point-head/loss, image size/crop context, or candidate
+  filtering. Artifact upload still failed after `AUTONOMY_RESULT` with HF
+  model-repo LFS `403`; the printed job log is the durable score.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and

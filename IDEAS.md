@@ -12,7 +12,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `gt_recall_iou_0_5=0.8384030418250951` on the 32-frame slice. The next
   bounded unit should keep this candidate source and change exactly one
   different point/candidate-quality lever: a stricter candidate-quality filter,
-  a small crop/point-head loss change, or a modest epoch/learning-rate probe.
+  a small crop/point-head loss change, image size/crop context, or a learning-rate
+  probe. Job `69fbf50aaff1cd33e8f2ed35` already tried more epochs alone
+  (`POINT_EPOCHS=4`) and exactly tied the best score while slightly worsening
+  mean point error, so do not spend the next pass on epoch count alone.
   Keep logging `raw_detector_boxes_before_point` so any score change can be
   separated from detector/candidate collapse.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
