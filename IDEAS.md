@@ -5,15 +5,16 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 ## Next Best Experiments
 
 - Build on the split-aware `tmoklc/football-player-detection` detector-to-point
-  bridge rather than rerunning it unchanged. Job `69fbee83317220dbbd1a56f6`
-  resolved the duplicate-basename split leakage and scored official
-  `mAP-LocSim=0.008787128712871288`, with raw bridge detector recall restored
-  to `gt_recall_iou_0_5=0.8384030418250951` on the 32-frame slice. The next
-  bounded unit should keep this candidate source and change exactly one point
-  quality lever: a slightly larger train slice, a small crop/point-head loss
-  change, or a stricter candidate-quality filter. Keep logging
-  `raw_detector_boxes_before_point` so any score change can be separated from
-  detector/candidate collapse.
+  bridge rather than rerunning it unchanged. Job `69fbf206317220dbbd1a5719`
+  increased only the point-regressor train slice from 64 to 128 images and
+  scored the current best official `mAP-LocSim=0.009405940594059406`, with raw
+  bridge detector recall still healthy at
+  `gt_recall_iou_0_5=0.8384030418250951` on the 32-frame slice. The next
+  bounded unit should keep this candidate source and change exactly one
+  different point/candidate-quality lever: a stricter candidate-quality filter,
+  a small crop/point-head loss change, or a modest epoch/learning-rate probe.
+  Keep logging `raw_detector_boxes_before_point` so any score change can be
+  separated from detector/candidate collapse.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.
