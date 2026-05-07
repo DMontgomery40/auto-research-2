@@ -76,6 +76,17 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   detector audit used `YOLO_IMGSZ=1280`; rerun the bridge with detector settings
   matched to the audit before discarding tmoklc as a source. Artifact upload
   failed after `AUTONOMY_RESULT` with HF model-repo LFS `403`.
+- `tmoklc-matched-bridge-libgl-blocker` added no score: job
+  `69fbe081aff1cd33e8f2ec29` attempted that matched tmoklc bridge with
+  `POINT_DETECTOR_IMGSZ=1280` and `POINT_MAX_DETECTIONS_PER_IMAGE=50`.
+  Repo-local preflight correctly stopped on missing HF `job.write`, so the
+  Hugging Face Jobs connector launched committed raw `train.py` from ref
+  `6d5881258224855734aab8923dd0f2f23b568d1a`. The job failed before training
+  or official SSKit evaluation while importing Ultralytics/OpenCV:
+  `ImportError: libGL.so.1: cannot open shared object file`. This is a
+  packaging blocker, not a tmoklc/model verdict. Fix the UV/OpenCV dependency
+  surface so point-regressor jobs import headless `cv2` without system GL, then
+  rerun the same matched bridge command.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
@@ -479,15 +490,21 @@ parity hypothesis.
 
 ## Next Action
 
-Next loop should run a bounded direct point-regressor smoke using
-`tmoklc/football-player-detection` as the real candidate source:
+Next loop should first fix the Hugging Face UV/OpenCV packaging blocker from
+job `69fbe081aff1cd33e8f2ec29`: the matched tmoklc bridge failed before
+training because importing Ultralytics/OpenCV required `libGL.so.1`. Keep this
+as a mechanics fix, not a model experiment. After `train.py` can import
+headless `cv2` in the point-regressor UV job, rerun the same bounded direct
+point-regressor smoke using `tmoklc/football-player-detection` as the real
+candidate source:
 `TRAIN_MODE=point_regressor SYNLOC_COORD_SCALE_MODE=actual_image
 POINT_CANDIDATE_MODE=yolo
 POINT_DETECTOR_BASELINE=tmoklc-football-player-detection|tmoklc/football-player-detection|football-player-detection.pt|1,2,3
-TRAIN_MAX_IMAGES=64 VAL_MAX_IMAGES=32 POINT_EPOCHS=2 POINT_BATCH=16`. Use the
-connector/app if repo-local preflight reports missing `job.write`, and follow
-the job to official `mAP-LocSim` or an explicit blocker. Do not expand to a
-full validation detector run or another public detector search until this
+POINT_DETECTOR_IMGSZ=1280 POINT_MAX_DETECTIONS_PER_IMAGE=50 TRAIN_MAX_IMAGES=64
+VAL_MAX_IMAGES=32 POINT_EPOCHS=2 POINT_BATCH=16`. Use the connector/app if
+repo-local preflight reports missing `job.write`, and follow the job to
+official `mAP-LocSim` or an explicit blocker. Do not expand to a full
+validation detector run or another public detector search until this
 detector-to-point bridge is scored.
 
 Do not rerun the keypoint actual-image YOLO11n-pose smoke just because the

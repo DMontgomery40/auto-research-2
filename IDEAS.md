@@ -4,6 +4,13 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
+- Fix the HF Jobs UV/OpenCV packaging blocker before spending another scoring
+  launch. The matched tmoklc point-regressor bridge job
+  `69fbe081aff1cd33e8f2ec29` failed before training/evaluation while importing
+  Ultralytics/OpenCV with `ImportError: libGL.so.1`. Keep this as a small
+  `train.py` mechanics fix: make point-regressor jobs install/import headless
+  `cv2` without requiring system GL, while preserving the RF-DETR lane's
+  optional runtime needs. Then rerun the exact matched tmoklc bridge below.
 - Rerun the direct point regressor plus `tmoklc/football-player-detection`
   bridge with detector settings matched to the strong detector-only audit:
   `TRAIN_MODE=point_regressor`, `POINT_CANDIDATE_MODE=yolo`,
