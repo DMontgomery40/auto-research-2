@@ -64,6 +64,16 @@ trap 'rm -f "$prompt_file"' EXIT
 cat > "$prompt_file" <<'EOF'
 You are the local Codex researcher for this auto-research-2 checkout.
 
+Project-local memory rule:
+
+- Do not read or rely on ~/.codex/MEMORY.md, ~/.codex/memory/, or
+  ~/.codex/memories/. Those global paths are disabled for this repo because
+  they can bleed in stale context from other checkouts.
+- Use only this checkout's AGENTS.md, program.md, CURRENT.md, LEDGER.md,
+  IDEAS.md, local files, and project-local memory under
+  ~/.codex/projects/-Users-davidmontgomery-auto-research-2/ if memory is
+  genuinely needed.
+
 Read these first:
 
 1. AGENTS.md
