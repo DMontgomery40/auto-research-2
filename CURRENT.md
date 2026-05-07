@@ -111,6 +111,25 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   slice looked strong while the bridge slice collapses, or move to a stronger
   official-runtime candidate source. Artifact upload still failed after
   `AUTONOMY_RESULT` with HF model-repo LFS `403`.
+- `tmoklc-detector-class-slice-audit` is a keep-signal and narrows the bridge
+  bug: job `69fbe74baff1cd33e8f2ec7c` added/scored
+  `TRAIN_MODE=detector_class_audit` from committed ref
+  `9e75f47d5e015a284f9e0a933e7048d636aee8be`, comparing the same
+  `tmoklc/football-player-detection` detector across `all=0,1,2,3`,
+  `athletes=1,2,3`, and `player=2` on 16 and 32 validation frames with
+  `SYNLOC_COORD_SCALE_MODE=actual_image`, `YOLO_IMGSZ=1280`, and
+  `YOLO_CONF=0.01`. The detector stayed strong on the exact 32-frame slice:
+  athlete-only scored official `mAP-LocSim=0.006958124383866958`,
+  `gt_recall_iou_0_5=0.8384030418250951`, 739 detections for 526 GT boxes,
+  and `det_precision_iou_0_5=0.6752368064952639`. Player-only still had
+  `gt_recall_iou_0_5=0.6901140684410646` and
+  `mAP-LocSim=0.006993505802193122`. So the point-regressor bridge collapse is
+  not explained by validation slice size, class ids, image scale, or detector
+  recall; it is likely a bridge ingestion/training/eval-path bug. A first
+  connector launch `69fbe651aff1cd33e8f2ec6f` failed before repo code because
+  the raw GitHub URL used a mistyped SHA and returned `404: Not Found`.
+  Artifact upload again failed after `AUTONOMY_RESULT` with HF model-repo
+  `403`.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
@@ -514,15 +533,19 @@ parity hypothesis.
 
 ## Next Action
 
-Next loop should not rerun the matched tmoklc detector-to-point bridge
-unchanged. Job `69fbe2c0aff1cd33e8f2ec42` scored that exact command after the
-OpenCV fix and got official `mAP-LocSim=0.0` with near-zero candidate IoU. The
-useful next unit is a tiny tmoklc bridge audit, not another training rerun:
-compare the earlier strong 16-frame detector-only audit slice against the
-32-frame point-regressor validation slice, saving/inspecting image ids,
-selected class ids, detector boxes before/after `actual_image` scaling,
-NMS/top-k effects, and GT IoU summaries. If that audit does not expose a
-clear bridge bug, return to official SSKit/SoccerNet-format candidate sources,
+Next loop should treat `tmoklc` as a real detector source but the
+point-regressor bridge as suspect. Do not rerun the matched tmoklc
+detector-to-point bridge unchanged: job `69fbe2c0aff1cd33e8f2ec42` scored that
+exact command after the OpenCV fix and got official `mAP-LocSim=0.0` with
+near-zero candidate IoU, while detector-class audit job
+`69fbe74baff1cd33e8f2ec7c` showed the same detector remains strong on the
+same 32-frame slice with athlete-only classes
+(`gt_recall_iou_0_5=0.8384030418250951`). The next useful unit is a
+code-level bridge ingestion audit: compare the boxes produced inside
+`evaluate_point_regressor_on_yolo_candidates()` against
+`predictions_for_model()` for the same image ids before any point-head crop or
+top-k selection, then fix the first concrete divergence. If no bridge bug is
+found, return to official SSKit/SoccerNet-format candidate sources,
 SoccerMaster official-runtime parity, or a track/pose source with real
 image-space athlete-box recall on the same SynLoc frames.
 
