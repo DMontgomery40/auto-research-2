@@ -187,6 +187,15 @@ if '"all=0,1,2,3;athletes=1,2,3;player=2"' not in train_text:
     raise SystemExit("detector class audit must compare all, athlete-only, and player-only class selections")
 if '{"detector_class_audit", "yolo_class_audit", "tmoklc_audit"}' not in train_text:
     raise SystemExit("main() must expose detector_class_audit aliases")
+for needle in [
+    "raw_detector_boxes_before_point",
+    "pre_topk_boxes_after_point",
+    "raw_detector_box_diagnostics",
+    "pre_topk_box_diagnostics",
+    "detector_class_names",
+]:
+    if needle not in train_text:
+        raise SystemExit(f"point-regressor YOLO bridge must preserve detector-stage audit field {needle}")
 if "model_class(pretrain_weights=str(checkpoint_path))" not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane should load checkpoints through the RF-DETR public constructor")
 if "model.model.model.load_state_dict(state)" in train_text:

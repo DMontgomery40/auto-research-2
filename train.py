@@ -1406,12 +1406,16 @@ def evaluate_point_regressor_on_yolo_candidates(
             gt_points_by_image.setdefault(image_id, []).append((float(point[0]), float(point[1])))
 
     det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    raw_det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
+    pre_topk_det_boxes_by_image: dict[int, list[list[float]]] = {image_id: [] for image_id in selected_image_ids}
     pred_points_by_image: dict[int, list[tuple[float, float]]] = {image_id: [] for image_id in selected_image_ids}
     detector = YOLO(str(detector_model_path))
+    detector_class_names = {str(key): value for key, value in getattr(detector, "names", {}).items()}
     detector_device: int | str = 0 if torch.cuda.is_available() else "cpu"
 
     results: list[dict[str, Any]] = []
     audit_examples: list[dict[str, Any]] = []
+    raw_class_counts_total: dict[int, int] = {}
     det_id = 1
     for image in images:
         image_id = int(image["id"])
@@ -1438,18 +1442,21 @@ def evaluate_point_regressor_on_yolo_candidates(
         raw_class_counts: dict[int, int] = {}
         for box, score, class_id in zip(xyxy, scores, classes):
             raw_class_counts[int(class_id)] = raw_class_counts.get(int(class_id), 0) + 1
+            raw_class_counts_total[int(class_id)] = raw_class_counts_total.get(int(class_id), 0) + 1
             if int(class_id) not in detector_spec.athlete_class_ids:
                 continue
             x1, y1, x2, y2 = [float(v) for v in box]
             if x2 <= x1 or y2 <= y1:
                 continue
+            ax1, ay1, ax2, ay2 = box_xyxy_to_annotation_scale((x1, y1, x2, y2), scale_x, scale_y)
+            raw_det_boxes_by_image.setdefault(image_id, []).append([ax1, ay1, ax2, ay2])
             sample = PointSample(
                 image_path=path,
                 image_id=image_id,
                 annotation_id=None,
                 bbox_xywh=(x1, y1, x2 - x1, y2 - y1),
                 point_xy=(0.0, 0.0),
-                annotation_bbox_xywh=(x1 / scale_x, y1 / scale_y, (x2 - x1) / scale_x, (y2 - y1) / scale_y),
+                annotation_bbox_xywh=(ax1, ay1, ax2 - ax1, ay2 - ay1),
                 annotation_point_xy=(0.0, 0.0),
                 coord_scale_x=scale_x,
                 coord_scale_y=scale_y,
@@ -1476,6 +1483,8 @@ def evaluate_point_regressor_on_yolo_candidates(
                     "coord_scale": [scale_x, scale_y],
                 }
             )
+        for candidate in candidates:
+            pre_topk_det_boxes_by_image.setdefault(image_id, []).append(candidate["xyxy"])
         if max_detections_per_image > 0:
             candidates = sorted(candidates, key=lambda item: item["score"], reverse=True)[:max_detections_per_image]
         if audit_sample_images > 0 and len(audit_examples) < audit_sample_images:
@@ -1514,7 +1523,16 @@ def evaluate_point_regressor_on_yolo_candidates(
                     "file_name": image["file_name"],
                     "width": image.get("width"),
                     "height": image.get("height"),
+                    "detector_class_names": detector_class_names,
                     "raw_class_counts": raw_class_counts,
+                    "raw_detector_box_diagnostics": image_space_diagnostics(
+                        {image_id: gt_boxes_by_image.get(image_id, [])},
+                        {image_id: raw_det_boxes_by_image.get(image_id, [])},
+                    ),
+                    "pre_topk_box_diagnostics": image_space_diagnostics(
+                        {image_id: gt_boxes_by_image.get(image_id, [])},
+                        {image_id: pre_topk_det_boxes_by_image.get(image_id, [])},
+                    ),
                     "gt": gt_rows,
                     "predictions_top10_after_filter": pred_rows,
                 }
@@ -1542,6 +1560,8 @@ def evaluate_point_regressor_on_yolo_candidates(
     pred_path.write_text(json.dumps(results), encoding="utf-8")
     metrics = evaluate_keypoints(gt_path, pred_path, 0)
     diagnostics = {
+        "raw_detector_boxes_before_point": image_space_diagnostics(gt_boxes_by_image, raw_det_boxes_by_image),
+        "pre_topk_boxes_after_point": image_space_diagnostics(gt_boxes_by_image, pre_topk_det_boxes_by_image),
         "boxes": image_space_diagnostics(gt_boxes_by_image, det_boxes_by_image),
         "keypoints": keypoint_diagnostics(gt_points_by_image, pred_points_by_image),
     }
@@ -1555,6 +1575,8 @@ def evaluate_point_regressor_on_yolo_candidates(
         "detector_repo": detector_spec.repo,
         "detector_filename": detector_spec.filename,
         "athlete_class_ids": sorted(detector_spec.athlete_class_ids),
+        "detector_class_names": detector_class_names,
+        "raw_class_counts": raw_class_counts_total,
         "position_from_keypoint_index": 0,
         "num_images": len(images),
         "num_predictions": len(results),
