@@ -159,6 +159,19 @@ with tempfile.TemporaryDirectory() as tmp:
     if box_xyxy_to_annotation_scale((50.0, 100.0, 75.0, 140.0), scale_x, scale_y) != (100.0, 200.0, 150.0, 280.0):
         raise SystemExit("box_xyxy_to_annotation_scale did not map detector boxes back to annotation coordinates")
 
+if '"coordinate_scale_mode": coordinate_scale_mode' not in train_text:
+    raise SystemExit("train.py summaries must record coordinate scale mode")
+if "def make_yolo_keypoint_dataset(" not in train_text or "coordinate_scale_mode: str,\n) -> tuple[Path, dict[str, Any]]" not in train_text:
+    raise SystemExit("keypoint dataset builder must accept coordinate_scale_mode")
+if "src, scale_x, scale_y, annotation_size, actual_size = image_path_and_scale_for_record(" not in train_text:
+    raise SystemExit("keypoint dataset builder must resolve actual image scale")
+if "x, y, w, h = scale_xywh((x, y, w, h), scale_x, scale_y)" not in train_text:
+    raise SystemExit("keypoint labels must scale annotation boxes into actual-image coordinates")
+if "px, py = scale_xy((px, py), scale_x, scale_y)" not in train_text:
+    raise SystemExit("keypoint labels must scale annotation keypoints into actual-image coordinates")
+if "akx, aky = scale_xy((kx, ky), 1.0 / scale_x, 1.0 / scale_y)" not in train_text:
+    raise SystemExit("keypoint predictions must map model keypoints back to annotation coordinates")
+
 if 'os.getenv("RFDETR_MODEL_CLASS", "RFDETRLarge")' not in train_text:
     raise SystemExit("RF-DETR SoccerNet lane must default to RFDETRLarge; the checkpoint is not base-width")
 if "model_class(pretrain_weights=str(checkpoint_path))" not in train_text:

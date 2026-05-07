@@ -1569,6 +1569,7 @@ def make_yolo_keypoint_dataset(
     val_max: int,
     source_keypoint_index: int,
     keypoint_target: str,
+    coordinate_scale_mode: str,
 ) -> tuple[Path, dict[str, Any]]:
     dataset = Path("/tmp/synloc-yolo-keypoint-dataset")
     if dataset.exists():
@@ -1584,7 +1585,11 @@ def make_yolo_keypoint_dataset(
             annotations_by_image.setdefault(int(ann["image_id"]), []).append(ann)
         stats = {"images": 0, "annotations": 0, "labels": 0, "skipped_keypoints": 0}
         for image in gt["images"][: max_images or None]:
-            src = image_path_for_record(data_root, image)
+            src, scale_x, scale_y, annotation_size, actual_size = image_path_and_scale_for_record(
+                data_root,
+                image,
+                coordinate_scale_mode=coordinate_scale_mode,
+            )
             stem = f"{int(image['id']):08d}_{Path(image['file_name']).stem}"
             image_target = dataset / "images" / split / f"{stem}{src.suffix.lower() or '.jpg'}"
             label_target = dataset / "labels" / split / f"{stem}.txt"
@@ -1592,12 +1597,13 @@ def make_yolo_keypoint_dataset(
                 image_target.symlink_to(src)
             except OSError:
                 shutil.copy2(src, image_target)
-            width = float(image["width"])
-            height = float(image["height"])
+            width = float(actual_size[0])
+            height = float(actual_size[1])
             lines: list[str] = []
             for ann in annotations_by_image.get(int(image["id"]), []):
                 stats["annotations"] += 1
                 x, y, w, h = [float(v) for v in ann.get("bbox", [0, 0, 0, 0])]
+                x, y, w, h = scale_xywh((x, y, w, h), scale_x, scale_y)
                 point = target_keypoint(
                     ann,
                     target=keypoint_target,
@@ -1607,6 +1613,7 @@ def make_yolo_keypoint_dataset(
                     stats["skipped_keypoints"] += 1
                     continue
                 px, py, visibility = point
+                px, py = scale_xy((px, py), scale_x, scale_y)
                 if visibility <= 0 or not np.isfinite([px, py]).all() or not (0 <= px < width and 0 <= py < height):
                     stats["skipped_keypoints"] += 1
                     continue
@@ -1636,6 +1643,7 @@ def make_yolo_keypoint_dataset(
     (dataset / "data.yaml").write_text(yaml.safe_dump(data_yaml, sort_keys=False), encoding="utf-8")
     manifest = {
         "keypoint_target": keypoint_target,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "source_keypoint_index": source_keypoint_index,
         "output_keypoint_index": 0,
         "train": train_stats,
@@ -1660,6 +1668,7 @@ def predictions_for_keypoint_model(
     max_detections_per_image: int,
     audit_sample_images: int,
     score_mode: str,
+    coordinate_scale_mode: str,
 ) -> dict[str, Any]:
     gt = json.loads(gt_path.read_text(encoding="utf-8"))
     images = gt["images"][: max_images or None]
@@ -1694,7 +1703,11 @@ def predictions_for_keypoint_model(
     det_id = 1
     for image in images:
         image_id = int(image["id"])
-        path = image_path_for_record(data_root, image)
+        path, scale_x, scale_y, annotation_size, actual_size = image_path_and_scale_for_record(
+            data_root,
+            image,
+            coordinate_scale_mode=coordinate_scale_mode,
+        )
         preds = model.predict(
             source=str(path),
             imgsz=imgsz,
@@ -1725,6 +1738,8 @@ def predictions_for_keypoint_model(
             if not np.isfinite([kx, ky]).all():
                 continue
             x1, y1, x2, y2 = [float(v) for v in box]
+            ax1, ay1, ax2, ay2 = box_xyxy_to_annotation_scale((x1, y1, x2, y2), scale_x, scale_y)
+            akx, aky = scale_xy((kx, ky), 1.0 / scale_x, 1.0 / scale_y)
             keypoint_score = 1.0
             if kconf is not None and det_index < len(kconf) and len(kconf[det_index]) > 0:
                 keypoint_score = max(float(kconf[det_index][0]), 1e-6)
@@ -1732,11 +1747,11 @@ def predictions_for_keypoint_model(
             candidate_score = keypoint_candidate_score(score_mode, box_score, keypoint_score)
             candidates.append(
                 {
-                    "bbox": [x1, y1, x2 - x1, y2 - y1],
-                    "keypoints": [kx, ky, 2.0],
+                    "bbox": [ax1, ay1, ax2 - ax1, ay2 - ay1],
+                    "keypoints": [akx, aky, 2.0],
                     "score": candidate_score,
-                    "xyxy": [x1, y1, x2, y2],
-                    "point": (kx, ky),
+                    "xyxy": [ax1, ay1, ax2, ay2],
+                    "point": (akx, aky),
                     "box_score": box_score,
                     "keypoint_score": keypoint_score,
                     "class_id": int(class_id),
@@ -1787,6 +1802,8 @@ def predictions_for_keypoint_model(
                     "file_name": image["file_name"],
                     "width": image.get("width"),
                     "height": image.get("height"),
+                    "annotation_size": annotation_size,
+                    "actual_size": actual_size,
                     "raw_class_counts": raw_class_counts,
                     "gt": gt_rows,
                     "predictions_top10_after_filter": pred_rows,
@@ -1831,6 +1848,7 @@ def predictions_for_keypoint_model(
         "max_detections_per_image": max_detections_per_image,
         "audit_sample_images": audit_sample_images,
         "score_mode": score_mode,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "model_class_names": class_names,
         "diagnostics": diagnostics,
         "audit_examples": audit_examples,
@@ -2246,6 +2264,9 @@ def run_keypoint() -> dict[str, Any]:
     audit_sample_images = env_int("SYNLOC_AUDIT_SAMPLE_IMAGES", 5)
     score_modes = keypoint_score_modes(os.getenv("YOLO_KEYPOINT_SCORE_MODE", "combined"))
     pose_model = os.getenv("YOLO_POSE_MODEL", "yolo11n-pose.pt")
+    coordinate_scale_mode = os.getenv("SYNLOC_COORD_SCALE_MODE", "strict").strip().lower()
+    if coordinate_scale_mode not in {"strict", "actual_image"}:
+        raise RuntimeError("SYNLOC_COORD_SCALE_MODE must be one of: strict, actual_image")
 
     data_root = load_synloc_data(version, synloc_snapshot_patterns(version, ["train", "valid"]))
     train_gt = find_annotation(data_root, "train")
@@ -2258,6 +2279,7 @@ def run_keypoint() -> dict[str, Any]:
         val_max=val_max,
         source_keypoint_index=source_keypoint_index,
         keypoint_target=keypoint_target,
+        coordinate_scale_mode=coordinate_scale_mode,
     )
 
     project = Path("/tmp/yolo-keypoint-train")
@@ -2297,6 +2319,7 @@ def run_keypoint() -> dict[str, Any]:
             max_detections_per_image=max_detections_per_image,
             audit_sample_images=audit_sample_images,
             score_mode=score_mode,
+            coordinate_scale_mode=coordinate_scale_mode,
         )
         validation = item["summary"]
         validation["out_dir"] = str(item["out_dir"])
@@ -2314,6 +2337,7 @@ def run_keypoint() -> dict[str, Any]:
         "run_id": f"synloc-keypoint-smoke-{utc_now().replace(':', '-')}",
         "pose_model": pose_model,
         "keypoint_target": keypoint_target,
+        "coordinate_scale_mode": coordinate_scale_mode,
         "best_checkpoint": str(best_pt),
         "train_images": train_max,
         "val_images": val_max,
