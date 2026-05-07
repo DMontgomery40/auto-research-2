@@ -94,6 +94,23 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   can execute. RF-DETR support remains available behind lazy installation only
   when `TRAIN_MODE=rfdetr_baseline` is selected, and `scripts/verify.sh` guards
   the dependency split. Rerun the exact matched tmoklc bridge command next.
+- `tmoklc-matched-bridge-scored` is a discard-result and resolves the prior
+  `libGL.so.1` blocker: job `69fbe2c0aff1cd33e8f2ec42` reran the matched
+  tmoklc direct point-regressor bridge with `POINT_DETECTOR_IMGSZ=1280` and
+  `POINT_MAX_DETECTIONS_PER_IMAGE=50` from committed ref
+  `96ccb7eae8da508e1ccda25ca395a3bd2735fcfc`. It reached official SSKit
+  evaluation, but official `mAP-LocSim=0.0`, `precision_50=0.0`,
+  `recall_50=0.0`; candidate diagnostics stayed collapsed with
+  `gt_recall_iou_0_5=0.0019011406844106464`,
+  `gt_recall_iou_0_3=0.011406844106463879`,
+  `mean_best_iou_gt_to_det=0.007551797826536668`,
+  `gt_recall_px_50=0.04182509505703422`, and mean GT-to-pred point error about
+  `457.3` px from 617 predictions for 526 GT boxes. Do not rerun this exact
+  matched bridge unchanged. The 16-frame detector-only tmoklc audit remains a
+  useful anomaly/source signal; next work should audit why the detector-only
+  slice looked strong while the bridge slice collapses, or move to a stronger
+  official-runtime candidate source. Artifact upload still failed after
+  `AUTONOMY_RESULT` with HF model-repo LFS `403`.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
@@ -497,21 +514,17 @@ parity hypothesis.
 
 ## Next Action
 
-Next loop should rerun the same bounded direct point-regressor smoke using
-`tmoklc/football-player-detection` as the real candidate source. The
-Hugging Face UV/OpenCV packaging blocker from job
-`69fbe081aff1cd33e8f2ec29` has a repo-local mechanics fix now: YOLO jobs use
-headless OpenCV by default, while RF-DETR installs its extra runtime lazily.
-Use this exact matched bridge command:
-`TRAIN_MODE=point_regressor SYNLOC_COORD_SCALE_MODE=actual_image
-POINT_CANDIDATE_MODE=yolo
-POINT_DETECTOR_BASELINE=tmoklc-football-player-detection|tmoklc/football-player-detection|football-player-detection.pt|1,2,3
-POINT_DETECTOR_IMGSZ=1280 POINT_MAX_DETECTIONS_PER_IMAGE=50 TRAIN_MAX_IMAGES=64
-VAL_MAX_IMAGES=32 POINT_EPOCHS=2 POINT_BATCH=16`. Use the connector/app if
-repo-local preflight reports missing `job.write`, and follow the job to
-official `mAP-LocSim` or an explicit blocker. Do not expand to a full
-validation detector run or another public detector search until this
-detector-to-point bridge is scored.
+Next loop should not rerun the matched tmoklc detector-to-point bridge
+unchanged. Job `69fbe2c0aff1cd33e8f2ec42` scored that exact command after the
+OpenCV fix and got official `mAP-LocSim=0.0` with near-zero candidate IoU. The
+useful next unit is a tiny tmoklc bridge audit, not another training rerun:
+compare the earlier strong 16-frame detector-only audit slice against the
+32-frame point-regressor validation slice, saving/inspecting image ids,
+selected class ids, detector boxes before/after `actual_image` scaling,
+NMS/top-k effects, and GT IoU summaries. If that audit does not expose a
+clear bridge bug, return to official SSKit/SoccerNet-format candidate sources,
+SoccerMaster official-runtime parity, or a track/pose source with real
+image-space athlete-box recall on the same SynLoc frames.
 
 Do not rerun the keypoint actual-image YOLO11n-pose smoke just because the
 scale adapter now exists; job `69fbd6c3aff1cd33e8f2ebb6` already showed the

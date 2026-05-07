@@ -4,21 +4,20 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Rerun the direct point regressor plus `tmoklc/football-player-detection`
-  bridge with detector settings matched to the strong detector-only audit:
-  `TRAIN_MODE=point_regressor`, `POINT_CANDIDATE_MODE=yolo`,
-  `POINT_DETECTOR_BASELINE=tmoklc-football-player-detection|tmoklc/football-player-detection|football-player-detection.pt|1,2,3`,
-  `SYNLOC_COORD_SCALE_MODE=actual_image`, `POINT_DETECTOR_IMGSZ=1280`, and
-  probably `POINT_MAX_DETECTIONS_PER_IMAGE=50`. The first bridge job
-  `69fbdd96aff1cd33e8f2ec00` scored `mAP-LocSim=0.0` with near-zero candidate
-  IoU, but it used the point-regressor defaults of detector `imgsz=960` and
-  top-25. The earlier detector-only audit used `YOLO_IMGSZ=1280` and looked
-  genuinely strong on 16 frames, so isolate the setting mismatch before
-  discarding tmoklc or returning to source search. The first matched rerun,
-  job `69fbe081aff1cd33e8f2ec29`, failed before scoring on
-  `ImportError: libGL.so.1`; the repo now pins headless OpenCV for YOLO jobs
-  and installs RF-DETR lazily, so rerun this exact matched bridge before
-  spending on another source search.
+- Audit the `tmoklc/football-player-detection` detector-only versus
+  detector-to-point bridge mismatch before rerunning or scaling it. The strong
+  detector-only audit on 16 validation frames scored official
+  `mAP-LocSim=0.007351653532700209` with
+  `gt_recall_iou_0_5=0.840531561461794`, but both point-regressor bridge runs
+  collapsed to official `mAP-LocSim=0.0` and near-zero candidate IoU. The
+  matched bridge rerun, job `69fbe2c0aff1cd33e8f2ec42`, used
+  `POINT_DETECTOR_IMGSZ=1280` and `POINT_MAX_DETECTIONS_PER_IMAGE=50`, reached
+  official SSKit evaluation, and still had
+  `gt_recall_iou_0_5=0.0019011406844106464`. A good next pass is a tiny
+  no-training audit that compares image ids, selected class ids, raw boxes,
+  scaled boxes, NMS/top-k effects, and GT IoU summaries for the exact
+  detector-only slice versus the bridge validation slice. Do not rerun the same
+  tmoklc bridge command unchanged.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.
