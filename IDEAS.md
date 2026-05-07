@@ -4,14 +4,17 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Pair the direct point regressor with the first useful real candidate source:
-  `tmoklc/football-player-detection`. Its 16-frame actual-image audit scored
-  official `mAP-LocSim=0.007351653532700209` with strong candidate overlap
-  (`gt_recall_iou_0_5=0.840531561461794`). Run a bounded 64/32 smoke with
+- Rerun the direct point regressor plus `tmoklc/football-player-detection`
+  bridge with detector settings matched to the strong detector-only audit:
   `TRAIN_MODE=point_regressor`, `POINT_CANDIDATE_MODE=yolo`,
   `POINT_DETECTOR_BASELINE=tmoklc-football-player-detection|tmoklc/football-player-detection|football-player-detection.pt|1,2,3`,
-  and `SYNLOC_COORD_SCALE_MODE=actual_image` before scaling or resuming source
-  search.
+  `SYNLOC_COORD_SCALE_MODE=actual_image`, `POINT_DETECTOR_IMGSZ=1280`, and
+  probably `POINT_MAX_DETECTIONS_PER_IMAGE=50`. The first bridge job
+  `69fbdd96aff1cd33e8f2ec00` scored `mAP-LocSim=0.0` with near-zero candidate
+  IoU, but it used the point-regressor defaults of detector `imgsz=960` and
+  top-25. The earlier detector-only audit used `YOLO_IMGSZ=1280` and looked
+  genuinely strong on 16 frames, so isolate the setting mismatch before
+  discarding tmoklc or returning to source search.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.

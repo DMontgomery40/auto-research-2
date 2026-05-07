@@ -62,6 +62,20 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   candidate source to pair with the direct point regressor, not as a reason to
   resume broad public-detector hunting. Artifact upload still failed after
   `AUTONOMY_RESULT` with HF model-repo PR/write `403`.
+- `point-regressor-tmoklc-yolo-candidates` is a discard-result but a useful
+  bridge-audit warning: job `69fbdd96aff1cd33e8f2ec00` trained the direct point
+  regressor on 64 train images for 2 epochs and evaluated it on 32 validation
+  images with `tmoklc/football-player-detection` real YOLO candidates through
+  `SYNLOC_COORD_SCALE_MODE=actual_image`. Official `mAP-LocSim=0.0`,
+  `precision_50=0.0`, and `recall_50=0.0`; candidate diagnostics collapsed to
+  `gt_recall_iou_0_5=0.0019011406844106464`,
+  `gt_recall_iou_0_3=0.011406844106463879`, and
+  `mean_best_iou_gt_to_det=0.0074524783749109385`, despite the earlier 16-frame
+  tmoklc detector-only audit looking strong. This point bridge used
+  `POINT_DETECTOR_IMGSZ=960` by default and top-25 candidates, while the good
+  detector audit used `YOLO_IMGSZ=1280`; rerun the bridge with detector settings
+  matched to the audit before discarding tmoklc as a source. Artifact upload
+  failed after `AUTONOMY_RESULT` with HF model-repo LFS `403`.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
