@@ -1,6 +1,6 @@
 # Current State
 
-Updated: 2026-05-06
+Updated: 2026-05-07
 
 ## Mission
 
@@ -36,6 +36,18 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
 - `keypoint-yolo11n-smoke` is a discard-result:
   `mAP-LocSim=5.743033700121752e-07`, `recall_50=0.0`,
   `gt_recall_px_50=0.05179282868525897`, worse than pose smoke.
+- `keypoint-actual-image-scale-smoke` is a keep-mechanics / discard-result:
+  job `69fbd6c3aff1cd33e8f2ebb6` added and scored
+  `SYNLOC_COORD_SCALE_MODE=actual_image` in the YOLO keypoint lane. Official
+  `mAP-LocSim=7.645552200007645e-05`, above the old strict-scale
+  YOLO11n-pose keypoint smoke but still below pose smoke
+  `0.000825082508250825`; diagnostics stayed weak with
+  `gt_recall_iou_0_5=0.0038022813688212928`,
+  `gt_recall_px_50=0.03802281368821293`, and mean best GT-to-pred point error
+  about `499.6` px. Keep the keypoint scale adapter and verification guard,
+  but do not rerun this exact YOLO11n-pose setup as the next scoring direction.
+  Artifact upload still failed after `AUTONOMY_RESULT` with HF model-repo LFS
+  `403`.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
@@ -254,6 +266,13 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   projection, and official SSKit evaluation. Local `python3 -m py_compile
   train.py` and `scripts/verify.sh` passed, including detector-box backscale
   coverage. No HF job was launched from the dirty mechanics pass.
+- `keypoint-actual-image-scale-smoke` extends the same coordinate-scale repair
+  into the YOLO keypoint lane. `train.py` now trains keypoint labels in actual
+  cached-image coordinates and maps predicted keypoint boxes/points back to
+  annotation coordinates before official SSKit evaluation. The cloud score
+  improved over the old strict-scale keypoint run but remained below pose smoke,
+  so the adapter is kept as mechanics and the exact YOLO11n-pose setup is
+  discarded as a scoring direction.
 - `actual-image-hamza-football-candidate-audit` is a discard-result: job
   `69fac706b745af80fb373923` evaluated
   `HamzaAliKhan/football-players-detection` through the repaired
@@ -388,14 +407,18 @@ Do not treat them as model underperformance.
 
 `train.py` now has a `TRAIN_MODE=keypoint` lane that trains one projected
 ground keypoint and evaluates through official SSKit `position_from_keypoint_index=0`.
-The tiny YOLO11n-pose smokes proved the wiring but produced too many noisy
-detections and too little point recall to promote. Top-k filtering, the
-`combined`/`box`/`keypoint` score-mode matrix, and the bbox-bottom-center target
-did not rescue official recall, so do not spend another pass on this exact
-YOLO11n-pose setup through confidence ranking or target switching alone. The
-saved audit examples show candidate points often hundreds of pixels from the
-nearest GT point, which points to a point-quality/model-family problem more than
-an SSKit ingestion problem.
+The lane now supports `SYNLOC_COORD_SCALE_MODE=actual_image`, so keypoint
+training/inference no longer silently mixes 3840x2160 annotations with
+1920x1080 cached image coordinates. The actual-image rerun improved the old
+strict-scale YOLO11n-pose score but still produced too many noisy detections
+and too little point recall to promote. Top-k filtering, the
+`combined`/`box`/`keypoint` score-mode matrix, bbox-bottom-center target, and
+coordinate-scale repair did not rescue official recall, so do not spend another
+pass on this exact YOLO11n-pose setup through confidence ranking, target
+switching, or scale plumbing alone. The saved audit examples still show
+candidate points often hundreds of pixels from the nearest GT point, which
+points to a point-quality/model-family problem more than an SSKit ingestion
+problem.
 
 `TRAIN_MODE=point_regressor` beat the pose smoke while given GT boxes, so the
 direct crop-regressor point head is not dead. Pairing it with the existing
@@ -432,7 +455,10 @@ parity hypothesis.
 Next loop should move past public generic detector hunting and look for an
 official SSKit/SoccerNet-format candidate source, SoccerMaster
 official-runtime parity, or a track/pose source with real athlete-box recall on
-the same SynLoc frames. Do not rerun the point-regressor train-jitter variant;
+the same SynLoc frames. Do not rerun the keypoint actual-image YOLO11n-pose
+smoke just because the scale adapter now exists; job `69fbd6c3aff1cd33e8f2ebb6`
+already showed the mechanics improvement still lands below pose smoke. Do not
+rerun the point-regressor train-jitter variant;
 it underperformed the existing no-train-jitter actual-image jittered smoke and
 its code was reverted. Do not rerun `PericlesRodrigues01/player-detector`; it
 produced many boxes but stayed below pose smoke with near-zero image-space

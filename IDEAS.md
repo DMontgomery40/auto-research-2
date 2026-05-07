@@ -68,6 +68,17 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   is discarded.
 - `keypoint-yolo11n-smoke` scored `5.743033700121752e-07` with
   `recall_50=0.0`; keep the keypoint wiring, discard this exact config.
+- `keypoint-actual-image-scale-smoke` scored
+  `7.645552200007645e-05` official `mAP-LocSim` after adding
+  `SYNLOC_COORD_SCALE_MODE=actual_image` to the YOLO keypoint lane. This proves
+  the keypoint lane needed the same coordinate-scale repair as detector and
+  point-regressor lanes, but it remains below pose smoke
+  `0.000825082508250825` with weak diagnostics:
+  `gt_recall_iou_0_5=0.0038022813688212928`,
+  `gt_recall_px_50=0.03802281368821293`, and mean best GT-to-pred point error
+  about `499.6` px. Keep the adapter; discard another pass on this exact
+  YOLO11n-pose setup unless the model family or candidate-quality hypothesis
+  changes.
 - `keypoint-topk25-smoke` printed `0.000` after SSKit evaluation with
   top-25-per-frame filtering; treat this as another plumbing warning and discard
   confidence-only pruning as a standalone rescue.
@@ -331,6 +342,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   while using the current cached fullHD images. Prior near-zero detector overlap
   may be contaminated by coordinate scale, so real-candidate reruns must use the
   repaired coordinate path or a rebuilt true-fullHD cache.
+- Rerunning the same YOLO11n-pose keypoint smoke only because the keypoint lane
+  now supports `SYNLOC_COORD_SCALE_MODE=actual_image`; the fixed-scale smoke
+  improved over the old strict-scale run but still landed an order of magnitude
+  below pose smoke with poor point diagnostics.
 - Running another RF-DETR SoccerNet scoring job just because the architecture
   mismatch is fixed. The large-model smoke scored zero with near-zero image-space
   overlap, so it needs a new preprocessing/coordinate-parity hypothesis first.
