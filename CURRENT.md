@@ -146,6 +146,23 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   Rerun the same matched tmoklc bridge from the split-aware commit next; do not
   treat the pre-fix score as a detector/model result. Artifact upload still
   failed after `AUTONOMY_RESULT` with HF model-repo LFS `403`.
+- `tmoklc-split-aware-bridge-scored` is a keep-signal and resolves the
+  duplicate-basename split-leak blocker: job `69fbee83317220dbbd1a56f6` reran
+  the same matched tmoklc detector-to-point bridge from split-aware committed
+  ref `991b6d32a62fe49b5ce70a89cc524a4dc8dd8982` through the Hugging Face Jobs
+  connector after repo-local preflight correctly stopped on missing local
+  `job.write`. Official `mAP-LocSim=0.008787128712871288`, above the prior
+  tmoklc detector-only audit `0.007351653532700209` and far above pose smoke.
+  The raw detector path recovered on the exact 32-frame bridge slice:
+  `raw_detector_boxes_before_point.gt_recall_iou_0_5=0.8384030418250951`,
+  `gt_recall_iou_0_3=0.9106463878326996`,
+  `det_precision_iou_0_5=0.6752368064952639`, and 739 detections for 526 GT
+  boxes. Point diagnostics are now useful rather than collapsed:
+  `gt_recall_px_50=0.9315589353612167` with mean best GT-to-pred point error
+  about `38.27` px. Keep the split-aware lookup and tmoklc point bridge as the
+  current best real-candidate direction. Artifact upload still failed after
+  `AUTONOMY_RESULT` with HF model-repo LFS `403`; the printed job log is the
+  durable score.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
@@ -549,21 +566,15 @@ parity hypothesis.
 
 ## Next Action
 
-Next loop should treat `tmoklc` as a real detector source but the
-point-regressor bridge as suspect. Do not rerun the matched tmoklc
-detector-to-point bridge unchanged: job `69fbe2c0aff1cd33e8f2ec42` scored that
-exact command after the OpenCV fix and got official `mAP-LocSim=0.0` with
-near-zero candidate IoU, while detector-class audit job
-`69fbe74baff1cd33e8f2ec7c` showed the same detector remains strong on the
-same 32-frame slice with athlete-only classes
-(`gt_recall_iou_0_5=0.8384030418250951`). The next useful unit is a
-code-level bridge ingestion audit: compare the boxes produced inside
-`evaluate_point_regressor_on_yolo_candidates()` against
-`predictions_for_model()` for the same image ids before any point-head crop or
-top-k selection, then fix the first concrete divergence. If no bridge bug is
-found, return to official SSKit/SoccerNet-format candidate sources,
-SoccerMaster official-runtime parity, or a track/pose source with real
-image-space athlete-box recall on the same SynLoc frames.
+Next loop should build on the split-aware tmoklc detector-to-point bridge:
+job `69fbee83317220dbbd1a56f6` restored raw detector recall on the bridge path
+and set the current best real-candidate score at
+`mAP-LocSim=0.008787128712871288`. Do not rerun the exact 64/32, 2-epoch
+smoke unchanged. The next useful unit is a bounded point-head or candidate
+quality experiment on this same source, such as a slightly larger train slice
+or a small point-regressor architecture/loss change, with the same raw detector
+diagnostics kept in the log. Keep judging with official SSKit `mAP-LocSim` and
+stop if raw detector recall collapses again.
 
 Do not rerun the keypoint actual-image YOLO11n-pose smoke just because the
 scale adapter now exists; job `69fbd6c3aff1cd33e8f2ebb6` already showed the

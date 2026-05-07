@@ -4,18 +4,16 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Rerun the `tmoklc/football-player-detection` detector-to-point bridge once
-  from the split-aware image lookup commit. Job `69fbea40aff1cd33e8f2eca0`
-  showed the matched bridge collapse is already present in
-  `raw_detector_boxes_before_point`, before point crops or top-k, with
-  `gt_recall_iou_0_5=0.0019011406844106464`. The concrete bug found in this
-  pass is duplicate-basename split leakage: point-regressor mode downloads
-  train and val, so validation annotations could be paired with train images
-  such as `000000.jpg`. `train.py` now passes split hints through detector,
-  keypoint, and point image lookup, and `scripts/verify.sh` guards same-name
-  train/val selection. Next command should be the same bounded tmoklc bridge
-  smoke; if raw detector recall recovers to the detector-class-audit level,
-  judge the point head, otherwise continue ingestion audit.
+- Build on the split-aware `tmoklc/football-player-detection` detector-to-point
+  bridge rather than rerunning it unchanged. Job `69fbee83317220dbbd1a56f6`
+  resolved the duplicate-basename split leakage and scored official
+  `mAP-LocSim=0.008787128712871288`, with raw bridge detector recall restored
+  to `gt_recall_iou_0_5=0.8384030418250951` on the 32-frame slice. The next
+  bounded unit should keep this candidate source and change exactly one point
+  quality lever: a slightly larger train slice, a small crop/point-head loss
+  change, or a stricter candidate-quality filter. Keep logging
+  `raw_detector_boxes_before_point` so any score change can be separated from
+  detector/candidate collapse.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.
