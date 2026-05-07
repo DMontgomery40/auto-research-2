@@ -12,16 +12,18 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `gt_recall_iou_0_5=0.8384030418250951` on the 32-frame slice. The next
   bounded unit should keep this candidate source and change exactly one
   different point/candidate-quality lever: a stricter candidate-quality filter,
-  a small point-head/loss change, image size, learning-rate probe, or train
-  slice size. Job `69fbf50aaff1cd33e8f2ed35` already tried more epochs alone
+  a small point-head/loss change, image size, or validation-breadth probe.
+  Job `69fbf50aaff1cd33e8f2ed35` already tried more epochs alone
   (`POINT_EPOCHS=4`) and exactly tied the best score while slightly worsening
   mean point error, and job `69fbf877317220dbbd1a5741` tried wider crop context
   alone (`POINT_CROP_PADDING=0.30`) and also tied while slightly worsening mean
   point error. Job `69fbfbde317220dbbd1a574a` then increased only the train
   slice to 256 images and also tied while slightly worsening mean point error.
-  Do not spend the next pass on epoch count, crop padding, or train-slice size
-  alone. Keep logging `raw_detector_boxes_before_point` so any score change can
-  be separated from detector/candidate collapse.
+  Job `69fbff6d317220dbbd1a577e` lowered `POINT_LR` to `0.0003` and dropped
+  official score to `0.008333333333333333` despite healthy detector diagnostics.
+  Do not spend the next pass on epoch count, crop padding, train-slice size, or
+  lower learning rate alone. Keep logging `raw_detector_boxes_before_point` so
+  any score change can be separated from detector/candidate collapse.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.
