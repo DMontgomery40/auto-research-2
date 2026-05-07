@@ -62,13 +62,18 @@ Use this shape:
 
 Inside the loop:
 
-1. Read `program.md`, `CURRENT.md`, `LEDGER.md`, and `IDEAS.md`.
-2. Pick one experiment with a clear expected score movement.
-3. Run it in an isolated branch/worktree under `worktrees/<tag>/` when needed.
-4. Edit `train.py` unless a fixed helper is actually broken.
-5. Evaluate with the official SSKit metric path.
-6. Record score, commit/job, keep/discard, and notes in `LEDGER.md`.
-7. Update `CURRENT.md`.
+1. Run `python3 scripts/research_history_gate.py`, then read `program.md`,
+   `CURRENT.md`, `LEDGER.md`, and `IDEAS.md`.
+2. Treat `LEDGER.md` and `CURRENT.md` as higher priority than `IDEAS.md`.
+   Reject exact repeats and already-tried one-knob variants unless there is a
+   new stated hypothesis that makes the pass meaningfully different.
+3. Pick one experiment with a clear expected score movement and name the prior
+   rows it builds on.
+4. Run it in an isolated branch/worktree under `worktrees/<tag>/` when needed.
+5. Edit `train.py` unless a fixed helper is actually broken.
+6. Evaluate with the official SSKit metric path.
+7. Record score, commit/job, keep/discard, and notes in `LEDGER.md`.
+8. Update `CURRENT.md`.
 
 ## Current Research Bias
 

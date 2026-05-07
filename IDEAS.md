@@ -2,6 +2,25 @@
 
 Active direction: track/pose/keypoint or direct ground-point prediction.
 
+## History Priority
+
+`LEDGER.md` and `CURRENT.md` outrank this backlog. Before selecting any item
+below, search the ledger for the same candidate source, `TRAIN_MODE`, env knob,
+and job/tag family. If it was already tried as a discard, tied no-improvement
+run, resolved blocker, or explicit "do not rerun", do not spend another cloud
+job on it without a new hypothesis that makes it meaningfully different.
+
+Already-tried standalone levers that must not be selected as the next unit:
+more point epochs, wider crop padding, larger train slice, lower point learning
+rate, stricter detector confidence, confidence-only/top-k keypoint filtering,
+YOLO11n-pose actual-image reruns, bbox-bottom-center target switching alone,
+train-jitter for the point regressor, default YOLO26 candidates, generic COCO
+person candidates, RF-DETR SoccerNet Large reruns, Pericles, Soccana, Hamza,
+EasyChamp, MartijnJolif, Uisikdag, and legacy YOLOv5 loader work without a
+source-specific reason. The latest example is
+`tmoklc-128-train-conf-005-bridge`: stricter detector confidence tied but did
+not improve the best and reduced raw detector recall.
+
 ## Next Best Experiments
 
 - Build on the split-aware `tmoklc/football-player-detection` detector-to-point
@@ -49,25 +68,16 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 - Use the saved keypoint matrix audit examples to pick a different point-quality
   signal or target: current candidate points are often hundreds of pixels from
   the nearest GT point, and confidence ranking did not fix official recall.
-- Run the new tiny direct footpoint/ground-point payload:
-  `TRAIN_MODE=point_regressor` keeps the official
-  `position_from_keypoint_index=0` evaluator path but does not start from
-  `yolo11n-pose.pt` COCO pose priors. It uses GT boxes as oracle validation
-  candidates to isolate point quality, so treat positive results as direction
-  signal rather than challenge-submittable scores.
-- Find a better real candidate source before scaling the direct point regressor:
-  the first YOLO26 detector-box bridge scored zero because candidate recall was
-  essentially absent, the larger-image/lower-threshold YOLO26 audit did not
-  fix it, public COCO `yolo11n.pt` person boxes stayed far below the pose
-  smoke, public COCO RT-DETR stayed far below the pose smoke despite slightly
-  better IoU diagnostics, and public EasyChamp/MartijnJolif/Uisikdag
-  soccer-football YOLO detectors also had zero IoU-0.5 GT recall on the same
-  frames. `Adit-jain/soccana` is now in the same discard bucket despite its
-  SoccerNet-labeled model card and loaded `Player/Ball/Referee` labels. The
-  useful immediate unit is the `tmoklc` detector-to-point bridge; after that,
-  return to official SSKit/SoccerNet-format candidates, SoccerMaster runtime
-  parity that proves real athlete boxes on the same frames, or a track/pose
-  candidate source with saved recall diagnostics.
+- Do not select the generic "new direct footpoint/ground-point payload" as a
+  fresh idea. `TRAIN_MODE=point_regressor` already exists, the GT-box oracle
+  smoke proved point-head signal, and the useful immediate unit is now a
+  non-repeated change to the current `tmoklc` detector-to-point bridge.
+- Candidate-source hunting is mostly exhausted for generic public detectors:
+  YOLO26, COCO YOLO11n, COCO RT-DETR, EasyChamp, MartijnJolif, Uisikdag,
+  Soccana, Hamza, and Pericles all failed or stayed below pose smoke on SynLoc
+  frames. New source work needs official SSKit/SoccerNet-format evidence,
+  SoccerMaster runtime parity that proves real athlete boxes on the same
+  frames, or a track/pose source with saved recall diagnostics.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A

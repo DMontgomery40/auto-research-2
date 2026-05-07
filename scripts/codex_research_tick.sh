@@ -59,9 +59,13 @@ if [ "$ALLOW_DIRTY" -ne 1 ] && [ -n "$(git status --short)" ]; then
 fi
 
 prompt_file="$(mktemp "${TMPDIR:-/tmp}/auto-research-2-codex-prompt.XXXXXX")"
-trap 'rm -f "$prompt_file"' EXIT
+history_file="$(mktemp "${TMPDIR:-/tmp}/auto-research-2-history-gate.XXXXXX")"
+trap 'rm -f "$prompt_file" "$history_file"' EXIT
 
-cat > "$prompt_file" <<'EOF'
+python3 scripts/research_history_gate.py > "$history_file"
+
+{
+cat <<'EOF'
 You are the local Codex researcher for this auto-research-2 checkout.
 
 Project-local memory rule:
@@ -73,6 +77,26 @@ Project-local memory rule:
   IDEAS.md, local files, and project-local memory under
   ~/.codex/projects/-Users-davidmontgomery-auto-research-2/ if memory is
   genuinely needed.
+
+History gate:
+
+- Treat the generated Research History Gate below as the first research-selection
+  context, ahead of IDEAS.md. It is generated from this checkout's LEDGER.md and
+  CURRENT.md so stale backlog text does not win over tried facts.
+- Before choosing an experiment, make a tried index from LEDGER.md/CURRENT.md:
+  candidate source, train mode, env knobs, job/tag, score, decision, and notes.
+- Reject exact repeats and single-knob repeats already logged as discard,
+  tie/no-improvement, blocker-resolved, or "do not rerun" unless the new pass
+  first states the specific new hypothesis that makes it meaningfully different.
+- If IDEAS.md suggests something that the ledger already tried, fix the stale
+  backlog wording or choose a different experiment. Do not spend a cloud job to
+  rediscover a logged result.
+- In your final note for the pass, state the history rows you built on and the
+  repeat you intentionally avoided.
+
+EOF
+cat "$history_file"
+cat <<'EOF'
 
 Read these first:
 
@@ -111,6 +135,7 @@ iteration. Do not treat a successful single pass as the end of autonomy.
   revert discarded experiment code while preserving the ledger/current facts.
 - Before ending a mutating turn, run scripts/verify.sh plus any narrower check.
 EOF
+} > "$prompt_file"
 
 if [ "$PRINT_PROMPT" -eq 1 ]; then
   cat "$prompt_file"

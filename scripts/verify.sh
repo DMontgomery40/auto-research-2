@@ -27,6 +27,7 @@ if [ -d refs ] && git status --short --ignored refs | grep -v '^!! refs/' >/dev/
 python3 -m py_compile scripts/ask_council.py
 python3 -m py_compile scripts/download_synloc.py
 python3 -m py_compile scripts/evaluate_synloc.py
+python3 -m py_compile scripts/research_history_gate.py
 python3 -m py_compile train.py
 python3 -m py_compile cloud/synloc_cache.py
 
@@ -255,6 +256,14 @@ if ! rg -q 'Hugging Face Jobs connector/app' scripts/codex_research_tick.sh; the
   echo "Codex tick prompt must route around local HF CLI job.write failures through the HF Jobs connector" >&2
   exit 1
 fi
+if ! rg -q 'Research History Gate' scripts/codex_research_tick.sh || ! rg -q 'LEDGER.md/CURRENT.md' scripts/codex_research_tick.sh; then
+  echo "Codex tick prompt must put the generated history gate ahead of experiment selection" >&2
+  exit 1
+fi
+if ! rg -q 'scripts/research_history_gate.py' program.md AGENTS.md CURRENT.md; then
+  echo "Repo instructions must make the tried-history gate part of every research loop" >&2
+  exit 1
+fi
 if ! rg -q 'HF_GIT_REF' scripts/run_hf_train.sh; then
   echo "HF train helper must pin train.py to a committed git ref" >&2
   exit 1
@@ -297,8 +306,10 @@ if ! rg -q 'PREFLIGHT=1' scripts/run_hf_train.sh; then
 fi
 
 scripts/codex_research_tick.sh --allow-dirty --dry-run >/tmp/auto-research-2-codex-tick.txt
+scripts/codex_research_tick.sh --allow-dirty --print-prompt >/tmp/auto-research-2-codex-prompt.txt
 scripts/codex_research_loop.sh --allow-dirty --dry-run --iterations 2 >/tmp/auto-research-2-codex-loop.txt 2>&1
 scripts/run_hf_train.sh --dry-run >/tmp/auto-research-2-hf-train.txt
+python3 scripts/research_history_gate.py >/tmp/auto-research-2-history-gate.txt
 cat >/tmp/auto-research-2-hf-env-test.env <<'EOF'
 HF_TOKEN=dummy-secret-for-verify
 HF_FLAVOR=cpu-basic
@@ -340,11 +351,12 @@ fi
 python3 - <<'PYCHECK'
 from pathlib import Path
 required_docs = {
-    "program.md": ["gpt-5.5", "low", "train.py", "mAP-LocSim", "0.9809895759", "first-yolo-train", "scripts/run_hf_train.sh", "cheapest option that actually works", "outer shell loop is the loop"],
+    "program.md": ["gpt-5.5", "low", "train.py", "mAP-LocSim", "0.9809895759", "first-yolo-train", "scripts/run_hf_train.sh", "cheapest option that actually works", "outer shell loop is the loop", "History Gate", "scripts/research_history_gate.py"],
     "README.md": ["program.md", "train.py", "scripts/run_hf_train.sh", "Hugging Face Jobs are CUDA execution substrate only", "cheapest option that actually works", "outside `~/Documents`"],
-    "AGENTS.md": ["program.md", "train.py", "Hugging Face Jobs are CUDA execution substrate only", "0.9809895759", "cheapest option that actually works"],
-    "CURRENT.md": ["0.9809895759040843", "3.572767401302389e-06", "track/pose/keypoint", "cheapest option that actually works"],
+    "AGENTS.md": ["program.md", "train.py", "Hugging Face Jobs are CUDA execution substrate only", "0.9809895759", "cheapest option that actually works", "scripts/research_history_gate.py"],
+    "CURRENT.md": ["0.9809895759040843", "3.572767401302389e-06", "track/pose/keypoint", "cheapest option that actually works", "scripts/research_history_gate.py"],
     "LEDGER.md": ["first-yolo-train", "discard", "0.000825082508250825"],
+    "IDEAS.md": ["History Priority", "Already-tried standalone levers", "tmoklc-128-train-conf-005-bridge"],
 }
 for filename, needles in required_docs.items():
     text = Path(filename).read_text(encoding="utf-8")
@@ -358,6 +370,26 @@ for filename in ["program.md", "README.md", "AGENTS.md", "CURRENT.md", "IDEAS.md
 tick = Path("/tmp/auto-research-2-codex-tick.txt").read_text(encoding="utf-8")
 for needle in ["codex", "gpt-5.5", "model_reasoning_effort", "low", "--search", "exec"]:
     if needle not in tick: raise SystemExit(f"codex tick dry-run missing {needle}")
+prompt = Path("/tmp/auto-research-2-codex-prompt.txt").read_text(encoding="utf-8")
+for needle in [
+    "# Research History Gate",
+    "LEDGER.md and CURRENT.md override IDEAS.md",
+    "tmoklc-128-train-bridge-scored",
+    "tmoklc-128-train-conf-005-bridge",
+    "Reject exact repeats and single-knob repeats",
+]:
+    if needle not in prompt: raise SystemExit(f"codex prompt missing history-gate context: {needle}")
+history = Path("/tmp/auto-research-2-history-gate.txt").read_text(encoding="utf-8")
+for needle in [
+    "All tried ledger tags:",
+    "tmoklc-split-aware-bridge-scored",
+    "tmoklc-128-train-lr-0003-bridge",
+    "tmoklc-128-train-conf-005-bridge",
+]:
+    if needle not in history: raise SystemExit(f"history gate output missing tried row: {needle}")
+ideas = Path("IDEAS.md").read_text(encoding="utf-8")
+if "Run the new tiny direct footpoint/ground-point payload" in ideas:
+    raise SystemExit("IDEAS.md must not present the already-run direct point payload as a fresh next experiment")
 loop = Path("/tmp/auto-research-2-codex-loop.txt").read_text(encoding="utf-8")
 if "codex" not in loop or "exec" not in loop: raise SystemExit("codex loop dry-run did not reach the Codex tick")
 if "local Codex research pass 1" not in loop or "local Codex research pass 2" not in loop: raise SystemExit("codex loop dry-run did not prove more than one pass")

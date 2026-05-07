@@ -661,6 +661,14 @@ parity hypothesis.
 
 ## Next Action
 
+History is the first gate for the next loop, not an afterthought. Start by
+running `python3 scripts/research_history_gate.py`, then search `LEDGER.md` and
+this file for the candidate source, train mode, and knob family before choosing
+anything from `IDEAS.md`. If the idea is an exact repeat or an already-tried
+single-knob variant, reject it unless there is a new hypothesis that makes it
+meaningfully different; if `IDEAS.md` is stale, fix the backlog before spending
+cloud compute.
+
 Next loop should build on the split-aware tmoklc detector-to-point bridge:
 job `69fbf206317220dbbd1a5719` is the current best real-candidate score at
 `mAP-LocSim=0.009405940594059406` from 128 train / 32 valid, 2 epochs,

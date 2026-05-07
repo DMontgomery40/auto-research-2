@@ -61,6 +61,28 @@ State and logs:
 Use sibling repos only as evidence sources. Pull any still-useful fact into
 `CURRENT.md`, `LEDGER.md`, or `IDEAS.md`, then keep the actual loop here.
 
+## History Gate
+
+Every research tick must put tried history ahead of the backlog. Start by
+building a tried index from `LEDGER.md` and `CURRENT.md`: tag/job, candidate
+source, train mode, env knobs, score, decision, and notes. `IDEAS.md` is only a
+backlog; it never overrides a logged discard, tied no-improvement run, resolved
+blocker, or explicit "do not rerun" note.
+
+Before choosing an experiment, search the history for the same candidate source,
+mode, and knob family. Reject exact repeats and one-knob repeats unless the pass
+states a new hypothesis that makes the attempt meaningfully different. If
+`IDEAS.md` still contains stale work that was already tried, update the backlog
+or pick a non-stale experiment rather than spending another cloud job on the
+same result.
+
+The helper below prints the gate context that the Codex tick prompt includes
+before the rest of the research instructions:
+
+```bash
+python3 scripts/research_history_gate.py
+```
+
 ## Setup Once
 
 1. Read `README.md`, `CURRENT.md`, `LEDGER.md`, and `IDEAS.md`.
@@ -110,20 +132,23 @@ scripts/codex_research_loop.sh --dry-run --iterations 2
 
 Inside each iteration:
 
-1. Read `CURRENT.md`, `LEDGER.md`, `IDEAS.md`, and this file.
-2. Choose exactly one experiment with a plausible path to move official
+1. Run `python3 scripts/research_history_gate.py`, then read `CURRENT.md`,
+   `LEDGER.md`, `IDEAS.md`, and this file.
+2. Name the prior rows the pass is building on and the tried repeats it is
+   explicitly avoiding.
+3. Choose exactly one experiment with a plausible path to move official
    `mAP-LocSim`.
-3. Work in an isolated branch/worktree under `worktrees/<tag>/` when the change
+4. Work in an isolated branch/worktree under `worktrees/<tag>/` when the change
    is more than a tiny doc/helper cleanup.
-4. Edit the smallest needed surface, usually `train.py`.
-5. Run local sanity checks, then one tiny cloud CUDA smoke if the idea needs GPU.
-6. Run one bounded Hugging Face job with a fixed timeout and cheap hardware first.
-7. Evaluate with the official SSKit `mAP-LocSim` path.
-8. Append one row to `LEDGER.md` with command/job, score, keep/discard, and
+5. Edit the smallest needed surface, usually `train.py`.
+6. Run local sanity checks, then one tiny cloud CUDA smoke if the idea needs GPU.
+7. Run one bounded Hugging Face job with a fixed timeout and cheap hardware first.
+8. Evaluate with the official SSKit `mAP-LocSim` path.
+9. Append one row to `LEDGER.md` with command/job, score, keep/discard, and
    the reason.
-9. Update `CURRENT.md` with the new best fact and next action.
-10. Keep the change only if the score movement justifies the complexity.
-11. If files changed and verification passes, commit the completed iteration so
+10. Update `CURRENT.md` with the new best fact and next action.
+11. Keep the change only if the score movement justifies the complexity.
+12. If files changed and verification passes, commit the completed iteration so
     the outer shell loop can start the next pass from a clean tree.
 
 Never ask "should I keep going?" once the loop starts. Stop only for missing
