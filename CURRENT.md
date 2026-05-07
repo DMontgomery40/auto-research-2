@@ -576,6 +576,21 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   Treat this as an integration blocker, not a detector verdict. Do not add a
   YOLOv5-specific runtime path without a stronger source-specific reason than
   another generic public football detector.
+- `tmoklc-128-train-conf-005-bridge` is a discard-result: job
+  `69fc02b3317220dbbd1a5809` held the current best 128-image split-aware
+  tmoklc detector-to-point bridge fixed and changed only
+  `POINT_DETECTOR_CONF=0.01` to `POINT_DETECTOR_CONF=0.05` from committed ref
+  `755cee18e2f09c4a7011a83ae78f899a24914d8c`. It reached official SSKit
+  evaluation and exactly tied, but did not improve, the current best official
+  `mAP-LocSim=0.009405940594059406`. The stricter detector threshold reduced
+  predictions from 739 to 613 and improved raw detector precision
+  (`det_precision_iou_0_5=0.7765089722675367`), but reduced raw detector
+  recall (`raw_detector_boxes_before_point.gt_recall_iou_0_5=0.8193916349809885`
+  versus `0.8384030418250951`) and worsened point diagnostics:
+  `gt_recall_px_50=0.9106463878326996`, mean best GT-to-pred point error about
+  `45.76` px. Do not spend the next loop on stricter detector confidence
+  alone. Artifact upload again failed after `AUTONOMY_RESULT` with HF
+  model-repo LFS `403`; the printed job log is the durable score.
 - Compute rule: use the cheapest option that actually works, always.
 
 ## Interpretation
@@ -655,10 +670,12 @@ larger train slice alone; jobs `69fbf50aaff1cd33e8f2ed35`,
 `69fbf877317220dbbd1a5741`, and `69fbfbde317220dbbd1a574a` all tied without
 improving and slightly worsened point error, and job
 `69fbff6d317220dbbd1a577e` lowered `POINT_LR` to `0.0003` but dropped official
-score to `0.008333333333333333`. The next useful unit is a bounded
-point-head/loss, image-size, candidate-filtering, or validation-breadth
-experiment on this same source, with the same raw detector diagnostics kept in
-the log.
+score to `0.008333333333333333`. Job `69fc02b3317220dbbd1a5809` raised only
+`POINT_DETECTOR_CONF` to `0.05` and tied the best while reducing raw detector
+recall and worsening point error, so do not try stricter detector confidence
+alone next. The next useful unit is a bounded point-head/loss, image-size,
+candidate-filtering with a new criterion, or validation-breadth experiment on
+this same source, with the same raw detector diagnostics kept in the log.
 Keep judging with official SSKit `mAP-LocSim` and stop if raw detector recall
 collapses again.
 

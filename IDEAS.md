@@ -21,9 +21,13 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   slice to 256 images and also tied while slightly worsening mean point error.
   Job `69fbff6d317220dbbd1a577e` lowered `POINT_LR` to `0.0003` and dropped
   official score to `0.008333333333333333` despite healthy detector diagnostics.
-  Do not spend the next pass on epoch count, crop padding, train-slice size, or
-  lower learning rate alone. Keep logging `raw_detector_boxes_before_point` so
-  any score change can be separated from detector/candidate collapse.
+  Job `69fc02b3317220dbbd1a5809` raised only `POINT_DETECTOR_CONF` to `0.05`
+  and exactly tied the best while reducing raw detector IoU-0.5 recall from
+  `0.8384030418250951` to `0.8193916349809885` and worsening mean point error
+  to about `45.76` px. Do not spend the next pass on epoch count, crop padding,
+  train-slice size, lower learning rate, or stricter detector confidence alone.
+  Keep logging `raw_detector_boxes_before_point` so any score change can be
+  separated from detector/candidate collapse.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
   source, SoccerMaster official-runtime candidate parity, or a track/pose
   source with real image-space athlete-box recall on the same SynLoc frames.
