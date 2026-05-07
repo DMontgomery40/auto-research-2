@@ -12,10 +12,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `gt_recall_iou_0_5=0.8384030418250951` on the 32-frame slice. The next
   bounded unit should keep this candidate source and change exactly one
   different point/candidate-quality lever: a stricter candidate-quality filter,
-  a small crop/point-head loss change, image size/crop context, or a learning-rate
-  probe. Job `69fbf50aaff1cd33e8f2ed35` already tried more epochs alone
+  a small point-head/loss change, image size, learning-rate probe, or train
+  slice size. Job `69fbf50aaff1cd33e8f2ed35` already tried more epochs alone
   (`POINT_EPOCHS=4`) and exactly tied the best score while slightly worsening
-  mean point error, so do not spend the next pass on epoch count alone.
+  mean point error, and job `69fbf877317220dbbd1a5741` tried wider crop context
+  alone (`POINT_CROP_PADDING=0.30`) and also tied while slightly worsening mean
+  point error. Do not spend the next pass on epoch count or crop padding alone.
   Keep logging `raw_detector_boxes_before_point` so any score change can be
   separated from detector/candidate collapse.
 - Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
@@ -94,6 +96,12 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   about `499.6` px. Keep the adapter; discard another pass on this exact
   YOLO11n-pose setup unless the model family or candidate-quality hypothesis
   changes.
+- `tmoklc-128-train-crop-pad-030-bridge` scored
+  `0.009405940594059406` official `mAP-LocSim`, tying but not improving the
+  current best 128-image tmoklc bridge. It kept raw detector recall healthy
+  (`gt_recall_iou_0_5=0.8384030418250951`) but mean best GT-to-pred point
+  error was slightly worse at about `38.62` px versus about `38.24` px for the
+  best 0.15-padding run. Discard wider crop context as a standalone next lever.
 - `keypoint-topk25-smoke` printed `0.000` after SSKit evaluation with
   top-25-per-frame filtering; treat this as another plumbing warning and discard
   confidence-only pruning as a standalone rescue.
