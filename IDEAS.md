@@ -4,11 +4,19 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
 
 ## Next Best Experiments
 
-- Find an official SSKit/SoccerNet-format candidate source, SoccerMaster
-  official-runtime candidate parity, or a track/pose source with real
-  image-space athlete-box recall on the same SynLoc frames. The direct point
-  regressor has signal when candidates are GT-like, but the default YOLO26
-  bridge stayed far below the pose smoke even after
+- Pair the direct point regressor with the first useful real candidate source:
+  `tmoklc/football-player-detection`. Its 16-frame actual-image audit scored
+  official `mAP-LocSim=0.007351653532700209` with strong candidate overlap
+  (`gt_recall_iou_0_5=0.840531561461794`). Run a bounded 64/32 smoke with
+  `TRAIN_MODE=point_regressor`, `POINT_CANDIDATE_MODE=yolo`,
+  `POINT_DETECTOR_BASELINE=tmoklc-football-player-detection|tmoklc/football-player-detection|football-player-detection.pt|1,2,3`,
+  and `SYNLOC_COORD_SCALE_MODE=actual_image` before scaling or resuming source
+  search.
+- Longer-term, keep looking for an official SSKit/SoccerNet-format candidate
+  source, SoccerMaster official-runtime candidate parity, or a track/pose
+  source with real image-space athlete-box recall on the same SynLoc frames.
+  The direct point regressor has signal when candidates are GT-like, and the
+  default YOLO26 bridge stayed far below the pose smoke even after
   `SYNLOC_COORD_SCALE_MODE=actual_image`.
 - Do not rerun the selected RF-DETR SoccerNet Large coordinate-parity smoke
   without a new runtime/preprocessing hypothesis. Connector job
@@ -40,9 +48,10 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   soccer-football YOLO detectors also had zero IoU-0.5 GT recall on the same
   frames. `Adit-jain/soccana` is now in the same discard bucket despite its
   SoccerNet-labeled model card and loaded `Player/Ball/Referee` labels. The
-  useful next unit is official SSKit/SoccerNet-format candidates, SoccerMaster
-  runtime parity that proves real athlete boxes on the same frames, or a
-  track/pose candidate source with saved recall diagnostics.
+  useful immediate unit is the `tmoklc` detector-to-point bridge; after that,
+  return to official SSKit/SoccerNet-format candidates, SoccerMaster runtime
+  parity that proves real athlete boxes on the same frames, or a track/pose
+  candidate source with saved recall diagnostics.
 - Improve the new `train.py TRAIN_MODE=keypoint` lane: the first
   YOLO11n-pose footpoint smoke proved `position_from_keypoint_index` wiring but
   scored only `5.743033700121752e-07` with too many noisy detections. A
@@ -261,6 +270,17 @@ Active direction: track/pose/keypoint or direct ground-point prediction.
   `mean_best_iou_gt_to_det=0.023235810243179132`. Discard this detector as a
   direct point-regressor candidate source and avoid more generic public sports
   YOLO audits unless there is a source-specific runtime/preprocess hypothesis.
+- `tmoklc-football-candidate-audit` scored
+  `0.007351653532700209` official `mAP-LocSim` when
+  `tmoklc/football-player-detection` was evaluated on 16 validation frames
+  through `SYNLOC_COORD_SCALE_MODE=actual_image`. Labels loaded as `0=ball`,
+  `1=goalkeeper`, `2=player`, `3=referee`; the run produced 429 detections for
+  301 GT boxes with `gt_recall_iou_0_5=0.840531561461794`,
+  `gt_recall_iou_0_3=0.9269102990033222`, and
+  `mean_best_iou_gt_to_det=0.6984613095305611`. This is the first real
+  candidate-source keep-signal and should be paired with the direct point
+  regressor next. Artifact upload still failed after `AUTONOMY_RESULT` with HF
+  model-repo PR/write `403`.
 - `keremberke-yolov5m-runtime-blocker` did not reach official scoring.
   Connector job `69fbd3a2317220dbbd1a5671` launched the legacy
   `keremberke/yolov5m-football` checkpoint through the repaired actual-image

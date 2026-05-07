@@ -48,6 +48,20 @@ Primary metric: official SSKit `mAP-LocSim`, higher is better.
   but do not rerun this exact YOLO11n-pose setup as the next scoring direction.
   Artifact upload still failed after `AUTONOMY_RESULT` with HF model-repo LFS
   `403`.
+- `tmoklc-football-candidate-audit` is a keep-signal: job
+  `69fbdb30317220dbbd1a56a4` evaluated
+  `tmoklc/football-player-detection` on 16 validation frames through
+  `SYNLOC_COORD_SCALE_MODE=actual_image`. The model labels loaded as
+  `0=ball`, `1=goalkeeper`, `2=player`, `3=referee`; 429 detections for 301 GT
+  boxes scored official `mAP-LocSim=0.007351653532700209`, above pose smoke
+  and prior direct-point synthetic smokes. Candidate diagnostics finally look
+  useful for a real source: `gt_recall_iou_0_5=0.840531561461794`,
+  `gt_recall_iou_0_3=0.9269102990033222`,
+  `mean_best_iou_gt_to_det=0.6984613095305611`, and
+  `det_precision_iou_0_5=0.6713286713286714`. Treat this as the next real
+  candidate source to pair with the direct point regressor, not as a reason to
+  resume broad public-detector hunting. Artifact upload still failed after
+  `AUTONOMY_RESULT` with HF model-repo PR/write `403`.
 - `keypoint-topk25-smoke` is a plumbing warning, not a model verdict:
   top-25-per-frame filtering reduced candidate noise but official SSKit still
   printed `mAP-LocSim=0.000`, `precision_50=0.000`, `recall_50=0.000`, and
@@ -429,19 +443,18 @@ fix it. Public COCO `yolo11n` person detections, public COCO RT-DETR person
 detections, and five public soccer/football YOLO detectors
 (`easychamp-yolov8`, `martinjolif-yolo11m`, `uisikdag-yolov8-football`,
 `Adit-jain/soccana`, `PericlesRodrigues01/player-detector`) all failed as
-useful candidate sources despite producing many boxes. Do not spend another
-pass pairing the point regressor with generic COCO person boxes, COCO
-transformer detector boxes, or these public soccer/football YOLO detectors.
-The untried legacy `keremberke/yolov5m-football` source did not reach scoring
-because its old YOLOv5 checkpoint is incompatible with the current Ultralytics
-runtime, so a YOLOv5 loader is now a mechanics decision rather than a free
-candidate audit. The next blocker is an official
-SSKit/SoccerNet-format candidate source, SoccerMaster official-runtime parity,
-or a track/pose source with real athlete-box recall on the same frames.
-Training the same tiny point regressor on deterministic jittered GT crops did
-not improve the synthetic jittered-candidate score, so do not add jittered-crop
-training knobs back without a new point-head architecture or candidate-noise
-hypothesis.
+useful candidate sources despite producing many boxes. The new exception is
+`tmoklc/football-player-detection`: its 16-frame actual-image audit had strong
+real candidate overlap (`gt_recall_iou_0_5=0.840531561461794`) and official
+`mAP-LocSim=0.007351653532700209`. The next loop should pair this detector
+with the direct point regressor before scaling or searching more public
+detectors. The untried legacy `keremberke/yolov5m-football` source did not
+reach scoring because its old YOLOv5 checkpoint is incompatible with the
+current Ultralytics runtime, so a YOLOv5 loader is now a mechanics decision
+rather than a free candidate audit. Training the same tiny point regressor on
+deterministic jittered GT crops did not improve the synthetic jittered-candidate
+score, so do not add jittered-crop training knobs back without a new point-head
+architecture or candidate-noise hypothesis.
 
 SoccerMaster remains possible only after official-runtime parity. Copied
 adapter scores are not valid SoccerMaster verdicts. RF-DETR SoccerNet large
@@ -452,19 +465,27 @@ parity hypothesis.
 
 ## Next Action
 
-Next loop should move past public generic detector hunting and look for an
-official SSKit/SoccerNet-format candidate source, SoccerMaster
-official-runtime parity, or a track/pose source with real athlete-box recall on
-the same SynLoc frames. Do not rerun the keypoint actual-image YOLO11n-pose
-smoke just because the scale adapter now exists; job `69fbd6c3aff1cd33e8f2ebb6`
-already showed the mechanics improvement still lands below pose smoke. Do not
-rerun the point-regressor train-jitter variant;
-it underperformed the existing no-train-jitter actual-image jittered smoke and
-its code was reverted. Do not rerun `PericlesRodrigues01/player-detector`; it
-produced many boxes but stayed below pose smoke with near-zero image-space
-overlap. Do not spend the next pass building legacy YOLOv5 support for
-`keremberke/yolov5m-football` unless there is a concrete source-specific reason
-to believe that checkpoint is worth a new runtime lane.
+Next loop should run a bounded direct point-regressor smoke using
+`tmoklc/football-player-detection` as the real candidate source:
+`TRAIN_MODE=point_regressor SYNLOC_COORD_SCALE_MODE=actual_image
+POINT_CANDIDATE_MODE=yolo
+POINT_DETECTOR_BASELINE=tmoklc-football-player-detection|tmoklc/football-player-detection|football-player-detection.pt|1,2,3
+TRAIN_MAX_IMAGES=64 VAL_MAX_IMAGES=32 POINT_EPOCHS=2 POINT_BATCH=16`. Use the
+connector/app if repo-local preflight reports missing `job.write`, and follow
+the job to official `mAP-LocSim` or an explicit blocker. Do not expand to a
+full validation detector run or another public detector search until this
+detector-to-point bridge is scored.
+
+Do not rerun the keypoint actual-image YOLO11n-pose smoke just because the
+scale adapter now exists; job `69fbd6c3aff1cd33e8f2ebb6` already showed the
+mechanics improvement still lands below pose smoke. Do not rerun the
+point-regressor train-jitter variant; it underperformed the existing
+no-train-jitter actual-image jittered smoke and its code was reverted. Do not
+rerun `PericlesRodrigues01/player-detector`; it produced many boxes but stayed
+below pose smoke with near-zero image-space overlap. Do not spend the next pass
+building legacy YOLOv5 support for `keremberke/yolov5m-football` unless there
+is a concrete source-specific reason to believe that checkpoint is worth a new
+runtime lane.
 For job submission, use `scripts/run_hf_train.sh --preflight` before the local
 CLI path; if it reports missing `job.write`, launch through the Hugging Face
 Jobs connector/app with the same raw GitHub `train.py` URL and env, or record a
